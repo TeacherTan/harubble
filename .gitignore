@@ -9,7 +9,6 @@ Cargo.lock
 # Node.js / npm
 # =============================================
 node_modules/
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 bun.lockb
