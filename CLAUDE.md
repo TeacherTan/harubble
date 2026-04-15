@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 - 技术栈：Rust + Tauri 2 + Vite + Svelte 5
 - 形态：跨平台桌面应用（macOS / Windows / Linux）
-- 当前重点：专辑浏览、在线播放、当前曲目下载已经接通；批量下载和下载进度还没完成
+- 当前重点：专辑浏览、在线播放、歌词/队列面板、当前曲目下载已经接通；批量下载和下载进度还没完成
 
 ## 常用命令
 
@@ -48,8 +48,10 @@ Cargo workspace
 
 - `src/App.svelte`：主界面和状态编排
 - `src/lib/api.ts`：Tauri command bridge
+- `src/lib/cache.ts`：专辑详情、歌曲详情、歌词和主题色缓存
+- `src/lib/theme.ts`：动态主题变量应用
 - `src/lib/types.ts`：前后端共享数据结构的 TS 版本
-- `src/lib/components/`：播放器、专辑卡片、曲目行等组件
+- `src/lib/components/`：播放器、专辑卡片、曲目行和加载动画组件
 
 ## 后端 command 清单
 
@@ -58,6 +60,7 @@ Cargo workspace
 - `get_albums`
 - `get_album_detail`
 - `get_song_detail`
+- `get_song_lyrics`
 - `extract_image_theme`
 - `get_default_output_dir`
 - `play_song`
@@ -86,16 +89,18 @@ Cargo workspace
 - 在线播放、暂停、恢复、拖动进度
 - 上一首 / 下一首
 - 当前专辑上下文播放
+- 播放列表乱序、列表循环 / 单曲循环
 - 底部播放器、歌词面板、播放队列面板
 - 系统媒体会话同步
 - 封面主题色提取
 - 流式播放缓存与缓存清理
-- 当前播放曲目单曲下载
+- 当前播放曲目和专辑曲目行的单曲下载
+- 歌词文本拉取与 `.lrc` 同目录保存开关
 - FLAC 元数据和封面写入
 
 ### 未完成
 
-- 工具栏多选批量下载
+- 批量下载
 - 下载进度 UI
 - 更完整的错误提示和任务状态管理
 
@@ -108,3 +113,4 @@ Cargo workspace
   - `src/lib/types.ts`
   - `README.md`
   - `src-tauri` / `siren_core` 中对应的 rustdoc
+- 如果改了歌词、下载设置或播放器交互，同时检查 `src/App.svelte` 和 `src/lib/components/AudioPlayer.svelte` 的状态同步
