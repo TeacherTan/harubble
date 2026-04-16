@@ -53,11 +53,16 @@
   import { motionStyles } from "$lib/actions/motionStyles";
   import { envStore } from "$lib/features/env/store.svelte";
   import { shellStore } from "$lib/features/shell/store.svelte";
+  import { toast } from "svelte-sonner";
   import AlbumCard from "$lib/components/AlbumCard.svelte";
   import SongRow from "$lib/components/SongRow.svelte";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import MotionSpinner from "$lib/components/MotionSpinner.svelte";
   import MotionPulseBlock from "$lib/components/MotionPulseBlock.svelte";
+  import TopToolbar from "$lib/components/app/TopToolbar.svelte";
+  import SettingsSheet from "$lib/components/app/SettingsSheet.svelte";
+  import DownloadTasksSheet from "$lib/components/app/DownloadTasksSheet.svelte";
+  import StatusToastHost from "$lib/components/app/StatusToastHost.svelte";
 
   // Minimum display time (ms) to prevent animation flash on fast loads
   const MIN_DISPLAY_MS = 260;
@@ -805,11 +810,11 @@
       const existingJob = getSongDownloadJob(currentSong.cid);
       await performSongDownload(currentSong.cid);
       if (existingJob) {
-        alert("这首歌的下载任务已在队列中或正在执行。");
+        notifyInfo("这首歌的下载任务已在队列中或正在执行。");
       }
     } catch (error) {
       console.error("[ERROR] Failed to download current song:", error);
-      alert(
+      notifyError(
         `下载失败：${error instanceof Error ? error.message : String(error)}`,
       );
     }
@@ -893,11 +898,11 @@
       const existingJob = findAlbumDownloadJob(selectedAlbum.cid);
       await performAlbumDownload(selectedAlbum);
       if (existingJob) {
-        alert("这张专辑的下载任务已在队列中或正在执行。");
+        notifyInfo("这张专辑的下载任务已在队列中或正在执行。");
       }
     } catch (error) {
       console.error("[ERROR] Failed to download album:", error);
-      alert(
+      notifyError(
         `整专下载失败：${error instanceof Error ? error.message : String(error)}`,
       );
     }
@@ -910,11 +915,11 @@
       const existingJob = findSelectionDownloadJob(selectedSongCids);
       await performSelectionDownload(selectedSongCids);
       if (existingJob) {
-        alert("这组歌曲的下载任务已在队列中或正在执行。");
+        notifyInfo("这组歌曲的下载任务已在队列中或正在执行。");
       }
     } catch (error) {
       console.error("[ERROR] Failed to create selection download job:", error);
-      alert(
+      notifyError(
         `批量下载失败：${error instanceof Error ? error.message : String(error)}`,
       );
     }
@@ -1696,14 +1701,14 @@
     isClearingAudioCache = true;
     try {
       const removed = await clearAudioCache();
-      alert(
+      notifyInfo(
         removed > 0
           ? `已清除 ${removed} 个音频缓存文件`
           : "当前没有可清除的音频缓存",
       );
     } catch (e) {
       console.error("[ERROR] Failed to clear audio cache:", e);
-      alert(`清除音频缓存失败：${e instanceof Error ? e.message : String(e)}`);
+      notifyError(`清除音频缓存失败：${e instanceof Error ? e.message : String(e)}`);
     } finally {
       isClearingAudioCache = false;
     }
@@ -1714,13 +1719,21 @@
     isSendingTestNotification = true;
     try {
       await sendTestNotification();
-      alert("测试通知已请求发送，请观察系统通知中心或终端日志。");
+      notifyInfo("测试通知已请求发送，请观察系统通知中心或终端日志。");
     } catch (e) {
       console.error("[ERROR] Failed to send test notification:", e);
-      alert(`发送测试通知失败：${e instanceof Error ? e.message : String(e)}`);
+      notifyError(`发送测试通知失败：${e instanceof Error ? e.message : String(e)}`);
     } finally {
       isSendingTestNotification = false;
     }
+  }
+
+  function notifyInfo(message: string) {
+    toast(message);
+  }
+
+  function notifyError(message: string) {
+    toast.error(message);
   }
 
   // Download job helper functions
@@ -2054,11 +2067,11 @@
     try {
       const removed = await clearDownloadHistory();
       if (removed === 0) {
-        alert("当前没有可清理的下载历史。");
+        notifyInfo("当前没有可清理的下载历史。");
       }
     } catch (e) {
       console.error("[ERROR] Failed to clear download history:", e);
-      alert(`清理下载历史失败：${e instanceof Error ? e.message : String(e)}`);
+      notifyError(`清理下载历史失败：${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -2067,11 +2080,11 @@
       const existingJob = getSongDownloadJob(song.cid);
       await performSongDownload(song.cid);
       if (existingJob) {
-        alert("这首歌的下载任务已在队列中或正在执行。");
+        notifyInfo("这首歌的下载任务已在队列中或正在执行。");
       }
     } catch (error) {
       console.error("[ERROR] Failed to download song:", error);
-      alert(
+      notifyError(
         `下载失败：${error instanceof Error ? error.message : String(error)}`,
       );
     }
@@ -2210,6 +2223,8 @@
   ></div>
 {/if}
 
+<StatusToastHost />
+
 <div class="container" class:macos-overlay={isMacOS}>
   <!-- 专辑列表侧边栏 -->
   <OverlayScrollbarsComponent
@@ -2265,6 +2280,23 @@
       ></div>
     {/if}
 
+    <TopToolbar
+      {activeDownloadCount}
+      {isRefreshing}
+      {settingsOpen}
+      {downloadPanelOpen}
+      onRefresh={handleRefresh}
+      onOpenDownloads={() => {
+        downloadPanelOpen = !downloadPanelOpen;
+        if (downloadPanelOpen) settingsOpen = false;
+      }}
+      onOpenSettings={() => {
+        settingsOpen = !settingsOpen;
+        if (settingsOpen) downloadPanelOpen = false;
+      }}
+    />
+
+    {#if false}
     <div class="top-actions">
       <div class="top-toolbar" role="toolbar" aria-label="页面操作">
         <motion.button
@@ -2374,6 +2406,7 @@
         </motion.button>
       </div>
     </div>
+    {/if}
 
     <!-- 歌曲列表内容区 -->
     <OverlayScrollbarsComponent
@@ -2892,6 +2925,43 @@
     </AnimatePresence>
   </section>
 
+  <SettingsSheet
+    bind:open={settingsOpen}
+    bind:format
+    {outputDir}
+    bind:downloadLyrics
+    bind:notifyOnDownloadComplete
+    bind:notifyOnPlaybackChange
+    {isSendingTestNotification}
+    {isClearingAudioCache}
+    onSelectDirectory={handleSelectDirectory}
+    onSendTestNotification={handleSendTestNotification}
+    onClearAudioCache={handleClearAudioCache}
+  />
+
+  <DownloadTasksSheet
+    bind:open={downloadPanelOpen}
+    {downloadManager}
+    {canClearDownloadHistory}
+    {getJobProgress}
+    {getJobProgressText}
+    {getJobStatusLabel}
+    {getJobKindLabel}
+    {getJobSummaryLabel}
+    {getJobErrorSummary}
+    {isJobActive}
+    {canCancelTask}
+    {canRetryTask}
+    {getTaskErrorLabel}
+    {getTaskStatusLabel}
+    onClearDownloadHistory={handleClearDownloadHistory}
+    onCancelDownloadJob={handleCancelDownloadJob}
+    onRetryDownloadJob={handleRetryDownloadJob}
+    onCancelDownloadTask={handleCancelDownloadTask}
+    onRetryDownloadTask={handleRetryDownloadTask}
+  />
+
+  {#if false}
   <!-- Download settings panel (slide-in from right) -->
   <AnimatePresence>
     {#if settingsOpen}
@@ -3323,4 +3393,5 @@
       </motion.div>
     {/if}
   </AnimatePresence>
+  {/if}
 </div>
