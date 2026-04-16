@@ -189,7 +189,12 @@ fn classify_error(e: anyhow::Error) -> DownloadErrorInfo {
     }
 
     if lower.contains("metadata") || lower.contains("metaflac") || lower.contains("tag") {
-        return make_error(DownloadErrorCode::Tagging, "Failed to write metadata", e, false);
+        return make_error(
+            DownloadErrorCode::Tagging,
+            "Failed to write metadata",
+            e,
+            false,
+        );
     }
 
     if lower.contains("network")
@@ -252,7 +257,8 @@ mod tests {
 
     #[test]
     fn classifies_io_errors_from_underlying_io_type() {
-        let io_error = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+        let io_error =
+            std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
         let error = classify_error(io_error.into());
 
         assert!(matches!(error.code, DownloadErrorCode::Io));

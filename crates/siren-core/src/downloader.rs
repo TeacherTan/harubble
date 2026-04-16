@@ -398,8 +398,9 @@ pub async fn download_album(
         }
 
         if let Some(lyric_text) = lyric_text.as_deref() {
-            write_lyric_sidecar(&out_path, lyric_text)
-                .with_context(|| format!("Failed to save lyric sidecar for {}", song_detail.name))?;
+            write_lyric_sidecar(&out_path, lyric_text).with_context(|| {
+                format!("Failed to save lyric sidecar for {}", song_detail.name)
+            })?;
         }
 
         paths.push(out_path);

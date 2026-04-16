@@ -777,7 +777,10 @@ mod tests {
             .retry_task("job-1", "task-1")
             .expect("job should exist");
 
-        assert!(matches!(snapshot.tasks[0].status, DownloadTaskStatus::Cancelled));
+        assert!(matches!(
+            snapshot.tasks[0].status,
+            DownloadTaskStatus::Cancelled
+        ));
         assert_eq!(snapshot.tasks[0].attempt, 0);
     }
 }
