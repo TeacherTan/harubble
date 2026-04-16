@@ -19,9 +19,7 @@ pub fn set_notification_preferences(
 }
 
 #[tauri::command]
-pub fn get_notification_permission_state(
-    state: State<'_, AppState>,
-) -> Result<String, String> {
+pub fn get_notification_permission_state(state: State<'_, AppState>) -> Result<String, String> {
     let app = state.player.app_handle();
     let permission = app
         .notification()
@@ -38,9 +36,7 @@ pub fn get_notification_permission_state(
 }
 
 #[tauri::command]
-pub fn send_test_notification(
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub fn send_test_notification(state: State<'_, AppState>) -> Result<(), String> {
     let app = state.player.app_handle();
     crate::notification::notify_test(app)
 }

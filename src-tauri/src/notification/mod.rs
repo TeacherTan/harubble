@@ -116,7 +116,8 @@ pub fn notify_playback_changed(app: &AppHandle, player_state: &PlayerState) {
         };
 
         #[cfg(target_os = "macos")]
-        if let Err(error) = macos::show_playback(&app_for_task, &title, &body, cover_path.as_ref()) {
+        if let Err(error) = macos::show_playback(&app_for_task, &title, &body, cover_path.as_ref())
+        {
             eprintln!("[notification] Failed to show playback notification: {error}");
         }
 
