@@ -65,6 +65,7 @@
   import StatusToastHost from "$lib/components/app/StatusToastHost.svelte";
   import AlbumSidebar from "$lib/components/app/AlbumSidebar.svelte";
   import AlbumWorkspace from "$lib/components/app/AlbumWorkspace.svelte";
+  import PlayerDock from "$lib/components/app/PlayerDock.svelte";
 
   // Minimum display time (ms) to prevent animation flash on fast loads
   const MIN_DISPLAY_MS = 260;
@@ -2769,7 +2770,6 @@
       {#if currentSong}
         <motion.div
           key="player-dock"
-          class="player-dock"
           initial={axisEnter("y", 18)}
           animate={axisAnimate("y")}
           exit={fadeExit()}
@@ -2877,7 +2877,7 @@
               {/if}
             </AnimatePresence>
 
-            <AudioPlayer
+            <PlayerDock
               song={currentSong}
               {isPlaying}
               {isPaused}
