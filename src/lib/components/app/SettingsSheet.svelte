@@ -45,7 +45,7 @@
         <label class="text-sm text-[var(--text-secondary)]" for="format-select">输出格式</label>
         <select
           id="format-select"
-          class="w-full rounded-2xl border border-white/50 bg-white/40 px-3 py-2 text-sm outline-none"
+          class="w-full rounded-2xl border border-white/50 bg-white/[0.40] px-3 py-2 text-sm outline-none"
           bind:value={format}
         >
           <option value="flac">FLAC（无损压缩）</option>
@@ -58,7 +58,7 @@
         <label class="text-sm text-[var(--text-secondary)]" for="output-dir">保存位置</label>
         <input
           id="output-dir"
-          class="w-full rounded-2xl border border-white/50 bg-white/35 px-3 py-2 text-sm outline-none"
+          class="w-full rounded-2xl border border-white/50 bg-white/[0.35] px-3 py-2 text-sm outline-none"
           readonly
           value={outputDir}
         />
@@ -67,7 +67,7 @@
         </Button>
       </div>
 
-      <div class="space-y-4 rounded-[22px] border border-white/45 bg-white/28 p-4">
+      <div class="space-y-4 rounded-[22px] border border-white/[0.45] bg-white/[0.28] p-4">
         <div class="flex items-center justify-between gap-4">
           <div class="min-w-0">
             <p class="text-sm font-medium">歌词文件</p>

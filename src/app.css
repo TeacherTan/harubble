@@ -18,7 +18,7 @@
   --surface-window: color-mix(in srgb, var(--bg-primary) 100%, transparent);
   --surface-sidebar: color-mix(in srgb, var(--bg-secondary) 92%, white 8%);
   --surface-workspace: color-mix(in srgb, var(--bg-primary) 96%, white 4%);
-  --surface-sheet: color-mix(in srgb, var(--bg-secondary) 76%, white 24%);
+  --surface-sheet: color-mix(in srgb, var(--bg-secondary) 76%, transparent 24%);
   --surface-dock: color-mix(in srgb, var(--player-shell-bg) 88%, white 12%);
   --surface-flyout: color-mix(in srgb, var(--player-shell-bg) 80%, transparent);
   --surface-state: rgba(var(--accent-rgb), 0.08);
@@ -49,7 +49,6 @@
   --muted-foreground: var(--text-secondary);
   --destructive: #ff3b30;
   --destructive-foreground: white;
-  --border: var(--border);
   --input: var(--bg-tertiary);
   --ring: rgba(var(--accent-rgb), 0.3);
   --radius: 0.5rem;
