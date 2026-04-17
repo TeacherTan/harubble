@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 - 技术栈：Rust + Tauri 2 + Vite + Svelte 5
 - 形态：跨平台桌面应用（macOS / Windows / Linux）
-- 当前重点：M1–M4 已完成，当前已具备系统通知集成能力
+- 当前重点：M1–M5-a/b 已完成，当前主界面已切换到新的 UI shell，并具备系统通知与远程封面解析链路
 
 ## 常用命令
 
@@ -65,12 +65,23 @@ Cargo workspace
 
 前端位于仓库根目录：
 
-- `src/App.svelte`：主界面和状态编排
+- `src/App.svelte`：主界面装配层，负责专辑加载、播放状态同步、下载任务状态同步、滚动舞台和面板编排
 - `src/lib/api.ts`：Tauri command bridge
-- `src/lib/cache.ts`：专辑详情、歌曲详情、歌词和主题色缓存
+- `src/lib/cache.ts`：专辑详情、歌曲详情、歌词、主题色和远程封面 data URL 缓存
 - `src/lib/theme.ts`：动态主题变量应用
 - `src/lib/types.ts`：前后端共享数据结构的 TS 版本
-- `src/lib/components/`：播放器、专辑卡片、曲目行、加载动画组件
+- `src/lib/components/AlbumCard.svelte`：左侧专辑卡片
+- `src/lib/components/SongRow.svelte`：曲目行，默认点击播放，进入多选模式后切换为勾选交互
+- `src/lib/components/AudioPlayer.svelte`：播放器主体，包含进度、乱序 / 循环、歌词 / 队列切换和当前歌曲下载入口
+- `src/lib/components/app/AlbumSidebar.svelte`：专辑侧栏容器
+- `src/lib/components/app/TopToolbar.svelte`：顶部工具栏，包含刷新、下载任务入口、设置入口
+- `src/lib/components/app/AlbumWorkspace.svelte`：主内容区容器
+- `src/lib/components/app/PlayerDock.svelte`：底部播放器 Dock 容器
+- `src/lib/components/app/SettingsSheet.svelte`：右侧设置面板
+- `src/lib/components/app/DownloadTasksSheet.svelte`：右侧下载任务面板
+- `src/lib/components/app/StatusToastHost.svelte`：toast 宿主
+- `src/lib/features/`：按 `env / library / player / download / shell` 划分的前端状态脚手架与领域逻辑目录
+- `src/lib/design/`：设计 token、动效参数和视觉 variant 定义
 
 ## 后端 command 清单
 
@@ -81,6 +92,7 @@ Cargo workspace
 - `get_song_detail`
 - `get_song_lyrics`
 - `extract_image_theme`
+- `get_image_data_url`
 - `get_default_output_dir`
 - `play_song`
 - `stop_playback`
