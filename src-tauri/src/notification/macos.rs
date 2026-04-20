@@ -25,11 +25,8 @@ fn set_app_identity(_app: &AppHandle) -> Result<(), String> {
     }
 
     // Debug mode: use Terminal as a fallback since the app runs from CLI.
-    set_application("com.apple.Terminal").map_err(|error| {
-        let message = format!("set_application failed: {error}");
-        eprintln!("[notification:macos] {message}");
-        message
-    })
+    set_application("com.apple.Terminal")
+        .map_err(|error| format!("set_application failed: {error}"))
 }
 
 pub fn show_playback(
@@ -47,11 +44,9 @@ pub fn show_playback(
         notification.image_path(path);
     }
 
-    notification.show().map_err(|error| {
-        let message = format!("show playback failed: {error}");
-        eprintln!("[notification:macos] {message}");
-        message
-    })?;
+    notification
+        .show()
+        .map_err(|error| format!("show playback failed: {error}"))?;
 
     Ok(())
 }
@@ -63,11 +58,7 @@ pub fn show_download(app: &AppHandle, title: &str, body: &str) -> Result<(), Str
         .summary(title)
         .body(body)
         .show()
-        .map_err(|error| {
-            let message = format!("show download failed: {error}");
-            eprintln!("[notification:macos] {message}");
-            message
-        })?;
+        .map_err(|error| format!("show download failed: {error}"))?;
 
     Ok(())
 }
@@ -79,12 +70,6 @@ pub fn show_test(app: &AppHandle) -> Result<(), String> {
         .summary("测试通知")
         .body("塞壬音乐下载器通知功能正常。")
         .show()
-        .map_err(|error| {
-            let message = format!("show test failed: {error}");
-            eprintln!("[notification:macos] {message}");
-            message
-        })?;
-
-    eprintln!("[notification:macos] test notification delivered");
+        .map_err(|error| format!("show test failed: {error}"))?;
     Ok(())
 }

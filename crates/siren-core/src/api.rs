@@ -1,4 +1,4 @@
-use crate::local_inventory::{AlbumDownloadBadge, TrackDownloadBadge};
+use crate::local_inventory::TrackDownloadBadge;
 use anyhow::Result;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -18,9 +18,6 @@ pub struct Album {
     /// 上游接口返回的专辑艺术家列表。
     #[serde(alias = "artistes")]
     pub artists: Vec<String>,
-    /// 当前 active outputDir 下的本地下载聚合标记。
-    #[serde(default)]
-    pub download: AlbumDownloadBadge,
 }
 
 /// `GET /api/album/{cid}/detail` 返回的专辑详情。
@@ -45,9 +42,6 @@ pub struct AlbumDetail {
     pub artists: Option<Vec<String>>,
     /// 该专辑包含的歌曲列表。
     pub songs: Vec<SongEntry>,
-    /// 当前 active outputDir 下的本地下载聚合标记。
-    #[serde(default)]
-    pub download: AlbumDownloadBadge,
 }
 
 /// [`AlbumDetail`] 中内嵌的歌曲摘要。

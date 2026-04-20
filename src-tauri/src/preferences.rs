@@ -1,3 +1,4 @@
+use crate::logging::{LogCenter, LogLevel, LogPayload};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -14,6 +15,8 @@ pub(crate) struct AppPreferences {
     pub(crate) download_lyrics: bool,
     pub(crate) notify_on_download_complete: bool,
     pub(crate) notify_on_playback_change: bool,
+    #[serde(default = "default_log_level")]
+    pub(crate) log_level: String,
 }
 
 impl AppPreferences {
@@ -22,6 +25,9 @@ impl AppPreferences {
         match self.output_format.as_str() {
             "flac" | "wav" | "mp3" => {}
             _ => return Err(format!("不支持的格式: {}", self.output_format)),
+        }
+        if LogLevel::parse(&self.log_level).is_none() {
+            return Err(format!("不支持的日志等级: {}", self.log_level));
         }
         let path = Path::new(&self.output_dir);
         if path.as_os_str().is_empty() || !path.is_absolute() {
@@ -36,6 +42,10 @@ impl AppPreferences {
         }
         Ok(())
     }
+}
+
+fn default_log_level() -> String {
+    LogLevel::Error.as_str().to_string()
 }
 
 fn validate_explicit_export_path(path: &Path) -> Result<(), String> {
@@ -84,6 +94,7 @@ impl Default for AppPreferences {
             download_lyrics: true,
             notify_on_download_complete: true,
             notify_on_playback_change: true,
+            log_level: default_log_level(),
         }
     }
 }
@@ -101,21 +112,57 @@ impl PreferencesStore {
     }
 
     /// 从 TOML 文件加载偏好，缺失或损坏时用默认值初始化并写入
-    pub(crate) fn load(&self) -> AppPreferences {
+    pub(crate) fn load(&self, log_center: Option<&LogCenter>) -> AppPreferences {
         if self.path.exists() {
             match fs::read_to_string(&self.path) {
                 Ok(content) => match toml::from_str::<AppPreferences>(&content) {
                     Ok(prefs) => match prefs.validate() {
                         Ok(()) => return prefs,
                         Err(error) => {
+                            if let Some(log_center) = log_center {
+                                log_center.record(
+                                    LogPayload::new(
+                                        LogLevel::Error,
+                                        "preferences",
+                                        "preferences.invalid_persisted",
+                                        "Persisted preferences are invalid",
+                                    )
+                                    .user_message("偏好配置无效，已回退到默认设置")
+                                    .details(error.clone()),
+                                );
+                            }
                             eprintln!("[preferences] invalid persisted preferences: {error}");
                         }
                     },
                     Err(e) => {
+                        if let Some(log_center) = log_center {
+                            log_center.record(
+                                LogPayload::new(
+                                    LogLevel::Error,
+                                    "preferences",
+                                    "preferences.parse_failed",
+                                    "Failed to parse persisted preferences",
+                                )
+                                .user_message("偏好配置损坏，已回退到默认设置")
+                                .details(e.to_string()),
+                            );
+                        }
                         eprintln!("[preferences] failed to parse TOML: {e}");
                     }
                 },
                 Err(e) => {
+                    if let Some(log_center) = log_center {
+                        log_center.record(
+                            LogPayload::new(
+                                LogLevel::Error,
+                                "preferences",
+                                "preferences.read_failed",
+                                "Failed to read persisted preferences",
+                            )
+                            .user_message("读取偏好配置失败，已回退到默认设置")
+                            .details(e.to_string()),
+                        );
+                    }
                     eprintln!("[preferences] failed to read file: {e}");
                 }
             }
@@ -141,8 +188,20 @@ impl PreferencesStore {
             download_lyrics: true,
             notify_on_download_complete: true,
             notify_on_playback_change: true,
+            log_level: default_log_level(),
         };
         if let Err(e) = self.save(&default_prefs) {
+            if let Some(log_center) = log_center {
+                log_center.record(
+                    LogPayload::new(
+                        LogLevel::Error,
+                        "preferences",
+                        "preferences.write_default_failed",
+                        "Failed to write default preferences",
+                    )
+                    .details(e.clone()),
+                );
+            }
             eprintln!("[preferences] failed to write default preferences: {e}");
         }
         default_prefs

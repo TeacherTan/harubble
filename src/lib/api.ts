@@ -5,7 +5,7 @@ import type {
   Album, AlbumDetail, SongDetail, ThemePalette, PlayerState, PlaybackContext,
   CreateDownloadJobRequest, DownloadJobSnapshot, DownloadManagerSnapshot,
   NotificationPermissionState, AppPreferences, LocalInventorySnapshot,
-  VerificationMode,
+  VerificationMode, LogViewerPage, LogViewerQuery, LogFileStatus,
 } from './types';
 import type { OutputFormat } from './types';
 
@@ -26,8 +26,12 @@ export async function getAlbums(): Promise<Album[]> {
 /**
  * Get album detail with caching (6h TTL).
  */
-export async function getAlbumDetail(albumCid: string): Promise<AlbumDetail> {
-  const cacheKey = `${CACHE_KEY_ALBUM_DETAIL}${albumCid}`;
+export async function getAlbumDetail(
+  albumCid: string,
+  inventoryVersion?: string | null,
+): Promise<AlbumDetail> {
+  const cacheScope = inventoryVersion ?? 'unversioned';
+  const cacheKey = `${CACHE_KEY_ALBUM_DETAIL}${cacheScope}:${albumCid}`;
   const cached = getCached<AlbumDetail>(cacheKey);
   if (cached) {
     return cached;
@@ -323,4 +327,12 @@ export async function exportPreferences(outputPath: string): Promise<AppPreferen
  */
 export async function importPreferences(inputPath: string): Promise<AppPreferences> {
   return invoke<AppPreferences>('import_preferences', { inputPath });
+}
+
+export async function listLogRecords(query: LogViewerQuery): Promise<LogViewerPage> {
+  return invoke<LogViewerPage>('list_log_records', { query });
+}
+
+export async function getLogFileStatus(): Promise<LogFileStatus> {
+  return invoke<LogFileStatus>('get_log_file_status');
 }

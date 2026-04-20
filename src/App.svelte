@@ -34,6 +34,8 @@
     getPreferences,
     setPreferences,
     getLocalInventorySnapshot,
+    listLogRecords,
+    getLogFileStatus,
   } from "$lib/api";
   import { clearCache, clearCachedByPrefix } from "$lib/cache";
   import type {
@@ -51,6 +53,11 @@
     DownloadTaskSnapshot,
     AppPreferences,
     LocalInventorySnapshot,
+    AppErrorEvent,
+    LogLevel,
+    LogFileKind,
+    LogFileStatus,
+    LogViewerRecord,
   } from "$lib/types";
   import { applyThemePalette, DEFAULT_THEME_PALETTE } from "$lib/theme";
   import { motionStyles } from "$lib/actions/motionStyles";
@@ -1367,6 +1374,12 @@
   });
 
   $effect(() => {
+    const _logLevel = logLevel;
+    if (!prefsReady) return;
+    void savePreferences();
+  });
+
+  $effect(() => {
     if (!albumStageEl) return;
 
     syncAlbumStageWidth();
@@ -1380,6 +1393,11 @@
     observer.observe(albumStageEl);
 
     return () => observer.disconnect();
+  });
+
+  $effect(() => {
+    if (!settingsOpen) return;
+    void refreshLogs(logFileKind);
   });
 
   onMount(() => {
@@ -1396,6 +1414,7 @@
     let unlistenDownloadJob: (() => void) | null = null;
     let unlistenDownloadProgress: (() => void) | null = null;
     let unlistenLocalInventory: (() => void) | null = null;
+    let unlistenAppError: (() => void) | null = null;
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     function updateReducedMotionPreference() {
@@ -1418,9 +1437,16 @@
         downloadLyrics = prefs.downloadLyrics;
         notifyOnDownloadComplete = prefs.notifyOnDownloadComplete;
         notifyOnPlaybackChange = prefs.notifyOnPlaybackChange;
+        logLevel = prefs.logLevel;
         prefsReady = true;
       } catch {
         prefsReady = true;
+      }
+
+      try {
+        localInventory = await getLocalInventorySnapshot();
+      } catch {
+        localInventory = null;
       }
 
       try {
@@ -1512,27 +1538,40 @@
         },
       );
 
+      unlistenAppError = await listen<AppErrorEvent>(
+        "app-error-recorded",
+        (event) => {
+          handleAppErrorEvent(event.payload);
+        },
+      );
+
       unlistenLocalInventory = await listen<LocalInventorySnapshot>(
         "local-inventory-state-changed",
         async (event) => {
           const previousVersion = localInventory?.inventoryVersion ?? null;
           localInventory = event.payload;
-          if (
-            event.payload.status === "completed" &&
-            previousVersion !== event.payload.inventoryVersion
-          ) {
+          const inventoryVersionChanged =
+            previousVersion !== event.payload.inventoryVersion;
+
+          if (inventoryVersionChanged) {
             invalidateInventoryCaches();
+          }
+
+          if (event.payload.status === "completed" && inventoryVersionChanged) {
+            const currentSelectedAlbumCid = selectedAlbumCid;
+            if (!currentSelectedAlbumCid) {
+              return;
+            }
+
             try {
-              const nextAlbums = await getAlbums();
-              albums = nextAlbums;
-              if (selectedAlbumCid) {
-                const refreshedAlbum = nextAlbums.find(
-                  (album) => album.cid === selectedAlbumCid,
-                );
-                if (refreshedAlbum) {
-                  selectedAlbum = await getAlbumDetail(refreshedAlbum.cid);
-                }
+              const detail = await getAlbumDetail(
+                currentSelectedAlbumCid,
+                event.payload.inventoryVersion,
+              );
+              if (selectedAlbumCid !== currentSelectedAlbumCid) {
+                return;
               }
+              selectedAlbum = detail;
             } catch {
               // Keep current UI state if refresh fails.
             }
@@ -1548,9 +1587,9 @@
       }
 
       try {
-        localInventory = await getLocalInventorySnapshot();
+        await refreshLogs("session");
       } catch {
-        localInventory = null;
+        // Keep settings usable if logs are unavailable.
       }
 
       try {
@@ -1579,6 +1618,7 @@
       unlistenDownloadJob?.();
       unlistenDownloadProgress?.();
       unlistenLocalInventory?.();
+      unlistenAppError?.();
       mediaQuery.removeEventListener("change", updateReducedMotionPreference);
       window.removeEventListener("resize", handleWindowResize);
     };
@@ -1647,7 +1687,10 @@
 
     const startTime = Date.now();
     try {
-      const detail = await getAlbumDetail(album.cid);
+      const detail = await getAlbumDetail(
+        album.cid,
+        localInventory?.inventoryVersion ?? null,
+      );
       if (requestSeq !== albumRequestSeq) return;
       const artworkAspectRatio = await preloadAlbumArtwork(detail);
       if (requestSeq !== albumRequestSeq) return;
@@ -1737,6 +1780,12 @@
   let downloadLyrics = $state(true);
   let notifyOnDownloadComplete = $state(true);
   let notifyOnPlaybackChange = $state(true);
+  let logLevel = $state<LogLevel>("error");
+  let logFileKind = $state<LogFileKind>("session");
+  let logRecords = $state<LogViewerRecord[]>([]);
+  let logFileStatus = $state<LogFileStatus | null>(null);
+  let logViewerLoading = $state(false);
+  let logViewerError = $state("");
   let isSendingTestNotification = $state(false);
   let isFormatHovered = $state(false);
   let isFormatFocused = $state(false);
@@ -1744,6 +1793,31 @@
   let isOutputDirFocused = $state(false);
   let prefsReady = $state(false);
   let localInventory = $state<LocalInventorySnapshot | null>(null);
+
+  async function refreshLogs(kind = logFileKind) {
+    logViewerLoading = true;
+    logViewerError = "";
+    try {
+      const [page, status] = await Promise.all([
+        listLogRecords({ kind, limit: 100 }),
+        getLogFileStatus(),
+      ]);
+      logRecords = page.records;
+      logFileStatus = status;
+      logFileKind = kind;
+    } catch (error) {
+      logViewerError = error instanceof Error ? error.message : String(error);
+    } finally {
+      logViewerLoading = false;
+    }
+  }
+
+  function handleAppErrorEvent(event: AppErrorEvent) {
+    notifyError(event.message);
+    if (settingsOpen) {
+      void refreshLogs(logFileKind);
+    }
+  }
 
   function invalidateInventoryCaches() {
     clearCachedByPrefix("album_detail:");
@@ -1797,6 +1871,7 @@
       downloadLyrics,
       notifyOnDownloadComplete,
       notifyOnPlaybackChange,
+      logLevel,
     };
     try {
       const updated = await setPreferences(prefs);
@@ -1806,6 +1881,7 @@
       downloadLyrics = updated.downloadLyrics;
       notifyOnDownloadComplete = updated.notifyOnDownloadComplete;
       notifyOnPlaybackChange = updated.notifyOnPlaybackChange;
+      logLevel = updated.logLevel;
     } catch (e) {
       console.error("[ERROR] Failed to save preferences:", e);
     }
@@ -2259,37 +2335,53 @@
     clearCache();
 
     // Reload current album if selected
-    if (selectedAlbumCid) {
-      const currentAlbumCid = selectedAlbumCid;
-      loadingDetail = true;
-      if (!selectedAlbum) {
-        armDetailSkeleton();
-      } else {
-        clearDetailSkeleton();
-      }
-      try {
-        const detail = await getAlbumDetail(currentAlbumCid);
-        if (requestSeq === albumRequestSeq) {
-          const artworkAspectRatio = await preloadAlbumArtwork(detail);
-          if (requestSeq === albumRequestSeq) {
-            setAlbumStageAspectRatio(artworkAspectRatio);
+    try {
+      const nextAlbums = await getAlbums();
+      albums = nextAlbums;
+      if (selectedAlbumCid) {
+        const currentAlbumCid = selectedAlbumCid;
+        loadingDetail = true;
+        if (!selectedAlbum) {
+          armDetailSkeleton();
+        } else {
+          clearDetailSkeleton();
+        }
+        const refreshedAlbum = nextAlbums.find((album) => album.cid === currentAlbumCid);
+        if (refreshedAlbum) {
+          try {
+            const detail = await getAlbumDetail(
+              currentAlbumCid,
+              localInventory?.inventoryVersion ?? null,
+            );
+            if (requestSeq === albumRequestSeq) {
+              const artworkAspectRatio = await preloadAlbumArtwork(detail);
+              if (requestSeq === albumRequestSeq) {
+                setAlbumStageAspectRatio(artworkAspectRatio);
+              }
+            }
+            if (requestSeq === albumRequestSeq) {
+              selectedAlbum = detail;
+              await tick();
+              resetContentScroll();
+            }
+          } catch (e) {
+            if (requestSeq === albumRequestSeq) {
+              console.error("[ERROR] Failed to reload album:", e);
+            }
+          } finally {
+            if (requestSeq === albumRequestSeq) {
+              clearDetailSkeleton();
+              loadingDetail = false;
+            }
           }
-        }
-        if (requestSeq === albumRequestSeq) {
-          selectedAlbum = detail;
-          await tick();
-          resetContentScroll();
-        }
-      } catch (e) {
-        if (requestSeq === albumRequestSeq) {
-          console.error("[ERROR] Failed to reload album:", e);
-        }
-      } finally {
-        if (requestSeq === albumRequestSeq) {
+        } else if (requestSeq === albumRequestSeq) {
+          selectedAlbum = null;
           clearDetailSkeleton();
           loadingDetail = false;
         }
       }
+    } catch (e) {
+      console.error("[ERROR] Failed to refresh album list:", e);
     }
 
     // Brief delay to show spinning state
@@ -2891,11 +2983,18 @@
     bind:downloadLyrics
     bind:notifyOnDownloadComplete
     bind:notifyOnPlaybackChange
+    bind:logLevel
+    {logFileKind}
+    {logRecords}
+    {logFileStatus}
+    {logViewerLoading}
+    {logViewerError}
     {isSendingTestNotification}
     {isClearingAudioCache}
     onSelectDirectory={handleSelectDirectory}
     onSendTestNotification={handleSendTestNotification}
     onClearAudioCache={handleClearAudioCache}
+    onChangeLogFileKind={refreshLogs}
   />
 
   <DownloadTasksSheet

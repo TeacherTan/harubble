@@ -1,8 +1,8 @@
 use crate::app_state::AppState;
 use siren_core::{
-    aggregate_album_badge, badge_for_detected_file, empty_album_badge, has_detected_track,
-    missing_track_badge, Album, AlbumDetail, LocalInventoryScanProgressEvent,
-    LocalInventorySnapshot, LocalInventoryStatus, SongDetail, TrackDownloadBadge, VerificationMode,
+    badge_for_detected_file, has_detected_track, missing_track_badge, AlbumDetail,
+    LocalInventoryScanProgressEvent, LocalInventorySnapshot, LocalInventoryStatus,
+    SongDetail, TrackDownloadBadge, VerificationMode,
 };
 use std::collections::HashSet;
 use std::path::Path;
@@ -70,6 +70,7 @@ impl LocalInventoryService {
         let inventory_version = next_inventory_version();
         let mut state = self.state.lock().await;
         state.verification_mode = verification_mode;
+        state.relative_audio_paths.clear();
         state.snapshot = LocalInventorySnapshot {
             root_output_dir,
             status: LocalInventoryStatus::Scanning,
@@ -130,81 +131,24 @@ impl LocalInventoryService {
     pub(crate) async fn cancel_scan(&self) -> LocalInventorySnapshot {
         self.cancel_flag.store(true, Ordering::SeqCst);
         let mut state = self.state.lock().await;
+        state.relative_audio_paths.clear();
         state.snapshot.status = LocalInventoryStatus::Idle;
         state.snapshot.finished_at = Some(iso_timestamp_now());
         state.snapshot.clone()
     }
 
-    pub(crate) async fn enrich_album_list_with_details(
-        &self,
-        albums: Vec<Album>,
-        album_details: &[AlbumDetail],
-    ) -> Vec<Album> {
-        let state = self.state.lock().await;
-        albums
-            .into_iter()
-            .map(|mut album| {
-                album.download = album_details
-                    .iter()
-                    .find(|detail| detail.cid == album.cid)
-                    .map(|detail| {
-                        detail
-                            .songs
-                            .iter()
-                            .map(|song| {
-                                track_badge_for_song(
-                                    &state.relative_audio_paths,
-                                    &detail.name,
-                                    &song.name,
-                                    state.verification_mode,
-                                    &state.snapshot.inventory_version,
-                                )
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .map(|track_badges| {
-                        aggregate_album_badge(
-                            &track_badges,
-                            state.snapshot.inventory_version.clone(),
-                        )
-                    })
-                    .unwrap_or_else(|| {
-                        if has_detected_album(&state.relative_audio_paths, &album.name) {
-                            aggregate_album_badge(
-                                &[badge_for_detected_file(
-                                    state.verification_mode,
-                                    state.snapshot.inventory_version.clone(),
-                                )],
-                                state.snapshot.inventory_version.clone(),
-                            )
-                        } else {
-                            empty_album_badge(state.snapshot.inventory_version.clone())
-                        }
-                    });
-                album
-            })
-            .collect()
-    }
-
     pub(crate) async fn enrich_album_detail(&self, mut album: AlbumDetail) -> AlbumDetail {
         let state = self.state.lock().await;
         let inventory_version = state.snapshot.inventory_version.clone();
-        let track_badges = album
-            .songs
-            .iter_mut()
-            .map(|song| {
-                let badge = track_badge_for_song(
-                    &state.relative_audio_paths,
-                    &album.name,
-                    &song.name,
-                    state.verification_mode,
-                    &inventory_version,
-                );
-                song.download = badge.clone();
-                badge
-            })
-            .collect::<Vec<_>>();
-        album.download = aggregate_album_badge(&track_badges, inventory_version);
+        for song in &mut album.songs {
+            song.download = track_badge_for_song(
+                &state.relative_audio_paths,
+                &album.name,
+                &song.name,
+                state.verification_mode,
+                &inventory_version,
+            );
+        }
         album
     }
 
@@ -296,13 +240,6 @@ fn track_badge_for_song(
     } else {
         missing_track_badge(inventory_version.to_string())
     }
-}
-
-fn has_detected_album(relative_audio_paths: &HashSet<String>, album_name: &str) -> bool {
-    let album_prefix = format!("{}/", siren_core::audio::sanitize_filename(album_name));
-    relative_audio_paths
-        .iter()
-        .any(|relative_path| relative_path.starts_with(&album_prefix))
 }
 
 fn collect_relative_audio_paths(
@@ -428,17 +365,16 @@ fn next_inventory_version() -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        collect_relative_audio_paths, track_badge_for_song, LocalInventoryService,
-        ScanCollectionOutcome,
+    use super::{collect_relative_audio_paths, track_badge_for_song, LocalInventoryService, ScanCollectionOutcome};
+    use siren_core::{
+        AlbumDetail, LocalInventoryStatus, LocalTrackDownloadStatus, SongEntry, VerificationMode,
     };
-    use siren_core::{Album, AlbumDetail, LocalInventoryStatus, SongEntry, VerificationMode};
     use std::path::Path;
     use std::sync::atomic::AtomicBool;
     use tempfile::tempdir;
 
     #[tokio::test]
-    async fn enriches_album_and_song_download_badges_from_output_dir() {
+    async fn enriches_album_detail_song_downloads_from_output_dir() {
         let temp_dir = tempdir().expect("temp dir");
         std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
         std::fs::write(temp_dir.path().join("Album/Track.flac"), b"audio").expect("audio file");
@@ -467,13 +403,6 @@ mod tests {
 
         assert_eq!(snapshot.status, LocalInventoryStatus::Completed);
 
-        let album = Album {
-            cid: "album-1".to_string(),
-            name: "Album".to_string(),
-            cover_url: "cover".to_string(),
-            artists: vec!["Artist".to_string()],
-            download: Default::default(),
-        };
         let album_detail = AlbumDetail {
             cid: "album-1".to_string(),
             name: "Album".to_string(),
@@ -488,17 +417,16 @@ mod tests {
                 artists: vec!["Artist".to_string()],
                 download: Default::default(),
             }],
-            download: Default::default(),
         };
 
-        let enriched_detail = service.enrich_album_detail(album_detail).await;
-        let enriched_albums = service
-            .enrich_album_list_with_details(vec![album], &[enriched_detail.clone()])
-            .await;
+        let enriched_detail = service.enrich_album_detail(album_detail.clone()).await;
 
-        assert!(enriched_albums[0].download.has_downloaded_tracks);
-        assert!(enriched_detail.download.has_downloaded_tracks);
+        assert_eq!(snapshot.status, LocalInventoryStatus::Completed);
         assert!(enriched_detail.songs[0].download.is_downloaded);
+        assert_eq!(
+            enriched_detail.songs[0].download.download_status,
+            LocalTrackDownloadStatus::Detected
+        );
     }
 
     #[tokio::test]

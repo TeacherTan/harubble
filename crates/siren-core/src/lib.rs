@@ -33,8 +33,7 @@ pub use downloader::{
     MetaOverride, OwnedFlacMetadata, WritePayload,
 };
 pub use local_inventory::{
-    aggregate_album_badge, badge_for_detected_file, badge_for_status, candidate_relative_paths,
-    empty_album_badge, has_detected_track, missing_track_badge, AlbumDownloadBadge,
-    LocalInventoryScanProgressEvent, LocalInventorySnapshot, LocalInventoryStatus,
-    LocalTrackDownloadStatus, TrackDownloadBadge, VerificationMode,
+    badge_for_detected_file, badge_for_status, candidate_relative_paths, has_detected_track,
+    missing_track_badge, LocalInventoryScanProgressEvent, LocalInventorySnapshot,
+    LocalInventoryStatus, LocalTrackDownloadStatus, TrackDownloadBadge, VerificationMode,
 };

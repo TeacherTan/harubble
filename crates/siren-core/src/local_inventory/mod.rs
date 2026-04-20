@@ -53,28 +53,6 @@ impl Default for TrackDownloadBadge {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AlbumDownloadBadge {
-    pub has_downloaded_tracks: bool,
-    pub downloaded_track_count: usize,
-    pub verified_track_count: usize,
-    pub mismatch_track_count: usize,
-    pub inventory_version: String,
-}
-
-impl Default for AlbumDownloadBadge {
-    fn default() -> Self {
-        Self {
-            has_downloaded_tracks: false,
-            downloaded_track_count: 0,
-            verified_track_count: 0,
-            mismatch_track_count: 0,
-            inventory_version: String::new(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct LocalInventorySnapshot {
     pub root_output_dir: String,
     pub status: LocalInventoryStatus,
@@ -128,13 +106,6 @@ pub fn missing_track_badge(inventory_version: impl Into<String>) -> TrackDownloa
     badge_for_status(LocalTrackDownloadStatus::Missing, inventory_version)
 }
 
-pub fn empty_album_badge(inventory_version: impl Into<String>) -> AlbumDownloadBadge {
-    AlbumDownloadBadge {
-        inventory_version: inventory_version.into(),
-        ..AlbumDownloadBadge::default()
-    }
-}
-
 pub fn badge_for_detected_file(
     verification_mode: VerificationMode,
     inventory_version: impl Into<String>,
@@ -155,32 +126,6 @@ pub fn badge_for_status(
     TrackDownloadBadge {
         is_downloaded: is_downloaded_status(status),
         download_status: status,
-        inventory_version: inventory_version.into(),
-    }
-}
-
-pub fn aggregate_album_badge(
-    track_badges: &[TrackDownloadBadge],
-    inventory_version: impl Into<String>,
-) -> AlbumDownloadBadge {
-    let downloaded_track_count = track_badges
-        .iter()
-        .filter(|badge| badge.is_downloaded)
-        .count();
-    let verified_track_count = track_badges
-        .iter()
-        .filter(|badge| badge.download_status == LocalTrackDownloadStatus::Verified)
-        .count();
-    let mismatch_track_count = track_badges
-        .iter()
-        .filter(|badge| badge.download_status == LocalTrackDownloadStatus::Mismatch)
-        .count();
-
-    AlbumDownloadBadge {
-        has_downloaded_tracks: downloaded_track_count > 0,
-        downloaded_track_count,
-        verified_track_count,
-        mismatch_track_count,
         inventory_version: inventory_version.into(),
     }
 }
@@ -211,9 +156,8 @@ pub fn has_detected_track(
 #[cfg(test)]
 mod tests {
     use super::{
-        aggregate_album_badge, badge_for_detected_file, candidate_relative_paths,
-        has_detected_track, is_downloaded_status, LocalTrackDownloadStatus, TrackDownloadBadge,
-        VerificationMode,
+        badge_for_detected_file, candidate_relative_paths, has_detected_track,
+        is_downloaded_status, LocalTrackDownloadStatus, VerificationMode,
     };
     use std::collections::HashSet;
 
@@ -252,34 +196,6 @@ mod tests {
             LocalTrackDownloadStatus::Detected
         );
         assert!(strict_badge.is_downloaded);
-    }
-
-    #[test]
-    fn aggregates_album_counts_from_track_badges() {
-        let badges = vec![
-            TrackDownloadBadge {
-                is_downloaded: true,
-                download_status: LocalTrackDownloadStatus::Detected,
-                inventory_version: "v1".to_string(),
-            },
-            TrackDownloadBadge {
-                is_downloaded: false,
-                download_status: LocalTrackDownloadStatus::Mismatch,
-                inventory_version: "v1".to_string(),
-            },
-            TrackDownloadBadge {
-                is_downloaded: true,
-                download_status: LocalTrackDownloadStatus::Verified,
-                inventory_version: "v1".to_string(),
-            },
-        ];
-
-        let album_badge = aggregate_album_badge(&badges, "v1");
-
-        assert!(album_badge.has_downloaded_tracks);
-        assert_eq!(album_badge.downloaded_track_count, 2);
-        assert_eq!(album_badge.verified_track_count, 1);
-        assert_eq!(album_badge.mismatch_track_count, 1);
     }
 
     #[test]

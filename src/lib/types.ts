@@ -1,11 +1,3 @@
-export interface AlbumDownloadBadge {
-  hasDownloadedTracks: boolean;
-  downloadedTrackCount: number;
-  verifiedTrackCount: number;
-  mismatchTrackCount: number;
-  inventoryVersion: string;
-}
-
 export type LocalTrackDownloadStatus =
   | 'missing'
   | 'detected'
@@ -51,7 +43,6 @@ export interface Album {
   name: string;
   coverUrl: string;
   artists: string[];
-  download: AlbumDownloadBadge;
 }
 
 export interface SongEntry {
@@ -94,7 +85,6 @@ export interface AlbumDetail {
   coverDeUrl: string | null;
   artists: string[] | null;
   songs: SongEntry[];
-  download: AlbumDownloadBadge;
 }
 
 export interface ThemePalette {
@@ -227,12 +217,58 @@ export interface PlayerState {
   volume: number;
 }
 
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
 export interface AppPreferences {
   outputFormat: OutputFormat;
   outputDir: string;
   downloadLyrics: boolean;
   notifyOnDownloadComplete: boolean;
   notifyOnPlaybackChange: boolean;
+  logLevel: LogLevel;
+}
+
+export type AppErrorLevel = 'warn' | 'error';
+
+export interface AppErrorEvent {
+  id: string;
+  ts: string;
+  level: AppErrorLevel;
+  domain: string;
+  code: string;
+  message: string;
+}
+
+export type LogFileKind = 'session' | 'persistent';
+
+export interface LogViewerQuery {
+  kind: LogFileKind;
+  level?: LogLevel | null;
+  domain?: string | null;
+  search?: string | null;
+  limit?: number | null;
+  offset?: number | null;
+}
+
+export interface LogViewerRecord {
+  id: string;
+  ts: string;
+  level: LogLevel;
+  domain: string;
+  code: string;
+  message: string;
+  details: string | null;
+}
+
+export interface LogViewerPage {
+  records: LogViewerRecord[];
+  total: number;
+  kind: LogFileKind;
+}
+
+export interface LogFileStatus {
+  hasSessionLog: boolean;
+  hasPersistentLog: boolean;
 }
 
 export type NotificationPermissionState =
