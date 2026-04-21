@@ -2,7 +2,7 @@
 
 > 前端架构、开发约定与验收基线的唯一主文档。
 >
-> 最后更新：2026-04-17
+> 最后更新：2026-04-21
 
 ## 1. 布局与主要组件
 
@@ -262,11 +262,13 @@ if (import.meta.hot) {
 
 ### 下载标记与缓存规则
 
-- `getAlbums()` 返回轻量 `Album[]`
-- `getAlbumDetail()` / `getSongDetail()` 返回值中的曲目级 `download` 字段属于动态数据
-- 一旦后端引入 `inventoryVersion`，前端缓存 key 必须纳入该版本，或在本地盘点事件后主动清理相关缓存
+- `getAlbums()` 返回轻量 `Album[]`，并携带专辑级 `download` 保守提示字段
+- `getAlbumDetail()` 返回专辑级 `download` 精确聚合字段，`songs[]` 中的曲目级 `download` 仍属于动态数据
+- `getSongDetail()` 返回值中的 `download` 字段属于动态数据
+- `getAlbumDetail()` 与 `getSongDetail()` 的缓存 key 必须带上 `inventoryVersion`
 - 不允许在缓存中长期保留脱离当前 `inventoryVersion` 的 `AlbumDetail` / `SongDetail`
-- 收到 `local-inventory-state-changed` 且 `inventoryVersion` 变化后，前端应立即清理专辑详情和歌曲详情相关缓存；完成扫描后再刷新数据
+- 收到 `local-inventory-state-changed` 且 `inventoryVersion` 变化后，前端应立即清理专辑详情和歌曲详情相关缓存
+- 盘点完成且 `inventoryVersion` 变化后，前端应刷新当前专辑详情，并重新拉取专辑列表，让侧栏专辑 badge 与详情同步
 
 ### 日志与运行时错误反馈
 
@@ -299,13 +301,18 @@ if (import.meta.hot) {
 
 ### 下载标记消费规则
 
-- 专辑详情曲目列表直接消费 `SongEntry.download.isDownloaded`
+- 专辑列表可消费 `Album.download` 作为保守提示；当前语义更接近“该专辑在当前 active root 下已发现可关联的本地内容”，不是完整性结论
+- 专辑详情页优先消费 `AlbumDetail.download` 作为专辑级精确聚合结果，不从 `songs[]` 再次本地推导
+- 专辑详情曲目列表直接消费 `SongEntry.download`
 - 当前歌曲详情或播放器关联区直接消费 `SongDetail.download`
 - 前端不得自己以下载任务历史或本地临时映射推导“是否已下载”，统一以后端内容接口返回的 `download` 字段为准
 - `download.isDownloaded = true` 的最低语义是“当前 active root 下已确认存在本地文件”，不等于“已完成一致性校验”
-- `download.downloadStatus = unverifiable` 时，前端仍按“已下载”展示，但可在需要时补充“未完成校验”提示
+- `download.downloadStatus = detected` 时，前端展示为“已检测到”
+- `download.downloadStatus = verified` 时，前端展示为“已校验”
+- `download.downloadStatus = partial` 时，前端展示为“部分下载”
+- `download.downloadStatus = unverifiable` 时，前端展示为“不可校验”，但仍属于已下载
 - `download.downloadStatus = mismatch` 时，前端应按异常态处理，不应继续展示为普通“已下载”
-- 若需要区分“已存在 / 已校验 / 异常”，使用 `download.downloadStatus` 而不是重新发明前端枚举
+- 若需要区分“已存在 / 已校验 / 异常”，使用 `download.downloadStatus`，不在前端重复推导或再发明枚举
 
 ### 曲目点击行为
 

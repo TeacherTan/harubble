@@ -30,10 +30,14 @@ pub use download::service::DownloadService;
 pub use downloader::{
     album_cover_exists, album_output_dir, download_album_cover, download_song,
     download_song_phase1, write_album_cover_bytes, write_payload_to_disk, DownloadProgress,
-    MetaOverride, OwnedFlacMetadata, WritePayload,
+    DownloadProvenanceSeed, MetaOverride, OwnedFlacMetadata, WritePayload,
 };
 pub use local_inventory::{
+    aggregate_album_download_badge, album_badge_for_status, album_badge_from_evidence,
     badge_for_detected_file, badge_for_status, candidate_relative_paths, has_detected_track,
-    missing_track_badge, LocalInventoryScanProgressEvent, LocalInventorySnapshot,
-    LocalInventoryStatus, LocalTrackDownloadStatus, TrackDownloadBadge, VerificationMode,
+    matched_track_evidence, missing_album_badge, missing_track_badge, track_badge_from_matches,
+    AlbumDownloadBadge, LocalAudioFileEvidence, LocalAudioFileVerificationState,
+    LocalInventoryScanProgressEvent, LocalInventorySnapshot, LocalInventoryStatus,
+    LocalTrackDownloadStatus, LocalTrackEvidenceMatchRule, MatchedTrackEvidence,
+    TrackDownloadBadge, VerificationMode,
 };

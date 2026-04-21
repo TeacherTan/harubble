@@ -5,7 +5,8 @@ use tauri::State;
 
 #[tauri::command]
 pub async fn get_albums(state: State<'_, AppState>) -> Result<Vec<siren_core::api::Album>, String> {
-    state.api.get_albums().await.map_err(|e| e.to_string())
+    let albums = state.api.get_albums().await.map_err(|e| e.to_string())?;
+    Ok(state.local_inventory_service.enrich_albums(albums).await)
 }
 
 #[tauri::command]

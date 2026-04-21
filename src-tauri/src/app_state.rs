@@ -1,5 +1,6 @@
 use crate::audio_cache;
 use crate::local_inventory::LocalInventoryService;
+use crate::local_inventory_provenance::LocalInventoryProvenanceStore;
 use crate::logging::{LogCenter, LogLevel, LogPayload};
 use crate::player::stream::{GrowingFileHandle, PlaybackInput, SampleBuffer};
 use crate::player::{AudioPlayer, PlaybackContext, PlaybackQueueEntry};
@@ -18,6 +19,7 @@ pub(crate) struct AppState {
     pub(crate) api: Arc<siren_core::ApiClient>,
     pub(crate) download_service: Arc<Mutex<DownloadService>>,
     pub(crate) local_inventory_service: LocalInventoryService,
+    pub(crate) local_inventory_provenance_store: Arc<LocalInventoryProvenanceStore>,
     pub(crate) preferences_store: Arc<PreferencesStore>,
     pub(crate) preferences: Arc<StdMutex<AppPreferences>>,
     pub(crate) log_center: Arc<LogCenter>,
@@ -29,11 +31,15 @@ impl AppState {
         let player = AudioPlayer::new(app.clone()).map_err(|e| e.to_string())?;
         let api = siren_core::ApiClient::new().map_err(|e| e.to_string())?;
         let download_service = Arc::new(Mutex::new(DownloadService::new()));
-        let local_inventory_service = LocalInventoryService::new();
         let app_data_dir = app
             .path()
             .app_data_dir()
             .map_err(|e| format!("failed to get app data dir: {e}"))?;
+        let local_inventory_provenance_store = Arc::new(
+            LocalInventoryProvenanceStore::new(app_data_dir.clone()).map_err(|e| e.to_string())?,
+        );
+        let local_inventory_service =
+            LocalInventoryService::new(local_inventory_provenance_store.clone());
         let store = PreferencesStore::new(app_data_dir);
         let preferences = store.load(Some(log_center.as_ref()));
         Ok(Self {
@@ -41,6 +47,7 @@ impl AppState {
             api: Arc::new(api),
             download_service,
             local_inventory_service,
+            local_inventory_provenance_store,
             preferences_store: Arc::new(store),
             preferences: Arc::new(StdMutex::new(preferences)),
             log_center,

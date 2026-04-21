@@ -2,132 +2,15 @@
 
 > 仅面向未来或尚未完成的后端阶段规划。
 >
-> 已完成的后端能力（Phase 1~7）与 Phase 8 基线，参见 [BACKEND_COMPLETED_PHASES.md](BACKEND_COMPLETED_PHASES.md)。
+> 已完成的后端能力（Phase 1~8）参见 [BACKEND_COMPLETED_PHASES.md](BACKEND_COMPLETED_PHASES.md)。
 >
 > 共享类型、命令、事件和状态机规则以 [BACKEND_API_CONTRACT.md](BACKEND_API_CONTRACT.md) 为唯一事实来源。
 
 ## 当前剩余的后端能力缺口
 
-1. **Phase 8 的校验链补全**：当前本地盘点首版主要基于文件名与目录结构做 detected/unverifiable 识别，`verified` / `mismatch` / `partial`、专辑级聚合 badge、MD5 best-effort 和 provenance 映射仍未落地。
-2. **Phase 9** 缓存替换方案：当前仍缺少分层缓存、按 key 失效、命中率统计、音频缓存容量上限与 siren-core HTTP 层 LRU 等能力。
-3. **Phase 10** 下载 session 持久化：当前下载任务状态仍是内存态，应用重启后历史和队列都会丢失。
-4. **Phase 11** 搜索 / 过滤 / 历史视图增强的后端支撑：当前 `list_download_jobs()` 返回完整快照，现阶段足够，但如果历史量变大，后端可能需要提供摘要、筛选或分页能力。
-
-## Phase 8：本地已下载盘点与下载标记（第二阶段补全项）
-
-> 当前已完成首版盘点基线：扫描 active `outputDir`、返回曲目级下载标记、暴露盘点命令与事件，并在 `outputDir` 变化后自动重扫。
->
-> 本章节聚焦的是 Phase 8 剩余的校验增强项，而不是从零开始实现整套盘点能力。
-
-### 目标
-
-基于当前 `AppPreferences.outputDir` 建立本地盘点能力，把“是否已下载”直接带到专辑列表、专辑详情和歌曲详情返回中，并在下载目录切换后自动重新检测。
-
-### 范围
-
-本阶段处理：
-
-- 当前 active `outputDir` 下的本地音频文件盘点
-- `Album` / `AlbumDetail` / `SongEntry` / `SongDetail` 返回值上的下载标记 enrich
-- 本地盘点快照、重扫命令与进度事件
-- `outputDir` 切换后的异步自动重扫
-- 条件满足时的 best-effort MD5 校验
-
-本阶段不做：
-
-- 旧目录到新目录的自动迁移
-- 多 root 并行盘点
-- 自动修复损坏文件或自动重下
-- 为首版引入数据库
-
-### 关键决策
-
-1. **独立域**：本地盘点作为独立后端域，不并入 `DownloadService`。
-2. **列表直出下载标记**：`get_albums()`、`get_album_detail()`、`get_song_detail()` 直接返回 `download` 字段，不新增第二套内容命令。
-3. **状态分离**：区分 `isDownloaded` 与 `downloadStatus`，避免把“本地存在”和“已校验一致”混为一谈；其中 `unverifiable` 表示“已存在但无法可信校验”，仍视为已下载。
-4. **缓存失效键**：使用 `inventoryVersion` 作为前端动态缓存的统一失效键。
-5. **MD5 best-effort**：只有本地最终文件与远端 checksum 语义可比时才尝试 MD5，不把 MD5 作为已下载识别前置条件。
-6. **provenance 映射**：对下载时拿到的原始资源 checksum（如 `Content-MD5` / `ETag`）与处理后产物建立持久映射，用“来源一致”替代“转码后文件必须直接命中远端 MD5”。
-7. **可信边界明确化**：provenance 只承接下载链路内已建链的受信来源；若最终产物被外部修改或摘要不再匹配，则映射失效。
-
-### 主要工作
-
-1. 在 `siren-core` / `src-tauri` 中引入本地盘点服务、扫描器与匹配逻辑。
-2. 冻结 `LocalTrackDownloadStatus`、`TrackDownloadBadge`、`AlbumDownloadBadge`、`LocalInventorySnapshot` 等共享类型。
-3. 为 `Album`、`AlbumDetail`、`SongEntry`、`SongDetail` 增加 `download` 字段。
-4. 新增 `get_local_inventory_snapshot()`、`rescan_local_inventory()`、`cancel_local_inventory_scan()`。
-5. 新增 `local-inventory-state-changed` 与 `local-inventory-scan-progress` 事件。
-6. 在 `set_preferences()` 中对 `outputDir` 变化增加异步重扫触发。
-7. 明确前端缓存失效策略：缓存 key 包含 `inventoryVersion` 或在盘点事件后主动失效。
-8. 补充上游 checksum 能力研究，确认 MD5 的可用边界。
-9. 设计并落地 provenance 映射存储：记录 `remote_checksum`、原始资源标识、处理参数摘要与最终产物摘要，为转码/写 tag 后的文件提供来源校验依据。
-10. 为 `strict` 模式补齐落地语义：显式产出 `unverifiable`，而不是把“已存在但无法校验”折叠到 `detected`。
-11. 明确 provenance 失效规则：文件被外部修改、覆盖或摘要漂移后，已有映射不得继续用于“来源已验证”结论。
-
-### 实施 checklist
-
-- [ ] **步骤 1：补齐状态模型落地**
-  - [ ] 在 `siren-core` 中为 `verified` / `mismatch` / `partial` / `unverifiable` 增加明确的 badge 构造入口，而不是只依赖 detected/missing 快捷路径
-  - [ ] 保持 `isDownloaded` 布尔映射不变，只扩展 `downloadStatus` 的实际产出能力
-  - [ ] 明确专辑级聚合状态与曲目级状态之间的映射规则，避免前后端各自推导
-
-- [ ] **步骤 2：把扫描结果从“路径集合”升级为“证据对象”**
-  - [ ] 让扫描阶段输出结构化证据，而不仅是 `relative_audio_paths`
-  - [ ] 证据至少包含：相对路径、文件大小、mtime、候选 checksum、命中规则、是否位于专辑目录
-  - [ ] 为后续 `verified` / `mismatch` / `partial` 判断预留字段，避免再次推翻扫描结果结构
-
-- [ ] **步骤 3：接入 checksum / provenance 校验链**
-  - [ ] 先确认上游 checksum 的实际可用性、语义与稳定性，明确哪些场景可以直接比对
-  - [ ] 在下载链路写入 provenance 映射，在重扫链路消费 provenance 映射
-  - [ ] provenance 存储保持为本地盘点独立模块，不并入 `DownloadService`
-  - [ ] 明确 provenance 失效条件：文件摘要漂移、外部覆盖、外部修改后不再沿用旧结论
-
-- [ ] **步骤 4：补专辑级聚合 badge**
-  - [ ] 增加专辑级聚合类型与聚合规则
-  - [ ] 至少覆盖：全缺失、部分存在、全部已下载、存在 mismatch / unverifiable 等异常态
-  - [ ] 保持列表接口与详情接口的聚合语义一致，避免同一专辑在不同视图出现冲突状态
-
-- [ ] **步骤 5：补测试与文档同步**
-  - [ ] 单测覆盖状态映射、候选匹配、strict 模式、provenance 失效规则
-  - [ ] 集成测试覆盖 `outputDir` 切换、重扫、文件被篡改后的重新判定
-  - [ ] 同步更新 `BACKEND_API_CONTRACT.md`、`FRONTEND_GUIDE.md`、`README.md` 与 rustdoc
-
-### 涉及文件
-
-- `crates/siren-core/src/api.rs`
-- `crates/siren-core/src/local_inventory/`（新目录）
-- `src-tauri/src/app_state.rs`
-- `src-tauri/src/commands/library.rs`
-- `src-tauri/src/commands/preferences.rs`
-- `src-tauri/src/commands/local_inventory.rs`（新文件）
-- `src-tauri/src/local_inventory/`（新目录）
-- `src/lib/types.ts`
-- `src/lib/api.ts`
-- `BACKEND_API_CONTRACT.md`
-- `FRONTEND_GUIDE.md`
-
-### 完成定义
-
-- `get_albums()` 返回的专辑列表可直接显示“已有下载内容”
-- `get_album_detail()` 返回的曲目列表可直接读取 `song.download.isDownloaded`
-- `get_song_detail()` 返回包含下载标记
-- 修改 `outputDir` 后，无需重启应用即可触发新的盘点
-- 前端在盘点后不会继续展示旧的下载标记缓存
-- 不可比场景下不会错误地因为 MD5 缺失把本地文件判为未下载
-- `strict` 模式下，“已存在但无法校验”的文件会稳定落到 `unverifiable`，而不是被折叠为 `detected` 或误判为未下载
-- 对于转码或写 tag/cover 后的产物，若存在可信 provenance 映射，可判定其来源对应的原始资源已校验一致
-- 对已建立 provenance 的产物，一旦文件被外部修改、覆盖或摘要漂移，不再继续沿用旧的“来源已验证”结论
-
-### 验证项
-
-1. 空目录扫描时，列表项下载标记全部为 false。
-2. 单首已落盘时，对应 `SongEntry.download.isDownloaded` 为 true。
-3. 专辑目录部分曲目存在时，专辑级下载聚合字段正确。
-4. 切换下载目录后，新旧目录下载标记按当前 root 正确切换。
-5. WAV → FLAC 场景不会错误进入“MD5 mismatch”。
-6. `strict` 模式下，远端 checksum 缺失或不可比时，已确认存在的本地文件会返回 `unverifiable`，且 `isDownloaded` 仍为 true。
-7. 对已建立 provenance 映射的转码产物，可在不直接比较最终文件与远端原始 MD5 的前提下判定来源一致。
-8. 对已建立 provenance 映射的产物，在文件摘要变化后重新扫描，不再返回 `verified`。
+1. **Phase 9** 缓存替换方案：当前仍缺少分层缓存、按 key 失效、命中率统计、音频缓存容量上限与 siren-core HTTP 层 LRU 等能力。
+2. **Phase 10** 下载 session 持久化：当前下载任务状态仍是内存态，应用重启后历史和队列都会丢失。
+3. **Phase 11** 搜索 / 过滤 / 历史视图增强的后端支撑：当前 `list_download_jobs()` 返回完整快照，现阶段足够，但如果历史量变大，后端可能需要提供摘要、筛选或分页能力。
 
 ## Phase 9：缓存替换方案
 

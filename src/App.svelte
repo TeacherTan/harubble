@@ -60,6 +60,7 @@
     LogViewerRecord,
   } from "$lib/types";
   import { applyThemePalette, DEFAULT_THEME_PALETTE } from "$lib/theme";
+  import { getDownloadBadgeLabel, shouldShowDownloadBadge } from "$lib/downloadBadge";
   import { motionStyles } from "$lib/actions/motionStyles";
   import { envStore } from "$lib/features/env/store.svelte";
   import { shellStore } from "$lib/features/shell/store.svelte";
@@ -1558,6 +1559,12 @@
           }
 
           if (event.payload.status === "completed" && inventoryVersionChanged) {
+            try {
+              await refreshAlbumsList();
+            } catch {
+              // Keep current album list if refresh fails.
+            }
+
             const currentSelectedAlbumCid = selectedAlbumCid;
             if (!currentSelectedAlbumCid) {
               return;
@@ -1822,6 +1829,10 @@
   function invalidateInventoryCaches() {
     clearCachedByPrefix("album_detail:");
     clearCachedByPrefix("song_detail:");
+  }
+
+  async function refreshAlbumsList() {
+    albums = await getAlbums();
   }
 
   async function handleSelectDirectory() {
@@ -2629,6 +2640,11 @@
                     <span class="album-song-count"
                       >{selectedAlbum.songs.length} 首歌曲</span
                     >
+                    {#if shouldShowDownloadBadge(selectedAlbum.download.downloadStatus)}
+                      <span class="album-download-status-badge">
+                        {getDownloadBadgeLabel(selectedAlbum.download.downloadStatus)}
+                      </span>
+                    {/if}
                   </div>
                   <div class="controls album-hero-actions">
                     <motion.button

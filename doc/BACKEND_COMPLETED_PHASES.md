@@ -9,8 +9,9 @@
 ## 当前总览
 
 - **Phase 1–7 已完成**
-- **Phase 8 基线已完成**
-- 当前待补齐内容为 **Phase 8 剩余增强项**，以及后续 **Phase 9–11**
+- **Phase 8 已完成**
+- Phase 8 当前已包含：结构化本地证据、`verified` / `mismatch` / `partial` / `unverifiable` 的实际产出、下载链路 provenance 记录、下载后自动重扫、`inventoryVersion` 驱动的前端缓存失效与状态展示
+- 当前待办已切换为 **Phase 9–11**
 
 ## 已完成阶段
 
@@ -62,13 +63,19 @@
 - 导入 / 导出偏好
 - 通知偏好收敛到统一偏好系统
 
-### Phase 8 基线：本地已下载盘点与下载标记首版
+### Phase 8：本地已下载盘点、校验链与下载标记
 
 - active `outputDir` 扫描
 - `SongEntry` / `SongDetail.download` enrich
 - 盘点快照 / 重扫 / 取消命令
 - 盘点状态 / 进度事件
 - `outputDir` 变化后自动重扫
+- 结构化本地证据模型（相对路径 / 文件大小 / mtime / 候选 checksum / 命中规则 / 专辑目录标记 / verification state）
+- `verified` / `mismatch` / `partial` / `unverifiable` 的实际状态产出
+- `Album.download` 列表级保守提示字段
+- 下载写盘成功后的 provenance 记录与自动 inventory 刷新
+- `inventoryVersion` 驱动的专辑详情 / 歌曲详情缓存失效
+- 前端专辑列表、专辑详情、曲目行的下载状态展示
 
 ## 已落地基础能力补充
 

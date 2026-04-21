@@ -4,8 +4,8 @@
 
 相关文档：
 
-- [BACKEND_COMPLETED_PHASES.md](BACKEND_COMPLETED_PHASES.md)：后端已完成阶段（Phase 1~7 与 Phase 8 基线）
-- [BACKEND_PENDING_PHASES.md](BACKEND_PENDING_PHASES.md)：后端待办阶段（Phase 8 剩余增强项与 Phase 9~11）
+- [BACKEND_COMPLETED_PHASES.md](BACKEND_COMPLETED_PHASES.md)：后端已完成阶段（Phase 1~8）
+- [BACKEND_PENDING_PHASES.md](BACKEND_PENDING_PHASES.md)：后端待办阶段（Phase 9~11）
 - [FRONTEND_GUIDE.md](FRONTEND_GUIDE.md)：前端架构与开发指南
 
 ## 共享类型
@@ -26,6 +26,7 @@
 - `DownloadTaskProgressEvent`
 - `LocalTrackDownloadStatus`
 - `TrackDownloadBadge`
+- `AlbumDownloadBadge`
 - `LocalInventoryStatus`
 - `VerificationMode`
 - `LocalInventorySnapshot`
@@ -169,6 +170,7 @@
 - `bytesTotal: number | null`
 - `songIndex: number`
 - `songCount: number`
+- `speedBytesPerSec: number`
 
 ### `LocalTrackDownloadStatus`
 
@@ -199,8 +201,16 @@
 
 当前实现说明：
 
-- 当前首版盘点实现已稳定产出 `missing`、`detected`，以及 `strict` 模式下的 `unverifiable`
-- `verified` / `mismatch` / `partial` 是已冻结的目标语义，但截至当前版本仍属于后续 Phase 8 增强项，尚未在扫描链路中实际产出
+- 当前实现已稳定产出 `missing`、`detected`、`verified`、`mismatch`、`partial`、`unverifiable`
+- `verified` 目前有两类来源：
+  - 本地最终文件摘要可直接与可信记录比对且结果一致
+  - 本地最终文件摘要命中下载链路写入的可信 provenance 记录
+- `mismatch` 目前用于“相同相对路径已有 provenance 记录，但当前最终文件摘要已漂移”的异常态
+- `partial` 目前会在两类场景出现：
+  - 曲目级：同一曲目命中多个本地候选文件
+  - 专辑级：当前 active root 下已发现部分本地内容，但尚不足以视为完整一致
+- `strict` 模式下，“已存在但当前无法可信校验”的文件会显式产出 `unverifiable`
+- `get_albums()` 的专辑 badge 仍是保守提示；若歌曲以单曲形式落在根目录、且缺少专辑目录证据，列表 badge 可能低估，详情页聚合结果为准
 
 ### `TrackDownloadBadge`
 
@@ -213,6 +223,19 @@
 - 前端直接消费 `isDownloaded`
 - 更细粒度语义由 `downloadStatus` 表达
 - `inventoryVersion` 用于动态缓存失效
+
+### `AlbumDownloadBadge`
+
+- `isDownloaded: boolean`
+- `downloadStatus: LocalTrackDownloadStatus`
+- `inventoryVersion: string`
+
+字段职责：
+
+- 用于 `get_albums()` 的专辑级下载提示状态
+- 布尔语义与 `TrackDownloadBadge.isDownloaded` 保持一致
+- `get_albums()` 当前返回保守聚合提示；`get_album_detail()` 返回基于曲目 badge 的更精确聚合结果
+- 前端直接渲染后端返回的专辑 badge，不在列表或详情层重复推导聚合逻辑
 
 ### `LocalInventoryStatus`
 
@@ -264,6 +287,7 @@
 - `name: string`
 - `coverUrl: string`
 - `artists: string[]`
+- `download: AlbumDownloadBadge`
 
 ### `SongEntry`
 
@@ -293,6 +317,7 @@
 - `coverUrl: string`
 - `coverDeUrl: string | null`
 - `artists: string[] | null`
+- `download: AlbumDownloadBadge`
 - `songs: SongEntry[]`
 
 ### `AppPreferences`
@@ -441,8 +466,8 @@
 返回约束：
 
 - `get_albums` 是轻量列表接口，不触发 per-album 详情 fan-out
-- `get_albums` 不返回专辑级下载 badge
-- `get_album_detail` 不承载专辑级聚合下载 badge
+- `get_albums` 返回专辑级下载 badge，基于专辑目录证据保守聚合；若专辑曲目以单曲形式下载到根目录，列表 badge 可能显示 `missing`，但详情页会正确显示已下载
+- `get_album_detail` 返回专辑级 `download` 字段，并基于 `songs[].download` 做精确聚合
 - `get_song_detail` 的返回值必须包含 `download` 字段
 - `SongEntry.download` 继续由 `get_album_detail` 内联返回
 
@@ -619,7 +644,7 @@
 
 - 本地盘点只扫描当前 `AppPreferences.outputDir`
 - 曲目级下载标记进入 `SongEntry` 与 `SongDetail` 返回值
-- `get_albums` 与 `get_album_detail` 不再内联专辑级 badge
+- `get_albums` 内联专辑级保守提示 badge，`get_album_detail` 内联专辑级精确聚合 badge
 - `download.isDownloaded` 是前端直接消费字段
 - `download.downloadStatus` 表达更细粒度的语义状态
 - `isDownloaded = true` 的最低语义是“当前 active root 下已确认存在本地文件”，不是“已完成远端一致性校验”

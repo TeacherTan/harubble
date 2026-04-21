@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 /// Detected audio format from raw bytes
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum AudioFormat {
     Wav,
     Mp3,

@@ -44,8 +44,12 @@ export async function getAlbumDetail(
 /**
  * Get song detail with caching (6h TTL).
  */
-export async function getSongDetail(songCid: string): Promise<SongDetail> {
-  const cacheKey = `${CACHE_KEY_SONG_DETAIL}${songCid}`;
+export async function getSongDetail(
+  songCid: string,
+  inventoryVersion?: string | null,
+): Promise<SongDetail> {
+  const cacheScope = inventoryVersion ?? 'unversioned';
+  const cacheKey = `${CACHE_KEY_SONG_DETAIL}${cacheScope}:${songCid}`;
   const cached = getCached<SongDetail>(cacheKey);
   if (cached) {
     return cached;

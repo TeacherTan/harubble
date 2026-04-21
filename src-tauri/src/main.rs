@@ -36,6 +36,7 @@ mod audio_cache;
 mod commands;
 mod downloads;
 mod local_inventory;
+mod local_inventory_provenance;
 mod logging;
 mod notification;
 mod player;
