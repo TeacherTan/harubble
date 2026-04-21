@@ -70,6 +70,12 @@ struct WriteResult {
     outcome: TaskExecutionResult,
 }
 
+struct StartedJob {
+    job_id: String,
+    write_tx: tokio::sync::mpsc::Sender<WriteJob>,
+    write_worker_handle: tokio::task::JoinHandle<()>,
+}
+
 // ─── Main execution loop ─────────────────────────────────────────────────────
 
 /// The main execution loop.
@@ -84,79 +90,16 @@ async fn execution_loop(app: &AppHandle, state: AppState) {
     loop {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let job_snapshot = {
-            let mut svc = service.lock().await;
-            svc.start_next_queued_job()
-        };
-
-        let Some(job_snapshot) = job_snapshot else {
+        let Some(started_job) = start_job(app, &service).await else {
             continue;
         };
-
-        let job_id = job_snapshot.id.clone();
-        emit_download_job_updated(app, &job_snapshot);
-        let manager_snapshot = service.lock().await.manager_snapshot();
-        emit_download_manager_state_changed(app, &manager_snapshot);
-
-        let (write_tx, mut write_rx) = tokio::sync::mpsc::channel::<WriteJob>(1);
-
-        let write_worker_handle = tokio::spawn(async move {
-            while let Some(job) = write_rx.recv().await {
-                let progress_ctx = job.progress_ctx.clone();
-                let task_for_write = job.task.clone();
-                let task_for_result = job.task;
-
-                let outcome = tokio::task::spawn_blocking(move || {
-                    task_for_write.execute_write_phase(&job.payload, {
-                        let service = progress_ctx.service;
-                        let app = progress_ctx.app;
-                        move |progress| {
-                            let service = Arc::clone(&service);
-                            let app = app.clone();
-                            tauri::async_runtime::spawn(async move {
-                                let snapshot = {
-                                    let mut svc = service.lock().await;
-                                    svc.update_task_state(
-                                        &progress.job_id,
-                                        &progress.task_id,
-                                        progress.status,
-                                        Some(progress.bytes_done),
-                                        progress.bytes_total,
-                                        None,
-                                        None,
-                                    )
-                                };
-                                if let Some(s) = snapshot {
-                                    let _ = app.emit(DOWNLOAD_TASK_PROGRESS, &progress);
-                                    emit_download_job_updated(&app, &s);
-                                }
-                            });
-                        }
-                    })
-                })
-                .await
-                .unwrap_or_else(|_| {
-                    TaskExecutionResult::Failed(siren_core::download::model::DownloadErrorInfo {
-                        code: siren_core::download::model::DownloadErrorCode::Internal,
-                        message: "Write worker panicked".to_string(),
-                        retryable: false,
-                        details: None,
-                    })
-                });
-
-                let _ = job.result_tx.send(WriteResult {
-                    task: task_for_result,
-                    outcome,
-                });
-            }
-        });
 
         let mut pending_write: Option<tokio::sync::oneshot::Receiver<WriteResult>> = None;
 
         loop {
             let task = {
                 let mut svc = service.lock().await;
-                svc.pop_next_task(&job_id)
+                svc.pop_next_task(&started_job.job_id)
             };
 
             let Some((task, preparing_snapshot)) = task else {
@@ -168,87 +111,30 @@ async fn execution_loop(app: &AppHandle, state: AppState) {
             emit_download_manager_state_changed(app, &manager_snapshot);
 
             let task_id = task.id.clone();
-            let job_id_clone = job_id.clone();
-
+            let job_id_clone = started_job.job_id.clone();
             let cancellation_flag = {
                 let svc = service.lock().await;
-                svc.active_task_cancel_flag(&job_id, &task_id)
+                svc.active_task_cancel_flag(&started_job.job_id, &task_id)
             };
-
-            let (job_kind, base_output_dir) = {
-                let svc = service.lock().await;
-                let job_snapshot = svc.get_job(&job_id);
-                let job_kind = job_snapshot
-                    .as_ref()
-                    .map(|job| job.kind)
-                    .unwrap_or(DownloadJobKind::Song);
-                let output_dir = svc
-                    .job_output_dir(&job_id)
-                    .unwrap_or_else(|| ".".to_string());
-                (job_kind, PathBuf::from(output_dir))
-            };
-
-            let out_dir = match job_kind {
-                DownloadJobKind::Song => base_output_dir.clone(),
-                DownloadJobKind::Album | DownloadJobKind::Selection => {
-                    album_output_dir(&base_output_dir, &task.album_name)
-                }
-            };
-
-            if matches!(job_kind, DownloadJobKind::Album) && !album_cover_exists(&out_dir) {
-                let _ = tokio::fs::create_dir_all(&out_dir).await;
-                if let Ok(album) = api.get_album_detail(&task.album_cid).await {
-                    let _ = download_album_cover(
-                        api.as_ref(),
-                        &album,
-                        &out_dir,
-                        cancellation_flag.as_ref(),
-                    )
-                    .await;
-                }
-            }
-
-            let service_for_progress = Arc::clone(&service);
-            let app_for_progress = app.clone();
-
-            let download_result = task
-                .execute_download_phase(api.as_ref(), &out_dir, cancellation_flag, {
-                    let service = Arc::clone(&service_for_progress);
-                    let app = app_for_progress.clone();
-                    move |progress| {
-                        let service = Arc::clone(&service);
-                        let app = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            let snapshot = {
-                                let mut svc = service.lock().await;
-                                svc.update_task_state(
-                                    &progress.job_id,
-                                    &progress.task_id,
-                                    progress.status,
-                                    Some(progress.bytes_done),
-                                    progress.bytes_total,
-                                    None,
-                                    None,
-                                )
-                            };
-                            if let Some(s) = snapshot {
-                                let _ = app.emit(DOWNLOAD_TASK_PROGRESS, &progress);
-                                emit_download_job_updated(&app, &s);
-                            }
-                        });
-                    }
-                })
-                .await;
+            let out_dir = prepare_task_output_dir(
+                &service,
+                &api,
+                &started_job.job_id,
+                &task,
+                cancellation_flag.as_ref(),
+            )
+            .await;
+            let download_result =
+                run_download_phase(app, &service, &api, &task, &out_dir, cancellation_flag).await;
 
             match download_result {
                 Ok(payload) => {
                     let (result_tx, result_rx) = tokio::sync::oneshot::channel();
 
-                    if let Some(prev_rx) = pending_write.take() {
-                        collect_write_result(prev_rx, &state, app).await;
-                    }
+                    flush_pending_write(&mut pending_write, &state, app).await;
 
-                    let _ = write_tx
+                    let _ = started_job
+                        .write_tx
                         .send(WriteJob {
                             task: task.clone(),
                             payload,
@@ -288,29 +174,194 @@ async fn execution_loop(app: &AppHandle, state: AppState) {
             }
         }
 
-        if let Some(prev_rx) = pending_write.take() {
-            collect_write_result(prev_rx, &state, app).await;
-        }
-
-        drop(write_tx);
-        let _ = write_worker_handle.await;
-
-        let snapshot = {
-            let mut svc = service.lock().await;
-            svc.finish_job(&job_id)
-        };
-
-        if let Some(s) = snapshot {
-            emit_download_job_updated(app, &s);
-            let manager_snapshot = service.lock().await.manager_snapshot();
-            emit_download_manager_state_changed(app, &manager_snapshot);
-
-            crate::notification::notify_download_completed(app, &s);
-        }
+        flush_pending_write(&mut pending_write, &state, app).await;
+        finalize_job(app, &service, started_job).await;
     }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+async fn start_job(
+    app: &AppHandle,
+    service: &Arc<tokio::sync::Mutex<siren_core::DownloadService>>,
+) -> Option<StartedJob> {
+    let job_snapshot = {
+        let mut svc = service.lock().await;
+        svc.start_next_queued_job()
+    }?;
+
+    emit_download_job_updated(app, &job_snapshot);
+    let manager_snapshot = service.lock().await.manager_snapshot();
+    emit_download_manager_state_changed(app, &manager_snapshot);
+
+    let (write_tx, mut write_rx) = tokio::sync::mpsc::channel::<WriteJob>(1);
+    let write_worker_handle = tokio::spawn(async move {
+        while let Some(job) = write_rx.recv().await {
+            let progress_ctx = job.progress_ctx.clone();
+            let task_for_write = job.task.clone();
+            let task_for_result = job.task;
+
+            let outcome = tokio::task::spawn_blocking(move || {
+                task_for_write.execute_write_phase(&job.payload, {
+                    let service = progress_ctx.service;
+                    let app = progress_ctx.app;
+                    move |progress| {
+                        let service = Arc::clone(&service);
+                        let app = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let snapshot = {
+                                let mut svc = service.lock().await;
+                                svc.update_task_state(
+                                    &progress.job_id,
+                                    &progress.task_id,
+                                    progress.status,
+                                    Some(progress.bytes_done),
+                                    progress.bytes_total,
+                                    None,
+                                    None,
+                                )
+                            };
+                            if let Some(s) = snapshot {
+                                let _ = app.emit(DOWNLOAD_TASK_PROGRESS, &progress);
+                                emit_download_job_updated(&app, &s);
+                            }
+                        });
+                    }
+                })
+            })
+            .await
+            .unwrap_or_else(|_| {
+                TaskExecutionResult::Failed(siren_core::download::model::DownloadErrorInfo {
+                    code: siren_core::download::model::DownloadErrorCode::Internal,
+                    message: "Write worker panicked".to_string(),
+                    retryable: false,
+                    details: None,
+                })
+            });
+
+            let _ = job.result_tx.send(WriteResult {
+                task: task_for_result,
+                outcome,
+            });
+        }
+    });
+
+    Some(StartedJob {
+        job_id: job_snapshot.id.clone(),
+        write_tx,
+        write_worker_handle,
+    })
+}
+
+async fn prepare_task_output_dir(
+    service: &Arc<tokio::sync::Mutex<siren_core::DownloadService>>,
+    api: &Arc<siren_core::ApiClient>,
+    job_id: &str,
+    task: &InternalDownloadTask,
+    cancellation_flag: Option<&Arc<std::sync::atomic::AtomicBool>>,
+) -> PathBuf {
+    let (job_kind, base_output_dir) = {
+        let svc = service.lock().await;
+        let job_snapshot = svc.get_job(job_id);
+        let job_kind = job_snapshot
+            .as_ref()
+            .map(|job| job.kind)
+            .unwrap_or(DownloadJobKind::Song);
+        let output_dir = svc
+            .job_output_dir(job_id)
+            .unwrap_or_else(|| ".".to_string());
+        (job_kind, PathBuf::from(output_dir))
+    };
+
+    let out_dir = match job_kind {
+        DownloadJobKind::Song => base_output_dir,
+        DownloadJobKind::Album | DownloadJobKind::Selection => {
+            album_output_dir(&base_output_dir, &task.album_name)
+        }
+    };
+
+    if matches!(job_kind, DownloadJobKind::Album) && !album_cover_exists(&out_dir) {
+        let _ = tokio::fs::create_dir_all(&out_dir).await;
+        if let Ok(album) = api.get_album_detail(&task.album_cid).await {
+            let _ = download_album_cover(api.as_ref(), &album, &out_dir, cancellation_flag).await;
+        }
+    }
+
+    out_dir
+}
+
+async fn run_download_phase(
+    app: &AppHandle,
+    service: &Arc<tokio::sync::Mutex<siren_core::DownloadService>>,
+    api: &Arc<siren_core::ApiClient>,
+    task: &InternalDownloadTask,
+    out_dir: &PathBuf,
+    cancellation_flag: Option<Arc<std::sync::atomic::AtomicBool>>,
+) -> Result<WritePayload, TaskExecutionResult> {
+    let service_for_progress = Arc::clone(service);
+    let app_for_progress = app.clone();
+
+    task.execute_download_phase(api.as_ref(), out_dir, cancellation_flag, {
+        let service = Arc::clone(&service_for_progress);
+        let app = app_for_progress.clone();
+        move |progress| {
+            let service = Arc::clone(&service);
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move {
+                let snapshot = {
+                    let mut svc = service.lock().await;
+                    svc.update_task_state(
+                        &progress.job_id,
+                        &progress.task_id,
+                        progress.status,
+                        Some(progress.bytes_done),
+                        progress.bytes_total,
+                        None,
+                        None,
+                    )
+                };
+                if let Some(s) = snapshot {
+                    let _ = app.emit(DOWNLOAD_TASK_PROGRESS, &progress);
+                    emit_download_job_updated(&app, &s);
+                }
+            });
+        }
+    })
+    .await
+}
+
+async fn flush_pending_write(
+    pending_write: &mut Option<tokio::sync::oneshot::Receiver<WriteResult>>,
+    state: &AppState,
+    app: &AppHandle,
+) {
+    let Some(rx) = pending_write.take() else {
+        return;
+    };
+    collect_write_result(rx, state, app).await;
+}
+
+async fn finalize_job(
+    app: &AppHandle,
+    service: &Arc<tokio::sync::Mutex<siren_core::DownloadService>>,
+    started_job: StartedJob,
+) {
+    drop(started_job.write_tx);
+    let _ = started_job.write_worker_handle.await;
+
+    let snapshot = {
+        let mut svc = service.lock().await;
+        svc.finish_job(&started_job.job_id)
+    };
+
+    if let Some(s) = snapshot {
+        emit_download_job_updated(app, &s);
+        let manager_snapshot = service.lock().await.manager_snapshot();
+        emit_download_manager_state_changed(app, &manager_snapshot);
+
+        crate::notification::notify_download_completed(app, &s);
+    }
+}
 
 async fn collect_write_result(
     rx: tokio::sync::oneshot::Receiver<WriteResult>,

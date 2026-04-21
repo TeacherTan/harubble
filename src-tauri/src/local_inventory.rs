@@ -506,413 +506,430 @@ mod tests {
         LocalInventoryService::new(store)
     }
 
-    #[tokio::test]
-    async fn enriches_album_detail_song_downloads_from_output_dir() {
-        let temp_dir = tempdir().expect("temp dir");
-        std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
-        std::fs::write(temp_dir.path().join("Album/Track.flac"), b"audio").expect("audio file");
+    mod enrich {
+        use super::*;
 
-        let service = make_service(temp_dir.path());
-        let started = service
-            .begin_scan(
-                temp_dir.path().to_string_lossy().to_string(),
-                VerificationMode::WhenAvailable,
+        #[tokio::test]
+        async fn enriches_album_detail_song_downloads_from_output_dir() {
+            let temp_dir = tempdir().expect("temp dir");
+            std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
+            std::fs::write(temp_dir.path().join("Album/Track.flac"), b"audio").expect("audio file");
+
+            let service = make_service(temp_dir.path());
+            let started = service
+                .begin_scan(
+                    temp_dir.path().to_string_lossy().to_string(),
+                    VerificationMode::WhenAvailable,
+                )
+                .await;
+            let files = collect_local_audio_evidence(
+                temp_dir.path(),
+                &started.root_output_dir,
+                &started.inventory_version,
+                &[],
+                &AtomicBool::new(false),
+                |_| {},
             )
-            .await;
-        let files = collect_local_audio_evidence(
-            temp_dir.path(),
-            &started.root_output_dir,
-            &started.inventory_version,
-            &[],
-            &AtomicBool::new(false),
-            |_| {},
-        )
-        .expect("scan files");
-        let ScanCollectionOutcome::Completed(files) = files else {
-            panic!("scan should complete");
-        };
-        let snapshot = service
-            .complete_scan(&started.inventory_version, files)
-            .await;
+            .expect("scan files");
+            let ScanCollectionOutcome::Completed(files) = files else {
+                panic!("scan should complete");
+            };
+            let snapshot = service
+                .complete_scan(&started.inventory_version, files)
+                .await;
 
-        assert_eq!(snapshot.status, LocalInventoryStatus::Completed);
-        assert_eq!(snapshot.scanned_file_count, 1);
-        assert_eq!(snapshot.matched_track_count, 1);
+            assert_eq!(snapshot.status, LocalInventoryStatus::Completed);
+            assert_eq!(snapshot.scanned_file_count, 1);
+            assert_eq!(snapshot.matched_track_count, 1);
 
-        let album_detail = AlbumDetail {
-            cid: "album-1".to_string(),
-            name: "Album".to_string(),
-            intro: None,
-            belong: "test".to_string(),
-            cover_url: "cover".to_string(),
-            cover_de_url: None,
-            artists: Some(vec!["Artist".to_string()]),
-            download: Default::default(),
-            songs: vec![SongEntry {
-                cid: "song-1".to_string(),
-                name: "Track".to_string(),
-                artists: vec!["Artist".to_string()],
-                download: Default::default(),
-            }],
-        };
-
-        let enriched_detail = service.enrich_album_detail(album_detail).await;
-
-        assert!(enriched_detail.songs[0].download.is_downloaded);
-        assert_eq!(
-            enriched_detail.songs[0].download.download_status,
-            LocalTrackDownloadStatus::Detected
-        );
-        assert_eq!(
-            enriched_detail.download.download_status,
-            LocalTrackDownloadStatus::Detected
-        );
-        assert!(enriched_detail.download.is_downloaded);
-    }
-
-    #[tokio::test]
-    async fn album_detail_aggregate_is_partial_when_only_some_songs_are_downloaded() {
-        let temp_dir = tempdir().expect("temp dir");
-        std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
-        std::fs::write(temp_dir.path().join("Album/Track A.flac"), b"audio").expect("audio file");
-
-        let service = make_service(temp_dir.path());
-        let started = service
-            .begin_scan(
-                temp_dir.path().to_string_lossy().to_string(),
-                VerificationMode::WhenAvailable,
-            )
-            .await;
-        let files = collect_local_audio_evidence(
-            temp_dir.path(),
-            &started.root_output_dir,
-            &started.inventory_version,
-            &[],
-            &AtomicBool::new(false),
-            |_| {},
-        )
-        .expect("scan files");
-        let ScanCollectionOutcome::Completed(files) = files else {
-            panic!("scan should complete");
-        };
-        let _snapshot = service
-            .complete_scan(&started.inventory_version, files)
-            .await;
-
-        let album_detail = AlbumDetail {
-            cid: "album-1".to_string(),
-            name: "Album".to_string(),
-            intro: None,
-            belong: "test".to_string(),
-            cover_url: "cover".to_string(),
-            cover_de_url: None,
-            artists: Some(vec!["Artist".to_string()]),
-            download: Default::default(),
-            songs: vec![
-                SongEntry {
-                    cid: "song-1".to_string(),
-                    name: "Track A".to_string(),
-                    artists: vec!["Artist".to_string()],
-                    download: Default::default(),
-                },
-                SongEntry {
-                    cid: "song-2".to_string(),
-                    name: "Track B".to_string(),
-                    artists: vec!["Artist".to_string()],
-                    download: Default::default(),
-                },
-            ],
-        };
-
-        let enriched_detail = service.enrich_album_detail(album_detail).await;
-
-        assert_eq!(
-            enriched_detail.download.download_status,
-            LocalTrackDownloadStatus::Partial
-        );
-        assert!(enriched_detail.download.is_downloaded);
-        assert_eq!(
-            enriched_detail.songs[0].download.download_status,
-            LocalTrackDownloadStatus::Detected
-        );
-        assert_eq!(
-            enriched_detail.songs[1].download.download_status,
-            LocalTrackDownloadStatus::Missing
-        );
-    }
-
-    #[tokio::test]
-    async fn enriches_album_list_with_partial_badge_when_album_directory_has_audio() {
-        let temp_dir = tempdir().expect("temp dir");
-        std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
-        std::fs::write(temp_dir.path().join("Album/Track.flac"), b"audio").expect("audio file");
-
-        let service = make_service(temp_dir.path());
-        let started = service
-            .begin_scan(
-                temp_dir.path().to_string_lossy().to_string(),
-                VerificationMode::WhenAvailable,
-            )
-            .await;
-        let files = collect_local_audio_evidence(
-            temp_dir.path(),
-            &started.root_output_dir,
-            &started.inventory_version,
-            &[],
-            &AtomicBool::new(false),
-            |_| {},
-        )
-        .expect("scan files");
-        let ScanCollectionOutcome::Completed(files) = files else {
-            panic!("scan should complete");
-        };
-        let snapshot = service
-            .complete_scan(&started.inventory_version, files)
-            .await;
-
-        let albums = service
-            .enrich_albums(vec![Album {
+            let album_detail = AlbumDetail {
                 cid: "album-1".to_string(),
                 name: "Album".to_string(),
+                intro: None,
+                belong: "test".to_string(),
                 cover_url: "cover".to_string(),
-                artists: vec!["Artist".to_string()],
+                cover_de_url: None,
+                artists: Some(vec!["Artist".to_string()]),
                 download: Default::default(),
-            }])
-            .await;
+                songs: vec![SongEntry {
+                    cid: "song-1".to_string(),
+                    name: "Track".to_string(),
+                    artists: vec!["Artist".to_string()],
+                    download: Default::default(),
+                }],
+            };
 
-        assert_eq!(
-            albums[0].download.download_status,
-            LocalTrackDownloadStatus::Partial
-        );
-        assert!(albums[0].download.is_downloaded);
-        assert_eq!(
-            albums[0].download.inventory_version,
-            snapshot.inventory_version
-        );
-    }
+            let enriched_detail = service.enrich_album_detail(album_detail).await;
 
-    #[tokio::test]
-    async fn missing_output_dir_yields_empty_snapshot() {
-        let temp_dir = tempdir().expect("temp dir");
-        let service = make_service(temp_dir.path());
-        let started = service
-            .begin_scan(
-                "/path/that/does/not/exist".to_string(),
-                VerificationMode::WhenAvailable,
+            assert!(enriched_detail.songs[0].download.is_downloaded);
+            assert_eq!(
+                enriched_detail.songs[0].download.download_status,
+                LocalTrackDownloadStatus::Detected
+            );
+            assert_eq!(
+                enriched_detail.download.download_status,
+                LocalTrackDownloadStatus::Detected
+            );
+            assert!(enriched_detail.download.is_downloaded);
+        }
+
+        #[tokio::test]
+        async fn album_detail_aggregate_is_partial_when_only_some_songs_are_downloaded() {
+            let temp_dir = tempdir().expect("temp dir");
+            std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
+            std::fs::write(temp_dir.path().join("Album/Track A.flac"), b"audio")
+                .expect("audio file");
+
+            let service = make_service(temp_dir.path());
+            let started = service
+                .begin_scan(
+                    temp_dir.path().to_string_lossy().to_string(),
+                    VerificationMode::WhenAvailable,
+                )
+                .await;
+            let files = collect_local_audio_evidence(
+                temp_dir.path(),
+                &started.root_output_dir,
+                &started.inventory_version,
+                &[],
+                &AtomicBool::new(false),
+                |_| {},
             )
-            .await;
-        let files = collect_local_audio_evidence(
-            Path::new("/path/that/does/not/exist"),
-            &started.root_output_dir,
-            &started.inventory_version,
-            &[],
-            &AtomicBool::new(false),
-            |_| {},
-        )
-        .expect("empty scan");
-        let ScanCollectionOutcome::Completed(files) = files else {
-            panic!("missing path scan should complete");
-        };
-        let snapshot = service
-            .complete_scan(&started.inventory_version, files)
-            .await;
+            .expect("scan files");
+            let ScanCollectionOutcome::Completed(files) = files else {
+                panic!("scan should complete");
+            };
+            let _snapshot = service
+                .complete_scan(&started.inventory_version, files)
+                .await;
 
-        assert_eq!(snapshot.status, LocalInventoryStatus::Completed);
-        assert_eq!(snapshot.scanned_file_count, 0);
-        assert_eq!(snapshot.matched_track_count, 0);
+            let album_detail = AlbumDetail {
+                cid: "album-1".to_string(),
+                name: "Album".to_string(),
+                intro: None,
+                belong: "test".to_string(),
+                cover_url: "cover".to_string(),
+                cover_de_url: None,
+                artists: Some(vec!["Artist".to_string()]),
+                download: Default::default(),
+                songs: vec![
+                    SongEntry {
+                        cid: "song-1".to_string(),
+                        name: "Track A".to_string(),
+                        artists: vec!["Artist".to_string()],
+                        download: Default::default(),
+                    },
+                    SongEntry {
+                        cid: "song-2".to_string(),
+                        name: "Track B".to_string(),
+                        artists: vec!["Artist".to_string()],
+                        download: Default::default(),
+                    },
+                ],
+            };
+
+            let enriched_detail = service.enrich_album_detail(album_detail).await;
+
+            assert_eq!(
+                enriched_detail.download.download_status,
+                LocalTrackDownloadStatus::Partial
+            );
+            assert!(enriched_detail.download.is_downloaded);
+            assert_eq!(
+                enriched_detail.songs[0].download.download_status,
+                LocalTrackDownloadStatus::Detected
+            );
+            assert_eq!(
+                enriched_detail.songs[1].download.download_status,
+                LocalTrackDownloadStatus::Missing
+            );
+        }
+
+        #[tokio::test]
+        async fn enriches_album_list_with_partial_badge_when_album_directory_has_audio() {
+            let temp_dir = tempdir().expect("temp dir");
+            std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
+            std::fs::write(temp_dir.path().join("Album/Track.flac"), b"audio").expect("audio file");
+
+            let service = make_service(temp_dir.path());
+            let started = service
+                .begin_scan(
+                    temp_dir.path().to_string_lossy().to_string(),
+                    VerificationMode::WhenAvailable,
+                )
+                .await;
+            let files = collect_local_audio_evidence(
+                temp_dir.path(),
+                &started.root_output_dir,
+                &started.inventory_version,
+                &[],
+                &AtomicBool::new(false),
+                |_| {},
+            )
+            .expect("scan files");
+            let ScanCollectionOutcome::Completed(files) = files else {
+                panic!("scan should complete");
+            };
+            let snapshot = service
+                .complete_scan(&started.inventory_version, files)
+                .await;
+
+            let albums = service
+                .enrich_albums(vec![Album {
+                    cid: "album-1".to_string(),
+                    name: "Album".to_string(),
+                    cover_url: "cover".to_string(),
+                    artists: vec!["Artist".to_string()],
+                    download: Default::default(),
+                }])
+                .await;
+
+            assert_eq!(
+                albums[0].download.download_status,
+                LocalTrackDownloadStatus::Partial
+            );
+            assert!(albums[0].download.is_downloaded);
+            assert_eq!(
+                albums[0].download.inventory_version,
+                snapshot.inventory_version
+            );
+        }
     }
 
-    #[test]
-    fn root_level_single_track_layout_marks_song_as_downloaded() {
-        let badge = track_badge_for_song(
-            &[LocalAudioFileEvidence {
-                relative_path: "Track.flac".to_string(),
-                file_size: 42,
-                modified_at_ms: Some(1),
-                candidate_checksum: Some("abc".to_string()),
-                is_in_album_directory: false,
-                verification_state: LocalAudioFileVerificationState::Unchecked,
-            }],
-            "Album",
-            "Track",
-            VerificationMode::WhenAvailable,
-            "v1",
-        );
-        assert!(badge.is_downloaded);
-        assert_eq!(badge.download_status, LocalTrackDownloadStatus::Detected);
-    }
+    mod track_badge {
+        use super::*;
 
-    #[test]
-    fn strict_mode_marks_detected_track_as_unverifiable() {
-        let badge = track_badge_for_song(
-            &[LocalAudioFileEvidence {
-                relative_path: "Album/Track.flac".to_string(),
-                file_size: 42,
-                modified_at_ms: Some(1),
-                candidate_checksum: Some("abc".to_string()),
-                is_in_album_directory: true,
-                verification_state: LocalAudioFileVerificationState::Unchecked,
-            }],
-            "Album",
-            "Track",
-            VerificationMode::Strict,
-            "v1",
-        );
-        assert_eq!(
-            badge.download_status,
-            LocalTrackDownloadStatus::Unverifiable
-        );
-        assert!(badge.is_downloaded);
-    }
-
-    #[test]
-    fn multiple_matching_candidates_mark_track_as_partial() {
-        let badge = track_badge_for_song(
-            &[
-                LocalAudioFileEvidence {
+        #[test]
+        fn root_level_single_track_layout_marks_song_as_downloaded() {
+            let badge = track_badge_for_song(
+                &[LocalAudioFileEvidence {
                     relative_path: "Track.flac".to_string(),
                     file_size: 42,
                     modified_at_ms: Some(1),
                     candidate_checksum: Some("abc".to_string()),
                     is_in_album_directory: false,
                     verification_state: LocalAudioFileVerificationState::Unchecked,
-                },
-                LocalAudioFileEvidence {
-                    relative_path: "Album/Track.wav".to_string(),
-                    file_size: 43,
-                    modified_at_ms: Some(2),
-                    candidate_checksum: Some("def".to_string()),
+                }],
+                "Album",
+                "Track",
+                VerificationMode::WhenAvailable,
+                "v1",
+            );
+            assert!(badge.is_downloaded);
+            assert_eq!(badge.download_status, LocalTrackDownloadStatus::Detected);
+        }
+
+        #[test]
+        fn strict_mode_marks_detected_track_as_unverifiable() {
+            let badge = track_badge_for_song(
+                &[LocalAudioFileEvidence {
+                    relative_path: "Album/Track.flac".to_string(),
+                    file_size: 42,
+                    modified_at_ms: Some(1),
+                    candidate_checksum: Some("abc".to_string()),
                     is_in_album_directory: true,
                     verification_state: LocalAudioFileVerificationState::Unchecked,
-                },
-            ],
-            "Album",
-            "Track",
-            VerificationMode::WhenAvailable,
-            "v1",
-        );
-        assert_eq!(badge.download_status, LocalTrackDownloadStatus::Partial);
-        assert!(badge.is_downloaded);
+                }],
+                "Album",
+                "Track",
+                VerificationMode::Strict,
+                "v1",
+            );
+            assert_eq!(
+                badge.download_status,
+                LocalTrackDownloadStatus::Unverifiable
+            );
+            assert!(badge.is_downloaded);
+        }
+
+        #[test]
+        fn multiple_matching_candidates_mark_track_as_partial() {
+            let badge = track_badge_for_song(
+                &[
+                    LocalAudioFileEvidence {
+                        relative_path: "Track.flac".to_string(),
+                        file_size: 42,
+                        modified_at_ms: Some(1),
+                        candidate_checksum: Some("abc".to_string()),
+                        is_in_album_directory: false,
+                        verification_state: LocalAudioFileVerificationState::Unchecked,
+                    },
+                    LocalAudioFileEvidence {
+                        relative_path: "Album/Track.wav".to_string(),
+                        file_size: 43,
+                        modified_at_ms: Some(2),
+                        candidate_checksum: Some("def".to_string()),
+                        is_in_album_directory: true,
+                        verification_state: LocalAudioFileVerificationState::Unchecked,
+                    },
+                ],
+                "Album",
+                "Track",
+                VerificationMode::WhenAvailable,
+                "v1",
+            );
+            assert_eq!(badge.download_status, LocalTrackDownloadStatus::Partial);
+            assert!(badge.is_downloaded);
+        }
+
+        #[test]
+        fn verified_match_promotes_track_to_verified() {
+            let badge = track_badge_for_song(
+                &[LocalAudioFileEvidence {
+                    relative_path: "Album/Track.flac".to_string(),
+                    file_size: 42,
+                    modified_at_ms: Some(1),
+                    candidate_checksum: Some("abc".to_string()),
+                    is_in_album_directory: true,
+                    verification_state: LocalAudioFileVerificationState::Verified,
+                }],
+                "Album",
+                "Track",
+                VerificationMode::WhenAvailable,
+                "v1",
+            );
+            assert_eq!(badge.download_status, LocalTrackDownloadStatus::Verified);
+            assert!(badge.is_downloaded);
+        }
+
+        #[test]
+        fn mismatch_match_promotes_track_to_mismatch() {
+            let badge = track_badge_for_song(
+                &[LocalAudioFileEvidence {
+                    relative_path: "Album/Track.flac".to_string(),
+                    file_size: 42,
+                    modified_at_ms: Some(1),
+                    candidate_checksum: Some("abc".to_string()),
+                    is_in_album_directory: true,
+                    verification_state: LocalAudioFileVerificationState::Mismatch,
+                }],
+                "Album",
+                "Track",
+                VerificationMode::WhenAvailable,
+                "v1",
+            );
+            assert_eq!(badge.download_status, LocalTrackDownloadStatus::Mismatch);
+            assert!(!badge.is_downloaded);
+        }
     }
 
-    #[test]
-    fn verified_match_promotes_track_to_verified() {
-        let badge = track_badge_for_song(
-            &[LocalAudioFileEvidence {
+    mod scan {
+        use super::*;
+
+        #[tokio::test]
+        async fn missing_output_dir_yields_empty_snapshot() {
+            let temp_dir = tempdir().expect("temp dir");
+            let service = make_service(temp_dir.path());
+            let started = service
+                .begin_scan(
+                    "/path/that/does/not/exist".to_string(),
+                    VerificationMode::WhenAvailable,
+                )
+                .await;
+            let files = collect_local_audio_evidence(
+                Path::new("/path/that/does/not/exist"),
+                &started.root_output_dir,
+                &started.inventory_version,
+                &[],
+                &AtomicBool::new(false),
+                |_| {},
+            )
+            .expect("empty scan");
+            let ScanCollectionOutcome::Completed(files) = files else {
+                panic!("missing path scan should complete");
+            };
+            let snapshot = service
+                .complete_scan(&started.inventory_version, files)
+                .await;
+
+            assert_eq!(snapshot.status, LocalInventoryStatus::Completed);
+            assert_eq!(snapshot.scanned_file_count, 0);
+            assert_eq!(snapshot.matched_track_count, 0);
+        }
+    }
+
+    mod provenance {
+        use super::*;
+
+        #[tokio::test]
+        async fn scan_marks_file_as_verified_when_provenance_checksum_matches() {
+            let temp_dir = tempdir().expect("temp dir");
+            std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
+            let file_path = temp_dir.path().join("Album/Track.flac");
+            std::fs::write(&file_path, b"audio").expect("audio file");
+            let checksum = format!("{:x}", md5::compute(b"audio"));
+            let records = vec![LocalInventoryProvenanceRecord {
+                song_cid: "song-1".to_string(),
+                album_cid: "album-1".to_string(),
                 relative_path: "Album/Track.flac".to_string(),
-                file_size: 42,
-                modified_at_ms: Some(1),
-                candidate_checksum: Some("abc".to_string()),
-                is_in_album_directory: true,
-                verification_state: LocalAudioFileVerificationState::Verified,
-            }],
-            "Album",
-            "Track",
-            VerificationMode::WhenAvailable,
-            "v1",
-        );
-        assert_eq!(badge.download_status, LocalTrackDownloadStatus::Verified);
-        assert!(badge.is_downloaded);
-    }
+                source_url: "https://example.test/source".to_string(),
+                source_audio_checksum: "source-md5".to_string(),
+                processing_fingerprint: "fp".to_string(),
+                final_artifact_checksum: checksum.clone(),
+                final_artifact_size: 5,
+                recorded_at: "2026-04-21T00:00:00Z".to_string(),
+            }];
 
-    #[test]
-    fn mismatch_match_promotes_track_to_mismatch() {
-        let badge = track_badge_for_song(
-            &[LocalAudioFileEvidence {
+            let result = collect_local_audio_evidence(
+                temp_dir.path(),
+                &temp_dir.path().to_string_lossy(),
+                "v1",
+                &records,
+                &AtomicBool::new(false),
+                |_| {},
+            )
+            .expect("scan files");
+            let ScanCollectionOutcome::Completed(result) = result else {
+                panic!("scan should complete");
+            };
+
+            assert_eq!(result.verified_track_count, 1);
+            assert_eq!(
+                result.audio_files[0].verification_state,
+                LocalAudioFileVerificationState::Verified
+            );
+            assert_eq!(
+                result.audio_files[0].candidate_checksum.as_deref(),
+                Some(checksum.as_str())
+            );
+        }
+
+        #[tokio::test]
+        async fn scan_marks_file_as_mismatch_when_provenance_checksum_drifts() {
+            let temp_dir = tempdir().expect("temp dir");
+            std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
+            let file_path = temp_dir.path().join("Album/Track.flac");
+            std::fs::write(&file_path, b"tampered").expect("audio file");
+            let records = vec![LocalInventoryProvenanceRecord {
+                song_cid: "song-1".to_string(),
+                album_cid: "album-1".to_string(),
                 relative_path: "Album/Track.flac".to_string(),
-                file_size: 42,
-                modified_at_ms: Some(1),
-                candidate_checksum: Some("abc".to_string()),
-                is_in_album_directory: true,
-                verification_state: LocalAudioFileVerificationState::Mismatch,
-            }],
-            "Album",
-            "Track",
-            VerificationMode::WhenAvailable,
-            "v1",
-        );
-        assert_eq!(badge.download_status, LocalTrackDownloadStatus::Mismatch);
-        assert!(!badge.is_downloaded);
-    }
+                source_url: "https://example.test/source".to_string(),
+                source_audio_checksum: "source-md5".to_string(),
+                processing_fingerprint: "fp".to_string(),
+                final_artifact_checksum: format!("{:x}", md5::compute(b"audio")),
+                final_artifact_size: 5,
+                recorded_at: "2026-04-21T00:00:00Z".to_string(),
+            }];
 
-    #[tokio::test]
-    async fn scan_marks_file_as_verified_when_provenance_checksum_matches() {
-        let temp_dir = tempdir().expect("temp dir");
-        std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
-        let file_path = temp_dir.path().join("Album/Track.flac");
-        std::fs::write(&file_path, b"audio").expect("audio file");
-        let checksum = format!("{:x}", md5::compute(b"audio"));
-        let records = vec![LocalInventoryProvenanceRecord {
-            song_cid: "song-1".to_string(),
-            album_cid: "album-1".to_string(),
-            relative_path: "Album/Track.flac".to_string(),
-            source_url: "https://example.test/source".to_string(),
-            source_audio_checksum: "source-md5".to_string(),
-            processing_fingerprint: "fp".to_string(),
-            final_artifact_checksum: checksum.clone(),
-            final_artifact_size: 5,
-            recorded_at: "2026-04-21T00:00:00Z".to_string(),
-        }];
+            let result = collect_local_audio_evidence(
+                temp_dir.path(),
+                &temp_dir.path().to_string_lossy(),
+                "v1",
+                &records,
+                &AtomicBool::new(false),
+                |_| {},
+            )
+            .expect("scan files");
+            let ScanCollectionOutcome::Completed(result) = result else {
+                panic!("scan should complete");
+            };
 
-        let result = collect_local_audio_evidence(
-            temp_dir.path(),
-            &temp_dir.path().to_string_lossy(),
-            "v1",
-            &records,
-            &AtomicBool::new(false),
-            |_| {},
-        )
-        .expect("scan files");
-        let ScanCollectionOutcome::Completed(result) = result else {
-            panic!("scan should complete");
-        };
-
-        assert_eq!(result.verified_track_count, 1);
-        assert_eq!(
-            result.audio_files[0].verification_state,
-            LocalAudioFileVerificationState::Verified
-        );
-        assert_eq!(
-            result.audio_files[0].candidate_checksum.as_deref(),
-            Some(checksum.as_str())
-        );
-    }
-
-    #[tokio::test]
-    async fn scan_marks_file_as_mismatch_when_provenance_checksum_drifts() {
-        let temp_dir = tempdir().expect("temp dir");
-        std::fs::create_dir_all(temp_dir.path().join("Album")).expect("album dir");
-        let file_path = temp_dir.path().join("Album/Track.flac");
-        std::fs::write(&file_path, b"tampered").expect("audio file");
-        let records = vec![LocalInventoryProvenanceRecord {
-            song_cid: "song-1".to_string(),
-            album_cid: "album-1".to_string(),
-            relative_path: "Album/Track.flac".to_string(),
-            source_url: "https://example.test/source".to_string(),
-            source_audio_checksum: "source-md5".to_string(),
-            processing_fingerprint: "fp".to_string(),
-            final_artifact_checksum: format!("{:x}", md5::compute(b"audio")),
-            final_artifact_size: 5,
-            recorded_at: "2026-04-21T00:00:00Z".to_string(),
-        }];
-
-        let result = collect_local_audio_evidence(
-            temp_dir.path(),
-            &temp_dir.path().to_string_lossy(),
-            "v1",
-            &records,
-            &AtomicBool::new(false),
-            |_| {},
-        )
-        .expect("scan files");
-        let ScanCollectionOutcome::Completed(result) = result else {
-            panic!("scan should complete");
-        };
-
-        assert_eq!(result.verified_track_count, 0);
-        assert_eq!(
-            result.audio_files[0].verification_state,
-            LocalAudioFileVerificationState::Mismatch
-        );
+            assert_eq!(result.verified_track_count, 0);
+            assert_eq!(
+                result.audio_files[0].verification_state,
+                LocalAudioFileVerificationState::Mismatch
+            );
+        }
     }
 }

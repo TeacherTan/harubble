@@ -146,6 +146,7 @@ Cargo workspace
 - `doc/BACKEND_PENDING_PHASES.md`：后端待办阶段（Phase 8 剩余增强项与 Phase 9~11）
 - `doc/FRONTEND_GUIDE.md`：前端架构、开发约定与验收基线
 - `doc/DECISIONS.md`：技术选型决策记录（ADR）
+- `doc/REVIEW_RULES.md`：测试整理、结构性重构、文档补充的评审与审批规则
 - `doc/RELEASE_PROCESS.md`：CI 与发布流程
 
 ## 当前实现状态
@@ -165,3 +166,4 @@ Cargo workspace
   - `README.md`
   - `src-tauri` / `siren_core` 中对应的 rustdoc
 - 如果改了歌词、下载设置或播放器交互，同时检查 `src/App.svelte` 和 `src/lib/components/AudioPlayer.svelte` 的状态同步
+- 如果本轮改动属于测试整理、结构性重构或审批材料补充，优先对照 `doc/REVIEW_RULES.md` 中的通用规则，而不是把实现细节写进审批文档
