@@ -1,8 +1,8 @@
 use crate::app_state::AppState;
 use siren_core::{
     badge_for_detected_file, has_detected_track, missing_track_badge, AlbumDetail,
-    LocalInventoryScanProgressEvent, LocalInventorySnapshot, LocalInventoryStatus,
-    SongDetail, TrackDownloadBadge, VerificationMode,
+    LocalInventoryScanProgressEvent, LocalInventorySnapshot, LocalInventoryStatus, SongDetail,
+    TrackDownloadBadge, VerificationMode,
 };
 use std::collections::HashSet;
 use std::path::Path;
@@ -365,7 +365,10 @@ fn next_inventory_version() -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{collect_relative_audio_paths, track_badge_for_song, LocalInventoryService, ScanCollectionOutcome};
+    use super::{
+        collect_relative_audio_paths, track_badge_for_song, LocalInventoryService,
+        ScanCollectionOutcome,
+    };
     use siren_core::{
         AlbumDetail, LocalInventoryStatus, LocalTrackDownloadStatus, SongEntry, VerificationMode,
     };

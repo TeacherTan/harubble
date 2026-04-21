@@ -184,18 +184,16 @@ fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app_handle, event| {
-            match event {
-                RunEvent::ExitRequested { .. } | RunEvent::Exit => {
-                    if let Some(state) = app_handle.try_state::<AppState>() {
-                        let threshold = LogLevel::parse(&state.preferences().log_level)
-                            .unwrap_or(LogLevel::Error);
-                        if let Err(error) = state.log_center.flush_session_to_persistent(threshold) {
-                            eprintln!("[logging] failed to flush session logs: {error:#}");
-                        }
+        .run(|app_handle, event| match event {
+            RunEvent::ExitRequested { .. } | RunEvent::Exit => {
+                if let Some(state) = app_handle.try_state::<AppState>() {
+                    let threshold =
+                        LogLevel::parse(&state.preferences().log_level).unwrap_or(LogLevel::Error);
+                    if let Err(error) = state.log_center.flush_session_to_persistent(threshold) {
+                        eprintln!("[logging] failed to flush session logs: {error:#}");
                     }
                 }
-                _ => {}
             }
+            _ => {}
         });
 }

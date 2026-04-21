@@ -373,7 +373,10 @@ mod tests {
 
         let snapshot = task.to_snapshot("/Users/me/Downloads/SirenMusic");
 
-        assert_eq!(snapshot.output_path.as_deref(), Some("Album/Disc 1/Track.flac"));
+        assert_eq!(
+            snapshot.output_path.as_deref(),
+            Some("Album/Disc 1/Track.flac")
+        );
     }
 
     #[test]

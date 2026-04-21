@@ -258,18 +258,17 @@ impl AppState {
         let sample_buffer = SampleBuffer::new();
 
         let log_center = Arc::clone(&self.log_center);
-        let error_handler: crate::player::stream::PlaybackErrorHandler =
-            Arc::new(move |message| {
-                log_center.record(
-                    crate::logging::LogPayload::new(
-                        crate::logging::LogLevel::Error,
-                        "player",
-                        "player.decode_worker_failed",
-                        "Audio decode worker failed",
-                    )
-                    .details(message),
-                );
-            });
+        let error_handler: crate::player::stream::PlaybackErrorHandler = Arc::new(move |message| {
+            log_center.record(
+                crate::logging::LogPayload::new(
+                    crate::logging::LogLevel::Error,
+                    "player",
+                    "player.decode_worker_failed",
+                    "Audio decode worker failed",
+                )
+                .details(message),
+            );
+        });
 
         let _decode_worker = input.spawn_decode_worker(
             source_format,
@@ -331,32 +330,52 @@ impl AppState {
             MediaControlEvent::Play => {
                 if let Err(error) = self.player.resume() {
                     log_center.record(
-                        LogPayload::new(LogLevel::Warn, "media-session", "media_session.resume_failed", "Failed to resume playback")
-                            .details(format!("{error:#}")),
+                        LogPayload::new(
+                            LogLevel::Warn,
+                            "media-session",
+                            "media_session.resume_failed",
+                            "Failed to resume playback",
+                        )
+                        .details(format!("{error:#}")),
                     );
                 }
             }
             MediaControlEvent::Pause => {
                 if let Err(error) = self.player.pause() {
                     log_center.record(
-                        LogPayload::new(LogLevel::Warn, "media-session", "media_session.pause_failed", "Failed to pause playback")
-                            .details(format!("{error:#}")),
+                        LogPayload::new(
+                            LogLevel::Warn,
+                            "media-session",
+                            "media_session.pause_failed",
+                            "Failed to pause playback",
+                        )
+                        .details(format!("{error:#}")),
                     );
                 }
             }
             MediaControlEvent::Toggle => {
                 if let Err(error) = self.player.toggle_playback() {
                     log_center.record(
-                        LogPayload::new(LogLevel::Warn, "media-session", "media_session.toggle_failed", "Failed to toggle playback")
-                            .details(format!("{error:#}")),
+                        LogPayload::new(
+                            LogLevel::Warn,
+                            "media-session",
+                            "media_session.toggle_failed",
+                            "Failed to toggle playback",
+                        )
+                        .details(format!("{error:#}")),
                     );
                 }
             }
             MediaControlEvent::Stop | MediaControlEvent::Quit => {
                 if let Err(error) = self.player.stop() {
                     log_center.record(
-                        LogPayload::new(LogLevel::Warn, "media-session", "media_session.stop_failed", "Failed to stop playback")
-                            .details(format!("{error:#}")),
+                        LogPayload::new(
+                            LogLevel::Warn,
+                            "media-session",
+                            "media_session.stop_failed",
+                            "Failed to stop playback",
+                        )
+                        .details(format!("{error:#}")),
                     );
                 }
             }
@@ -365,8 +384,13 @@ impl AppState {
                 tauri::async_runtime::spawn(async move {
                     if let Err(error) = state.play_next_internal().await {
                         state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.next_track_failed", "Failed to play next track")
-                                .details(error.to_string()),
+                            LogPayload::new(
+                                LogLevel::Warn,
+                                "media-session",
+                                "media_session.next_track_failed",
+                                "Failed to play next track",
+                            )
+                            .details(error.to_string()),
                         );
                     }
                 });
@@ -376,8 +400,13 @@ impl AppState {
                 tauri::async_runtime::spawn(async move {
                     if let Err(error) = state.play_previous_internal().await {
                         state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.previous_track_failed", "Failed to play previous track")
-                                .details(error.to_string()),
+                            LogPayload::new(
+                                LogLevel::Warn,
+                                "media-session",
+                                "media_session.previous_track_failed",
+                                "Failed to play previous track",
+                            )
+                            .details(error.to_string()),
                         );
                     }
                 });
@@ -385,10 +414,16 @@ impl AppState {
             MediaControlEvent::SetPosition(position) => {
                 let state = self.clone();
                 tauri::async_runtime::spawn(async move {
-                    if let Err(error) = state.seek_current_internal(position.0.as_secs_f64()).await {
+                    if let Err(error) = state.seek_current_internal(position.0.as_secs_f64()).await
+                    {
                         state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.seek_failed", "Failed to seek playback")
-                                .details(error.to_string()),
+                            LogPayload::new(
+                                LogLevel::Warn,
+                                "media-session",
+                                "media_session.seek_failed",
+                                "Failed to seek playback",
+                            )
+                            .details(error.to_string()),
                         );
                     }
                 });
@@ -404,8 +439,13 @@ impl AppState {
                     };
                     if let Err(error) = state.seek_current_internal(target).await {
                         state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.seek_by_delta_failed", "Failed to seek by delta")
-                                .details(error.to_string()),
+                            LogPayload::new(
+                                LogLevel::Warn,
+                                "media-session",
+                                "media_session.seek_by_delta_failed",
+                                "Failed to seek by delta",
+                            )
+                            .details(error.to_string()),
                         );
                     }
                 });
@@ -420,8 +460,13 @@ impl AppState {
                     };
                     if let Err(error) = state.seek_current_internal(target).await {
                         state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.seek_forward_failed", "Failed to seek forward/backward")
-                                .details(error.to_string()),
+                            LogPayload::new(
+                                LogLevel::Warn,
+                                "media-session",
+                                "media_session.seek_forward_failed",
+                                "Failed to seek forward/backward",
+                            )
+                            .details(error.to_string()),
                         );
                     }
                 });
@@ -439,4 +484,3 @@ fn normalize_seek_position(position_secs: f64, duration_secs: f64) -> f64 {
         position_secs
     }
 }
-

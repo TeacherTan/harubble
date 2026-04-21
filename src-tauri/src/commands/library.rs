@@ -111,7 +111,9 @@ pub async fn get_image_data_url(
 #[tauri::command]
 pub fn get_default_output_dir() -> String {
     dirs::download_dir()
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))
+        .unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"))
+        })
         .join("SirenMusic")
         .to_string_lossy()
         .to_string()

@@ -301,7 +301,9 @@ impl AudioPlayer {
         let stop_flag = Arc::clone(&self.stop_flag);
         let app_for_error = self.app.clone();
         let error_handler = Arc::new(move |message: String| {
-            if stop_flag.load(Ordering::SeqCst) || active_session.load(Ordering::SeqCst) != session_id {
+            if stop_flag.load(Ordering::SeqCst)
+                || active_session.load(Ordering::SeqCst) != session_id
+            {
                 return;
             }
             if let Some(state) = app_for_error.try_state::<crate::app_state::AppState>() {
