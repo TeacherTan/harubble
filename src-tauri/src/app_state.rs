@@ -1,12 +1,15 @@
 use crate::audio_cache;
+use crate::download_session::DownloadSessionStore;
 use crate::local_inventory::LocalInventoryService;
+use crate::local_inventory_provenance::LocalInventoryProvenanceStore;
 use crate::logging::{LogCenter, LogLevel, LogPayload};
 use crate::player::stream::{GrowingFileHandle, PlaybackInput, SampleBuffer};
 use crate::player::{AudioPlayer, PlaybackContext, PlaybackQueueEntry};
 use crate::preferences::{AppPreferences, PreferencesStore};
 use anyhow::{Context, Result};
-use siren_core::DownloadService;
+use siren_core::{DownloadManagerSnapshot, DownloadService};
 use souvlaki::{MediaControlEvent, SeekDirection};
+use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex as StdMutex};
 use tauri::Manager;
@@ -18,9 +21,15 @@ pub(crate) struct AppState {
     pub(crate) api: Arc<siren_core::ApiClient>,
     pub(crate) download_service: Arc<Mutex<DownloadService>>,
     pub(crate) local_inventory_service: LocalInventoryService,
+    pub(crate) local_inventory_provenance_store: Arc<LocalInventoryProvenanceStore>,
+    pub(crate) download_session_store: Arc<DownloadSessionStore>,
     pub(crate) preferences_store: Arc<PreferencesStore>,
     pub(crate) preferences: Arc<StdMutex<AppPreferences>>,
     pub(crate) log_center: Arc<LogCenter>,
+}
+
+struct PreparedPlaybackInput {
+    input: PlaybackInput,
 }
 
 impl AppState {
@@ -28,23 +37,37 @@ impl AppState {
         let log_center = Arc::new(LogCenter::new(app.clone())?);
         let player = AudioPlayer::new(app.clone()).map_err(|e| e.to_string())?;
         let api = siren_core::ApiClient::new().map_err(|e| e.to_string())?;
-        let download_service = Arc::new(Mutex::new(DownloadService::new()));
-        let local_inventory_service = LocalInventoryService::new();
         let app_data_dir = app
             .path()
             .app_data_dir()
             .map_err(|e| format!("failed to get app data dir: {e}"))?;
+        let download_session_store = Arc::new(DownloadSessionStore::new(app_data_dir.clone()));
+        let loaded_download_session = download_session_store.load(Some(log_center.as_ref()));
+        let download_service = Arc::new(Mutex::new(DownloadService::from_manager_snapshot(
+            loaded_download_session.snapshot.clone(),
+        )));
+        let local_inventory_provenance_store = Arc::new(
+            LocalInventoryProvenanceStore::new(app_data_dir.clone()).map_err(|e| e.to_string())?,
+        );
+        let local_inventory_service =
+            LocalInventoryService::new(local_inventory_provenance_store.clone());
         let store = PreferencesStore::new(app_data_dir);
         let preferences = store.load(Some(log_center.as_ref()));
-        Ok(Self {
+        let state = Self {
             player: Arc::new(player),
             api: Arc::new(api),
             download_service,
             local_inventory_service,
+            local_inventory_provenance_store,
+            download_session_store,
             preferences_store: Arc::new(store),
             preferences: Arc::new(StdMutex::new(preferences)),
             log_center,
-        })
+        };
+        if loaded_download_session.should_persist {
+            state.persist_download_snapshot(&loaded_download_session.snapshot);
+        }
+        Ok(state)
     }
 
     pub(crate) fn preferences(&self) -> AppPreferences {
@@ -57,6 +80,21 @@ impl AppState {
 
     pub(crate) fn preferences_store(&self) -> Arc<PreferencesStore> {
         self.preferences_store.clone()
+    }
+
+    pub(crate) fn persist_download_snapshot(&self, snapshot: &DownloadManagerSnapshot) {
+        if let Err(error) = self.download_session_store.save(snapshot) {
+            self.log_center.record(
+                LogPayload::new(
+                    LogLevel::Error,
+                    "download-session",
+                    "download_session.write_failed",
+                    "Failed to persist download session",
+                )
+                .user_message("下载历史保存失败")
+                .details(error),
+            );
+        }
     }
 
     pub(crate) async fn play_song_internal(
@@ -179,68 +217,8 @@ impl AppState {
     ) -> Result<f64> {
         let stop_flag = self.player.stop_signal();
         let pause_flag = self.player.pause_signal();
-        let cache_path = audio_cache::cached_song_path(song_cid, source_url)?;
-        let pending_marker = audio_cache::pending_marker_path(&cache_path);
-
-        let input = if audio_cache::is_song_cached(&cache_path) {
-            PlaybackInput::cached_file(cache_path)
-        } else {
-            let _ = std::fs::remove_file(&cache_path);
-            let _ = std::fs::remove_file(&pending_marker);
-            std::fs::write(&pending_marker, b"pending").with_context(|| {
-                format!("Failed to create cache marker {}", pending_marker.display())
-            })?;
-
-            let (handle, mut writer) = GrowingFileHandle::new(cache_path.clone())?;
-            let api = Arc::clone(&self.api);
-            let stop_for_download = Arc::clone(&stop_flag);
-            let handle_for_download = handle.clone();
-            let source_url = source_url.to_string();
-            let cache_path_for_cleanup = cache_path.clone();
-            let pending_for_cleanup = pending_marker.clone();
-
-            let log_center = Arc::clone(&self.log_center);
-
-            tokio::spawn(async move {
-                let download_result = api
-                    .download_stream(&source_url, |chunk, _, _| {
-                        if stop_for_download.load(Ordering::SeqCst) {
-                            return Ok(false);
-                        }
-                        handle_for_download.append_chunk(&mut writer, chunk)?;
-                        Ok(true)
-                    })
-                    .await;
-
-                match download_result {
-                    Ok(()) if !stop_for_download.load(Ordering::SeqCst) => {
-                        handle_for_download.mark_complete();
-                        let _ = std::fs::remove_file(&pending_for_cleanup);
-                    }
-                    Ok(()) => {
-                        handle_for_download.mark_error("Playback stopped");
-                        let _ = std::fs::remove_file(&pending_for_cleanup);
-                        let _ = std::fs::remove_file(&cache_path_for_cleanup);
-                    }
-                    Err(error) => {
-                        log_center.record(
-                            LogPayload::new(
-                                LogLevel::Error,
-                                "player",
-                                "player.stream_download_failed",
-                                "Streaming download failed during playback",
-                            )
-                            .details(format!("{error:#}")),
-                        );
-                        handle_for_download.mark_error(error.to_string());
-                        let _ = std::fs::remove_file(&pending_for_cleanup);
-                        let _ = std::fs::remove_file(&cache_path_for_cleanup);
-                    }
-                }
-            });
-
-            PlaybackInput::growing_file(handle)
-        };
+        let prepared_input = self.prepare_playback_input(song_cid, source_url, &stop_flag)?;
+        let input = prepared_input.input.clone();
 
         let inspect_input = input.clone();
         let source_format = tokio::task::spawn_blocking(move || inspect_input.inspect_format())
@@ -258,18 +236,17 @@ impl AppState {
         let sample_buffer = SampleBuffer::new();
 
         let log_center = Arc::clone(&self.log_center);
-        let error_handler: crate::player::stream::PlaybackErrorHandler =
-            Arc::new(move |message| {
-                log_center.record(
-                    crate::logging::LogPayload::new(
-                        crate::logging::LogLevel::Error,
-                        "player",
-                        "player.decode_worker_failed",
-                        "Audio decode worker failed",
-                    )
-                    .details(message),
-                );
-            });
+        let error_handler: crate::player::stream::PlaybackErrorHandler = Arc::new(move |message| {
+            log_center.record(
+                crate::logging::LogPayload::new(
+                    crate::logging::LogLevel::Error,
+                    "player",
+                    "player.decode_worker_failed",
+                    "Audio decode worker failed",
+                )
+                .details(message),
+            );
+        });
 
         let _decode_worker = input.spawn_decode_worker(
             source_format,
@@ -281,25 +258,10 @@ impl AppState {
             error_handler,
         )?;
 
-        let minimum_samples =
-            ((output_format.sample_rate as usize * output_format.channels as usize) / 3)
-                .max(output_format.channels as usize * 4096)
-                .min(output_format.channels as usize * 32_768);
+        self.wait_for_initial_buffer(&sample_buffer, output_format, &stop_flag)
+            .await?;
 
-        let wait_buffer = sample_buffer.clone();
-        let wait_stop = Arc::clone(&stop_flag);
-        tokio::task::spawn_blocking(move || {
-            wait_buffer.wait_for_samples(minimum_samples, &wait_stop)
-        })
-        .await
-        .map_err(|error| anyhow::anyhow!(error.to_string()))??;
-
-        anyhow::ensure!(
-            self.player.is_session_active(session_id),
-            "Playback stopped"
-        );
-
-        self.player.start_stream_playback(
+        self.start_prepared_playback(
             session_id,
             output_format,
             sample_buffer,
@@ -326,108 +288,299 @@ impl AppState {
     }
 
     pub(crate) fn handle_media_control(&self, event: MediaControlEvent) {
-        let log_center = Arc::clone(&self.log_center);
         match event {
-            MediaControlEvent::Play => {
-                if let Err(error) = self.player.resume() {
-                    log_center.record(
-                        LogPayload::new(LogLevel::Warn, "media-session", "media_session.resume_failed", "Failed to resume playback")
-                            .details(format!("{error:#}")),
-                    );
-                }
-            }
-            MediaControlEvent::Pause => {
-                if let Err(error) = self.player.pause() {
-                    log_center.record(
-                        LogPayload::new(LogLevel::Warn, "media-session", "media_session.pause_failed", "Failed to pause playback")
-                            .details(format!("{error:#}")),
-                    );
-                }
-            }
-            MediaControlEvent::Toggle => {
-                if let Err(error) = self.player.toggle_playback() {
-                    log_center.record(
-                        LogPayload::new(LogLevel::Warn, "media-session", "media_session.toggle_failed", "Failed to toggle playback")
-                            .details(format!("{error:#}")),
-                    );
-                }
-            }
-            MediaControlEvent::Stop | MediaControlEvent::Quit => {
-                if let Err(error) = self.player.stop() {
-                    log_center.record(
-                        LogPayload::new(LogLevel::Warn, "media-session", "media_session.stop_failed", "Failed to stop playback")
-                            .details(format!("{error:#}")),
-                    );
-                }
-            }
-            MediaControlEvent::Next => {
-                let state = self.clone();
-                tauri::async_runtime::spawn(async move {
-                    if let Err(error) = state.play_next_internal().await {
-                        state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.next_track_failed", "Failed to play next track")
-                                .details(error.to_string()),
-                        );
-                    }
-                });
-            }
-            MediaControlEvent::Previous => {
-                let state = self.clone();
-                tauri::async_runtime::spawn(async move {
-                    if let Err(error) = state.play_previous_internal().await {
-                        state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.previous_track_failed", "Failed to play previous track")
-                                .details(error.to_string()),
-                        );
-                    }
-                });
-            }
+            MediaControlEvent::Play => self.handle_media_play(),
+            MediaControlEvent::Pause => self.handle_media_pause(),
+            MediaControlEvent::Toggle => self.handle_media_toggle(),
+            MediaControlEvent::Stop | MediaControlEvent::Quit => self.handle_media_stop_or_quit(),
+            MediaControlEvent::Next => self.handle_media_next(),
+            MediaControlEvent::Previous => self.handle_media_previous(),
             MediaControlEvent::SetPosition(position) => {
-                let state = self.clone();
-                tauri::async_runtime::spawn(async move {
-                    if let Err(error) = state.seek_current_internal(position.0.as_secs_f64()).await {
-                        state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.seek_failed", "Failed to seek playback")
-                                .details(error.to_string()),
-                        );
-                    }
-                });
+                self.handle_media_set_position(position.0.as_secs_f64())
             }
             MediaControlEvent::SeekBy(direction, delta) => {
-                let state = self.clone();
-                tauri::async_runtime::spawn(async move {
-                    let current = state.player.get_state();
-                    let delta_secs = delta.as_secs_f64();
-                    let target = match direction {
-                        SeekDirection::Forward => current.progress + delta_secs,
-                        SeekDirection::Backward => current.progress - delta_secs,
-                    };
-                    if let Err(error) = state.seek_current_internal(target).await {
-                        state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.seek_by_delta_failed", "Failed to seek by delta")
-                                .details(error.to_string()),
-                        );
-                    }
-                });
+                self.handle_media_seek_by(direction, delta.as_secs_f64())
             }
-            MediaControlEvent::Seek(direction) => {
-                let state = self.clone();
-                tauri::async_runtime::spawn(async move {
-                    let current = state.player.get_state();
-                    let target = match direction {
-                        SeekDirection::Forward => current.progress + 10.0,
-                        SeekDirection::Backward => current.progress - 10.0,
-                    };
-                    if let Err(error) = state.seek_current_internal(target).await {
-                        state.log_center.record(
-                            LogPayload::new(LogLevel::Warn, "media-session", "media_session.seek_forward_failed", "Failed to seek forward/backward")
-                                .details(error.to_string()),
-                        );
-                    }
-                });
-            }
+            MediaControlEvent::Seek(direction) => self.handle_media_seek(direction),
             _ => {}
         }
+    }
+
+    fn handle_media_play(&self) {
+        if let Err(error) = self.player.resume() {
+            self.log_center.record(
+                LogPayload::new(
+                    LogLevel::Warn,
+                    "media-session",
+                    "media_session.resume_failed",
+                    "Failed to resume playback",
+                )
+                .details(format!("{error:#}")),
+            );
+        }
+    }
+
+    fn handle_media_pause(&self) {
+        if let Err(error) = self.player.pause() {
+            self.log_center.record(
+                LogPayload::new(
+                    LogLevel::Warn,
+                    "media-session",
+                    "media_session.pause_failed",
+                    "Failed to pause playback",
+                )
+                .details(format!("{error:#}")),
+            );
+        }
+    }
+
+    fn handle_media_toggle(&self) {
+        if let Err(error) = self.player.toggle_playback() {
+            self.log_center.record(
+                LogPayload::new(
+                    LogLevel::Warn,
+                    "media-session",
+                    "media_session.toggle_failed",
+                    "Failed to toggle playback",
+                )
+                .details(format!("{error:#}")),
+            );
+        }
+    }
+
+    fn handle_media_stop_or_quit(&self) {
+        if let Err(error) = self.player.stop() {
+            self.log_center.record(
+                LogPayload::new(
+                    LogLevel::Warn,
+                    "media-session",
+                    "media_session.stop_failed",
+                    "Failed to stop playback",
+                )
+                .details(format!("{error:#}")),
+            );
+        }
+    }
+
+    fn handle_media_next(&self) {
+        let state = self.clone();
+        tauri::async_runtime::spawn(async move {
+            if let Err(error) = state.play_next_internal().await {
+                state.log_center.record(
+                    LogPayload::new(
+                        LogLevel::Warn,
+                        "media-session",
+                        "media_session.next_track_failed",
+                        "Failed to play next track",
+                    )
+                    .details(error.to_string()),
+                );
+            }
+        });
+    }
+
+    fn handle_media_previous(&self) {
+        let state = self.clone();
+        tauri::async_runtime::spawn(async move {
+            if let Err(error) = state.play_previous_internal().await {
+                state.log_center.record(
+                    LogPayload::new(
+                        LogLevel::Warn,
+                        "media-session",
+                        "media_session.previous_track_failed",
+                        "Failed to play previous track",
+                    )
+                    .details(error.to_string()),
+                );
+            }
+        });
+    }
+
+    fn handle_media_set_position(&self, position_secs: f64) {
+        let state = self.clone();
+        tauri::async_runtime::spawn(async move {
+            if let Err(error) = state.seek_current_internal(position_secs).await {
+                state.log_center.record(
+                    LogPayload::new(
+                        LogLevel::Warn,
+                        "media-session",
+                        "media_session.seek_failed",
+                        "Failed to seek playback",
+                    )
+                    .details(error.to_string()),
+                );
+            }
+        });
+    }
+
+    fn handle_media_seek_by(&self, direction: SeekDirection, delta_secs: f64) {
+        let state = self.clone();
+        tauri::async_runtime::spawn(async move {
+            let current = state.player.get_state();
+            let target = match direction {
+                SeekDirection::Forward => current.progress + delta_secs,
+                SeekDirection::Backward => current.progress - delta_secs,
+            };
+            if let Err(error) = state.seek_current_internal(target).await {
+                state.log_center.record(
+                    LogPayload::new(
+                        LogLevel::Warn,
+                        "media-session",
+                        "media_session.seek_by_delta_failed",
+                        "Failed to seek by delta",
+                    )
+                    .details(error.to_string()),
+                );
+            }
+        });
+    }
+
+    fn handle_media_seek(&self, direction: SeekDirection) {
+        let state = self.clone();
+        tauri::async_runtime::spawn(async move {
+            let current = state.player.get_state();
+            let target = match direction {
+                SeekDirection::Forward => current.progress + 10.0,
+                SeekDirection::Backward => current.progress - 10.0,
+            };
+            if let Err(error) = state.seek_current_internal(target).await {
+                state.log_center.record(
+                    LogPayload::new(
+                        LogLevel::Warn,
+                        "media-session",
+                        "media_session.seek_forward_failed",
+                        "Failed to seek forward/backward",
+                    )
+                    .details(error.to_string()),
+                );
+            }
+        });
+    }
+
+    fn prepare_playback_input(
+        &self,
+        song_cid: &str,
+        source_url: &str,
+        stop_flag: &Arc<std::sync::atomic::AtomicBool>,
+    ) -> Result<PreparedPlaybackInput> {
+        let cache_path = audio_cache::cached_song_path(song_cid, source_url)?;
+        let pending_marker = audio_cache::pending_marker_path(&cache_path);
+
+        let input = if audio_cache::is_song_cached(&cache_path) {
+            PlaybackInput::cached_file(cache_path.clone())
+        } else {
+            let _ = std::fs::remove_file(&cache_path);
+            let _ = std::fs::remove_file(&pending_marker);
+            std::fs::write(&pending_marker, b"pending").with_context(|| {
+                format!("Failed to create cache marker {}", pending_marker.display())
+            })?;
+
+            let (handle, writer) = GrowingFileHandle::new(cache_path.clone())?;
+            self.spawn_stream_download(
+                source_url.to_string(),
+                Arc::clone(stop_flag),
+                handle.clone(),
+                writer,
+                cache_path.clone(),
+                pending_marker.clone(),
+            );
+            PlaybackInput::growing_file(handle)
+        };
+
+        Ok(PreparedPlaybackInput { input })
+    }
+
+    fn spawn_stream_download(
+        &self,
+        source_url: String,
+        stop_flag: Arc<std::sync::atomic::AtomicBool>,
+        handle: GrowingFileHandle,
+        mut writer: std::fs::File,
+        cache_path: PathBuf,
+        pending_marker: PathBuf,
+    ) {
+        let api = Arc::clone(&self.api);
+        let log_center = Arc::clone(&self.log_center);
+
+        tokio::spawn(async move {
+            let download_result = api
+                .download_stream(&source_url, |chunk, _, _| {
+                    if stop_flag.load(Ordering::SeqCst) {
+                        return Ok(false);
+                    }
+                    handle.append_chunk(&mut writer, chunk)?;
+                    Ok(true)
+                })
+                .await;
+
+            match download_result {
+                Ok(()) if !stop_flag.load(Ordering::SeqCst) => {
+                    handle.mark_complete();
+                    let _ = std::fs::remove_file(&pending_marker);
+                    audio_cache::spawn_cleanup_if_needed();
+                }
+                Ok(()) => {
+                    handle.mark_error("Playback stopped");
+                    let _ = std::fs::remove_file(&pending_marker);
+                    let _ = std::fs::remove_file(&cache_path);
+                }
+                Err(error) => {
+                    log_center.record(
+                        LogPayload::new(
+                            LogLevel::Error,
+                            "player",
+                            "player.stream_download_failed",
+                            "Streaming download failed during playback",
+                        )
+                        .details(format!("{error:#}")),
+                    );
+                    handle.mark_error(error.to_string());
+                    let _ = std::fs::remove_file(&pending_marker);
+                    let _ = std::fs::remove_file(&cache_path);
+                }
+            }
+        });
+    }
+
+    async fn wait_for_initial_buffer(
+        &self,
+        sample_buffer: &SampleBuffer,
+        output_format: crate::player::stream::AudioFormat,
+        stop_flag: &Arc<std::sync::atomic::AtomicBool>,
+    ) -> Result<()> {
+        let minimum_samples =
+            ((output_format.sample_rate as usize * output_format.channels as usize) / 3)
+                .max(output_format.channels as usize * 4096)
+                .min(output_format.channels as usize * 32_768);
+
+        let wait_buffer = sample_buffer.clone();
+        let wait_stop = Arc::clone(stop_flag);
+        tokio::task::spawn_blocking(move || {
+            wait_buffer.wait_for_samples(minimum_samples, &wait_stop)
+        })
+        .await
+        .map_err(|error| anyhow::anyhow!(error.to_string()))??;
+        Ok(())
+    }
+
+    fn start_prepared_playback(
+        &self,
+        session_id: u64,
+        output_format: crate::player::stream::AudioFormat,
+        sample_buffer: SampleBuffer,
+        start_position_secs: f64,
+    ) -> Result<f64> {
+        anyhow::ensure!(
+            self.player.is_session_active(session_id),
+            "Playback stopped"
+        );
+
+        self.player.start_stream_playback(
+            session_id,
+            output_format,
+            sample_buffer,
+            start_position_secs,
+        )
     }
 }
 
@@ -439,4 +592,3 @@ fn normalize_seek_position(position_secs: f64, duration_secs: f64) -> f64 {
         position_secs
     }
 }
-

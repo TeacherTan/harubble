@@ -38,11 +38,18 @@ export interface LocalInventoryScanProgressEvent {
   currentPath: string | null;
 }
 
+export interface AlbumDownloadBadge {
+  isDownloaded: boolean;
+  downloadStatus: LocalTrackDownloadStatus;
+  inventoryVersion: string;
+}
+
 export interface Album {
   cid: string;
   name: string;
   coverUrl: string;
   artists: string[];
+  download: AlbumDownloadBadge;
 }
 
 export interface SongEntry {
@@ -84,6 +91,7 @@ export interface AlbumDetail {
   coverUrl: string;
   coverDeUrl: string | null;
   artists: string[] | null;
+  download: AlbumDownloadBadge;
   songs: SongEntry[];
 }
 

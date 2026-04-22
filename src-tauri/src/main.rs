@@ -34,8 +34,10 @@
 mod app_state;
 mod audio_cache;
 mod commands;
+mod download_session;
 mod downloads;
 mod local_inventory;
+mod local_inventory_provenance;
 mod logging;
 mod notification;
 mod player;
@@ -173,6 +175,7 @@ fn main() {
             commands::logging::list_log_records,
             commands::logging::get_log_file_status,
             commands::downloads::clear_audio_cache,
+            commands::downloads::clear_response_cache,
             commands::downloads::create_download_job,
             commands::downloads::list_download_jobs,
             commands::downloads::get_download_job,
@@ -184,18 +187,16 @@ fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app_handle, event| {
-            match event {
-                RunEvent::ExitRequested { .. } | RunEvent::Exit => {
-                    if let Some(state) = app_handle.try_state::<AppState>() {
-                        let threshold = LogLevel::parse(&state.preferences().log_level)
-                            .unwrap_or(LogLevel::Error);
-                        if let Err(error) = state.log_center.flush_session_to_persistent(threshold) {
-                            eprintln!("[logging] failed to flush session logs: {error:#}");
-                        }
+        .run(|app_handle, event| match event {
+            RunEvent::ExitRequested { .. } | RunEvent::Exit => {
+                if let Some(state) = app_handle.try_state::<AppState>() {
+                    let threshold =
+                        LogLevel::parse(&state.preferences().log_level).unwrap_or(LogLevel::Error);
+                    if let Err(error) = state.log_center.flush_session_to_persistent(threshold) {
+                        eprintln!("[logging] failed to flush session logs: {error:#}");
                     }
                 }
-                _ => {}
             }
+            _ => {}
         });
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { motion } from '@humanspeak/svelte-motion';
   import type { SongEntry } from '$lib/types';
+  import { getDownloadBadgeLabel, shouldShowDownloadBadge } from '$lib/downloadBadge';
 
   type SongDownloadState = 'idle' | 'creating' | 'queued' | 'running';
 
@@ -39,19 +40,12 @@
 
   const showEmphasis = $derived.by(() => isPlaying || isHovered || isFocused || isSelected);
   const showPlayIndicator = $derived.by(() => isPlaying || isHovered || isFocused);
-  const showDownloadedBadge = $derived.by(() => song.download?.isDownloaded ?? false);
-  const downloadedBadgeLabel = $derived.by(() => {
-    switch (song.download?.downloadStatus) {
-      case 'verified':
-        return '已校验';
-      case 'unverifiable':
-        return '已下载';
-      case 'partial':
-        return '部分下载';
-      default:
-        return '已下载';
-    }
-  });
+  const showDownloadedBadge = $derived.by(() =>
+    shouldShowDownloadBadge(song.download.downloadStatus)
+  );
+  const downloadedBadgeLabel = $derived.by(() =>
+    getDownloadBadgeLabel(song.download.downloadStatus)
+  );
   const isBusy = $derived.by(() => downloadState !== 'idle');
   const isDownloadDisabled = $derived.by(() => isBusy || downloadDisabled || selectionMode);
   const downloadButtonLabel = $derived.by(() => {

@@ -5,6 +5,7 @@ use crate::audio::{
 };
 use crate::download::model::DownloadTaskStatus;
 use anyhow::{anyhow, Context, Result};
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -50,6 +51,16 @@ impl OwnedFlacMetadata {
 /// Payload produced by the download phase, carrying all data needed to write
 /// the song to disk. This is the message type sent from the download stage
 /// to the write worker in a pipeline configuration.
+#[derive(Debug, Clone)]
+pub struct DownloadProvenanceSeed {
+    /// The upstream source URL used for the download.
+    pub source_url: String,
+    /// MD5 of the original downloaded audio bytes before any conversion/tagging.
+    pub source_audio_checksum: String,
+    /// Stable digest describing the write pipeline applied to the source bytes.
+    pub processing_fingerprint: String,
+}
+
 #[derive(Debug)]
 pub struct WritePayload {
     /// Complete audio data buffered in memory.
@@ -64,6 +75,8 @@ pub struct WritePayload {
     pub flac_metadata: Option<OwnedFlacMetadata>,
     /// Lyric text content, if lyrics were downloaded.
     pub lyric_text: Option<String>,
+    /// Provenance seed captured during the trusted download pipeline.
+    pub provenance_seed: DownloadProvenanceSeed,
     /// Cancellation flag shared with the download phase.
     pub cancellation_flag: Option<Arc<AtomicBool>>,
 }
@@ -107,6 +120,52 @@ pub struct DownloadProgress {
 
 fn lyric_sidecar_path(audio_path: &Path) -> PathBuf {
     audio_path.with_extension("lrc")
+}
+
+#[derive(Serialize)]
+struct ProcessingFingerprint<'a> {
+    output_format: OutputFormat,
+    source_format: AudioFormat,
+    writes_flac_tags: bool,
+    embeds_cover: bool,
+    writes_lyric_sidecar: bool,
+    base_name: &'a str,
+}
+
+fn source_audio_checksum(audio_bytes: &[u8]) -> String {
+    format!("{:x}", md5::compute(audio_bytes))
+}
+
+fn build_processing_fingerprint(
+    source_format: AudioFormat,
+    format: OutputFormat,
+    base_name: &str,
+    flac_metadata: Option<&OwnedFlacMetadata>,
+    lyric_text: Option<&str>,
+) -> String {
+    let writes_flac_tags = flac_metadata.is_some()
+        && (source_format == AudioFormat::Flac
+            || (source_format == AudioFormat::Wav && format == OutputFormat::Flac));
+    let fingerprint = ProcessingFingerprint {
+        output_format: format,
+        source_format,
+        writes_flac_tags,
+        embeds_cover: flac_metadata
+            .and_then(|metadata| metadata.cover_jpeg.as_ref())
+            .is_some(),
+        writes_lyric_sidecar: lyric_text.is_some(),
+        base_name,
+    };
+    serde_json::to_string(&fingerprint).unwrap_or_else(|_| {
+        format!(
+            "{:?}:{:?}:{writes_flac_tags}:{}:{}:{}",
+            format,
+            source_format,
+            fingerprint.embeds_cover,
+            fingerprint.writes_lyric_sidecar,
+            base_name
+        )
+    })
 }
 
 fn write_lyric_sidecar(audio_path: &Path, lyric_text: &str) -> Result<PathBuf> {
@@ -339,6 +398,19 @@ pub async fn download_song_phase1(
     // Build FLAC metadata if applicable
     let flac_metadata = build_owned_flac_metadata(song, album, meta, embedded_cover.as_deref());
 
+    let source_format = AudioFormat::detect(&audio_bytes);
+    let provenance_seed = DownloadProvenanceSeed {
+        source_url: song.source_url.clone(),
+        source_audio_checksum: source_audio_checksum(&audio_bytes),
+        processing_fingerprint: build_processing_fingerprint(
+            source_format,
+            format,
+            &song.name,
+            flac_metadata.as_ref(),
+            lyric_text.as_deref(),
+        ),
+    };
+
     Ok(WritePayload {
         audio_bytes,
         output_dir: out_dir.to_path_buf(),
@@ -346,6 +418,7 @@ pub async fn download_song_phase1(
         format,
         flac_metadata,
         lyric_text,
+        provenance_seed,
         cancellation_flag,
     })
 }

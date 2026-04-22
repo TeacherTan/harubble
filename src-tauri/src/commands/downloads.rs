@@ -24,6 +24,12 @@ pub fn clear_audio_cache(state: State<'_, AppState>) -> Result<u64, String> {
     audio_cache::clear_audio_cache().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub fn clear_response_cache(state: State<'_, AppState>) -> Result<(), String> {
+    state.api.clear_response_cache();
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // Phase 1: Download job management commands
 // ---------------------------------------------------------------------------
@@ -52,6 +58,7 @@ pub async fn create_download_job(
         let manager_snapshot = service.manager_snapshot();
         (job_snapshot, manager_snapshot)
     };
+    state.persist_download_snapshot(&manager_snapshot);
 
     emit_download_job_updated(&app, &job_snapshot);
     emit_download_manager_state_changed(&app, &manager_snapshot);
@@ -90,6 +97,7 @@ pub async fn cancel_download_job(
     };
 
     if let Some(job_snapshot) = &snapshot {
+        state.persist_download_snapshot(&manager_snapshot);
         emit_download_job_updated(&app, job_snapshot);
         emit_download_manager_state_changed(&app, &manager_snapshot);
     }
@@ -112,6 +120,7 @@ pub async fn cancel_download_task(
     };
 
     if let Some(job_snapshot) = &snapshot {
+        state.persist_download_snapshot(&manager_snapshot);
         emit_download_job_updated(&app, job_snapshot);
         emit_download_manager_state_changed(&app, &manager_snapshot);
     }
@@ -133,6 +142,7 @@ pub async fn retry_download_job(
     };
 
     if let Some(job_snapshot) = &snapshot {
+        state.persist_download_snapshot(&manager_snapshot);
         emit_download_job_updated(&app, job_snapshot);
         emit_download_manager_state_changed(&app, &manager_snapshot);
     }
@@ -155,6 +165,7 @@ pub async fn retry_download_task(
     };
 
     if let Some(job_snapshot) = &snapshot {
+        state.persist_download_snapshot(&manager_snapshot);
         emit_download_job_updated(&app, job_snapshot);
         emit_download_manager_state_changed(&app, &manager_snapshot);
     }
@@ -173,6 +184,7 @@ pub async fn clear_download_history(
         let manager_snapshot = service.manager_snapshot();
         (removed_count, manager_snapshot)
     };
+    state.persist_download_snapshot(&manager_snapshot);
 
     emit_download_state(&app, &manager_snapshot);
 

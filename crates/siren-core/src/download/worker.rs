@@ -19,7 +19,7 @@ use crate::download::model::{
     DownloadErrorCode, DownloadErrorInfo, DownloadTaskProgressEvent, InternalDownloadTask,
 };
 use crate::downloader::{
-    download_song, download_song_phase1, write_payload_to_disk, MetaOverride, WritePayload,
+    download_song_phase1, write_payload_to_disk, DownloadProvenanceSeed, MetaOverride, WritePayload,
 };
 use anyhow::Error;
 use std::path::Path;
@@ -27,11 +27,17 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+#[derive(Debug, Clone)]
+pub struct CompletedTaskArtifacts {
+    pub output_path: String,
+    pub provenance_seed: DownloadProvenanceSeed,
+}
+
 /// Result of executing a download task.
 #[derive(Debug)]
 pub enum TaskExecutionResult {
     /// Task completed successfully.
-    Completed { output_path: String },
+    Completed(CompletedTaskArtifacts),
     /// Task was cancelled.
     Cancelled,
     /// Task failed with an error.
@@ -99,8 +105,7 @@ impl InternalDownloadTask {
         let last_bytes = Arc::new(AtomicU64::new(0));
         let last_time = Arc::new(Mutex::new(start_time));
 
-        // Execute the download using the existing download_song function
-        let result = download_song(
+        let phase1_result = download_song_phase1(
             api,
             &song,
             &album,
@@ -127,7 +132,6 @@ impl InternalDownloadTask {
                     };
                     let elapsed = now.duration_since(prev_time).as_secs_f64();
 
-                    // Calculate speed: bytes downloaded since last update / time elapsed
                     let prev_bytes = last_bytes.swap(prog.bytes_done, Ordering::Relaxed);
                     let speed_bytes_per_sec = if elapsed > 0.0 {
                         let bytes_delta = prog.bytes_done.saturating_sub(prev_bytes);
@@ -151,12 +155,22 @@ impl InternalDownloadTask {
         )
         .await;
 
-        match result {
-            Ok(path) => TaskExecutionResult::Completed {
-                output_path: path.to_string_lossy().to_string(),
+        match phase1_result {
+            Ok(payload) => match write_payload_to_disk(&payload, None) {
+                Ok(path) => TaskExecutionResult::Completed(CompletedTaskArtifacts {
+                    output_path: path.to_string_lossy().to_string(),
+                    provenance_seed: payload.provenance_seed,
+                }),
+                Err(e) => {
+                    let msg = e.to_string();
+                    if msg.contains("cancelled") || msg.contains("Canceled") {
+                        TaskExecutionResult::Cancelled
+                    } else {
+                        TaskExecutionResult::Failed(classify_error(e))
+                    }
+                }
             },
             Err(e) => {
-                // Check if this was a cancellation
                 let msg = e.to_string();
                 if msg.contains("cancelled") || msg.contains("Canceled") {
                     TaskExecutionResult::Cancelled
@@ -318,9 +332,10 @@ impl InternalDownloadTask {
         };
 
         match write_payload_to_disk(payload, Some(&progress_adapter)) {
-            Ok(path) => TaskExecutionResult::Completed {
+            Ok(path) => TaskExecutionResult::Completed(CompletedTaskArtifacts {
                 output_path: path.to_string_lossy().to_string(),
-            },
+                provenance_seed: payload.provenance_seed.clone(),
+            }),
             Err(e) => {
                 let msg = e.to_string();
                 if msg.contains("cancelled") || msg.contains("Canceled") {

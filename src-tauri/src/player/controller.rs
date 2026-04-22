@@ -243,79 +243,9 @@ impl AudioPlayer {
         }
         emit_state_and_sync(&self.app, &self.state, &self.media_session);
 
-        let state_for_progress = Arc::clone(&self.state);
-        let state_for_finish = Arc::clone(&self.state);
-        let app_for_progress = self.app.clone();
-        let app_for_finish = self.app.clone();
-        let media_for_progress = Arc::clone(&self.media_session);
-        let media_for_finish = Arc::clone(&self.media_session);
-        let active_session = Arc::clone(&self.active_session_id);
-        let stop_flag = Arc::clone(&self.stop_flag);
-
-        let progress_callback: Arc<dyn Fn(f64, f64) + Send + Sync> =
-            Arc::new(move |progress, duration| {
-                if active_session.load(Ordering::SeqCst) != session_id
-                    || stop_flag.load(Ordering::SeqCst)
-                {
-                    return;
-                }
-                {
-                    let mut state = state_for_progress.lock().unwrap();
-                    let absolute_progress = if duration > 0.0 {
-                        (initial_progress + progress).min(duration)
-                    } else {
-                        initial_progress + progress
-                    };
-                    state.progress = absolute_progress;
-                    if duration > 0.0 {
-                        state.duration = duration.max(initial_progress);
-                    }
-                }
-                emit_progress_and_sync(&app_for_progress, &state_for_progress, &media_for_progress);
-            });
-
-        let active_session = Arc::clone(&self.active_session_id);
-        let stop_flag = Arc::clone(&self.stop_flag);
-        let pause_flag = Arc::clone(&self.pause_flag);
-        let finish_callback: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
-            if active_session.load(Ordering::SeqCst) != session_id
-                || stop_flag.load(Ordering::SeqCst)
-            {
-                return;
-            }
-            pause_flag.store(false, Ordering::SeqCst);
-            {
-                let mut state = state_for_finish.lock().unwrap();
-                state.is_playing = false;
-                state.is_paused = false;
-                state.is_loading = false;
-                if state.duration <= 0.0 {
-                    state.duration = state.progress;
-                }
-                state.progress = state.duration;
-            }
-            emit_state_and_sync(&app_for_finish, &state_for_finish, &media_for_finish);
-        });
-
-        let active_session = Arc::clone(&self.active_session_id);
-        let stop_flag = Arc::clone(&self.stop_flag);
-        let app_for_error = self.app.clone();
-        let error_handler = Arc::new(move |message: String| {
-            if stop_flag.load(Ordering::SeqCst) || active_session.load(Ordering::SeqCst) != session_id {
-                return;
-            }
-            if let Some(state) = app_for_error.try_state::<crate::app_state::AppState>() {
-                state.log_center.record(
-                    crate::logging::LogPayload::new(
-                        crate::logging::LogLevel::Error,
-                        "player",
-                        "player.output_stream_failed",
-                        "Audio output stream failed",
-                    )
-                    .details(message),
-                );
-            }
-        });
+        let progress_callback = self.build_progress_callback(session_id, initial_progress);
+        let finish_callback = self.build_finish_callback(session_id);
+        let error_handler = self.build_error_callback(session_id);
 
         self.backend
             .lock()
@@ -344,6 +274,93 @@ impl AudioPlayer {
         emit_state_and_sync(&self.app, &self.state, &self.media_session);
 
         Ok(self.state.lock().unwrap().duration)
+    }
+
+    fn build_progress_callback(
+        &self,
+        session_id: u64,
+        initial_progress: f64,
+    ) -> Arc<dyn Fn(f64, f64) + Send + Sync> {
+        let state_for_progress = Arc::clone(&self.state);
+        let app_for_progress = self.app.clone();
+        let media_for_progress = Arc::clone(&self.media_session);
+        let active_session = Arc::clone(&self.active_session_id);
+        let stop_flag = Arc::clone(&self.stop_flag);
+
+        Arc::new(move |progress, duration| {
+            if active_session.load(Ordering::SeqCst) != session_id
+                || stop_flag.load(Ordering::SeqCst)
+            {
+                return;
+            }
+            {
+                let mut state = state_for_progress.lock().unwrap();
+                let absolute_progress = if duration > 0.0 {
+                    (initial_progress + progress).min(duration)
+                } else {
+                    initial_progress + progress
+                };
+                state.progress = absolute_progress;
+                if duration > 0.0 {
+                    state.duration = duration.max(initial_progress);
+                }
+            }
+            emit_progress_and_sync(&app_for_progress, &state_for_progress, &media_for_progress);
+        })
+    }
+
+    fn build_finish_callback(&self, session_id: u64) -> Arc<dyn Fn() + Send + Sync> {
+        let state_for_finish = Arc::clone(&self.state);
+        let app_for_finish = self.app.clone();
+        let media_for_finish = Arc::clone(&self.media_session);
+        let active_session = Arc::clone(&self.active_session_id);
+        let stop_flag = Arc::clone(&self.stop_flag);
+        let pause_flag = Arc::clone(&self.pause_flag);
+
+        Arc::new(move || {
+            if active_session.load(Ordering::SeqCst) != session_id
+                || stop_flag.load(Ordering::SeqCst)
+            {
+                return;
+            }
+            pause_flag.store(false, Ordering::SeqCst);
+            {
+                let mut state = state_for_finish.lock().unwrap();
+                state.is_playing = false;
+                state.is_paused = false;
+                state.is_loading = false;
+                if state.duration <= 0.0 {
+                    state.duration = state.progress;
+                }
+                state.progress = state.duration;
+            }
+            emit_state_and_sync(&app_for_finish, &state_for_finish, &media_for_finish);
+        })
+    }
+
+    fn build_error_callback(&self, session_id: u64) -> Arc<dyn Fn(String) + Send + Sync> {
+        let active_session = Arc::clone(&self.active_session_id);
+        let stop_flag = Arc::clone(&self.stop_flag);
+        let app_for_error = self.app.clone();
+
+        Arc::new(move |message: String| {
+            if stop_flag.load(Ordering::SeqCst)
+                || active_session.load(Ordering::SeqCst) != session_id
+            {
+                return;
+            }
+            if let Some(state) = app_for_error.try_state::<crate::app_state::AppState>() {
+                state.log_center.record(
+                    crate::logging::LogPayload::new(
+                        crate::logging::LogLevel::Error,
+                        "player",
+                        "player.output_stream_failed",
+                        "Audio output stream failed",
+                    )
+                    .details(message),
+                );
+            }
+        })
     }
 
     pub fn pause(&self) -> Result<()> {

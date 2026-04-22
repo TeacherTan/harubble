@@ -3,6 +3,7 @@
   import { motionStyles } from '$lib/actions/motionStyles';
   import type { Album } from '$lib/types';
   import { lazyLoad } from '$lib/lazyLoad';
+  import { getDownloadBadgeLabel, shouldShowDownloadBadge } from '$lib/downloadBadge';
 
   interface Props {
     album: Album;
@@ -22,6 +23,13 @@
   } as const));
 
   const showCoverLift = $derived.by(() => isHovered || isFocused);
+  const showDownloadBadge = $derived.by(() =>
+    shouldShowDownloadBadge(album.download.downloadStatus)
+  );
+
+  const downloadBadgeLabel = $derived.by(() =>
+    getDownloadBadgeLabel(album.download.downloadStatus)
+  );
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -81,6 +89,9 @@
   <div class="album-info">
     <div class="album-name">{album.name}</div>
     <div class="album-artists">{(album.artists || []).join(', ')}</div>
+    {#if showDownloadBadge}
+      <span class="album-download-badge">{downloadBadgeLabel}</span>
+    {/if}
   </div>
 </motion.div>
 
@@ -162,5 +173,18 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .album-download-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.1);
+    border: 1px solid rgba(var(--accent-rgb), 0.12);
   }
 </style>

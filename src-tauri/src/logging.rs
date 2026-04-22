@@ -218,7 +218,10 @@ impl LogCenter {
             .map_err(|error| format!("failed to get app data dir: {error}"))?
             .join("logs");
         fs::create_dir_all(&cache_dir).map_err(|error| {
-            format!("failed to create session log directory {}: {error}", cache_dir.display())
+            format!(
+                "failed to create session log directory {}: {error}",
+                cache_dir.display()
+            )
         })?;
         fs::create_dir_all(&app_data_dir).map_err(|error| {
             format!(
@@ -233,7 +236,10 @@ impl LogCenter {
             SESSION_LOG_PREFIX, session_id, SESSION_LOG_SUFFIX
         ));
         File::create(&session_path).map_err(|error| {
-            format!("failed to create session log file {}: {error}", session_path.display())
+            format!(
+                "failed to create session log file {}: {error}",
+                session_path.display()
+            )
         })?;
 
         Ok(Self {
@@ -432,7 +438,9 @@ fn next_id() -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{append_json_line, read_records, FrontendExposure, LogFileKind, LogLevel, LogViewerQuery};
+    use super::{
+        append_json_line, read_records, FrontendExposure, LogFileKind, LogLevel, LogViewerQuery,
+    };
     use serde_json::json;
     use tempfile::tempdir;
 

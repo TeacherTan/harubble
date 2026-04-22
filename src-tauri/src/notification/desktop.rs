@@ -16,9 +16,7 @@ pub fn show_playback(
         builder = builder.icon(path);
     }
 
-    builder
-        .show()
-        .map_err(|error| error.to_string())?;
+    builder.show().map_err(|error| error.to_string())?;
 
     Ok(())
 }
