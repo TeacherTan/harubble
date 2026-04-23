@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use pinyin::ToPinyin;
 use serde::{Deserialize, Serialize};
 use siren_core::ApiClient;
 use std::path::{Path, PathBuf};
@@ -25,6 +26,14 @@ pub(crate) struct LibrarySearchAlbumRecord {
     pub album_cid: String,
     pub album_title: String,
     pub artist_line: Option<String>,
+    pub intro: Option<String>,
+    pub belong: Option<String>,
+    pub album_title_pinyin_full: Option<String>,
+    pub album_title_pinyin_initials: Option<String>,
+    pub artist_line_pinyin_full: Option<String>,
+    pub artist_line_pinyin_initials: Option<String>,
+    pub belong_pinyin_full: Option<String>,
+    pub belong_pinyin_initials: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,6 +44,10 @@ pub(crate) struct LibrarySearchSongRecord {
     pub album_title: String,
     pub song_title: String,
     pub artist_line: Option<String>,
+    pub song_title_pinyin_full: Option<String>,
+    pub song_title_pinyin_initials: Option<String>,
+    pub artist_line_pinyin_full: Option<String>,
+    pub artist_line_pinyin_initials: Option<String>,
 }
 
 pub(crate) async fn build_library_search_snapshot(
@@ -48,36 +61,44 @@ pub(crate) async fn build_library_search_snapshot(
 
     for album in albums {
         let album_artist_line = join_artists(&album.artists);
-        album_records.push(LibrarySearchAlbumRecord {
-            album_cid: album.cid.clone(),
-            album_title: album.name.clone(),
-            artist_line: album_artist_line.clone(),
-        });
-
         let detail = api
             .get_album_detail(&album.cid)
             .await
             .with_context(|| format!("failed to fetch album detail {}", album.cid))?;
-
         let fallback_artist_line = detail
             .artists
             .as_ref()
             .and_then(|artists| join_artists(artists))
             .or(album_artist_line.clone());
 
-        song_records.extend(
-            detail
-                .songs
-                .into_iter()
-                .map(|song| LibrarySearchSongRecord {
-                    album_cid: album.cid.clone(),
-                    song_cid: song.cid,
-                    album_title: album.name.clone(),
-                    song_title: song.name,
-                    artist_line: join_artists(&song.artists)
-                        .or_else(|| fallback_artist_line.clone()),
-                }),
-        );
+        album_records.push(LibrarySearchAlbumRecord {
+            album_cid: album.cid.clone(),
+            album_title: album.name.clone(),
+            artist_line: fallback_artist_line.clone(),
+            intro: normalize_optional_text(detail.intro.clone()),
+            belong: normalize_optional_text(Some(detail.belong.clone())),
+            album_title_pinyin_full: to_full_pinyin(&album.name),
+            album_title_pinyin_initials: to_pinyin_initials(&album.name),
+            artist_line_pinyin_full: album_artist_line.as_deref().and_then(to_full_pinyin),
+            artist_line_pinyin_initials: album_artist_line.as_deref().and_then(to_pinyin_initials),
+            belong_pinyin_full: to_full_pinyin(&detail.belong),
+            belong_pinyin_initials: to_pinyin_initials(&detail.belong),
+        });
+
+        song_records.extend(detail.songs.into_iter().map(|song| {
+            let artist_line = join_artists(&song.artists).or_else(|| fallback_artist_line.clone());
+            LibrarySearchSongRecord {
+                album_cid: album.cid.clone(),
+                song_cid: song.cid,
+                album_title: album.name.clone(),
+                song_title: song.name.clone(),
+                artist_line_pinyin_full: artist_line.as_deref().and_then(to_full_pinyin),
+                artist_line_pinyin_initials: artist_line.as_deref().and_then(to_pinyin_initials),
+                song_title_pinyin_full: to_full_pinyin(&song.name),
+                song_title_pinyin_initials: to_pinyin_initials(&song.name),
+                artist_line,
+            }
+        }));
     }
 
     Ok(LibrarySearchSnapshot {
@@ -145,6 +166,45 @@ fn join_artists(artists: &[String]) -> Option<String> {
         None
     } else {
         Some(line)
+    }
+}
+
+fn normalize_optional_text(value: Option<String>) -> Option<String> {
+    value.and_then(|text| {
+        let trimmed = text.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    })
+}
+
+fn to_full_pinyin(input: &str) -> Option<String> {
+    let syllables = input
+        .to_pinyin()
+        .flatten()
+        .map(|item| item.plain().to_string())
+        .collect::<Vec<_>>();
+
+    if syllables.is_empty() {
+        None
+    } else {
+        Some(syllables.join(" "))
+    }
+}
+
+fn to_pinyin_initials(input: &str) -> Option<String> {
+    let initials = input
+        .to_pinyin()
+        .flatten()
+        .filter_map(|item| item.plain().chars().next())
+        .collect::<String>();
+
+    if initials.is_empty() {
+        None
+    } else {
+        Some(initials)
     }
 }
 

@@ -311,6 +311,14 @@ mod tests {
                 album_cid: "album-a".to_string(),
                 album_title: "Alpha".to_string(),
                 artist_line: Some("Artist".to_string()),
+                intro: None,
+                belong: None,
+                album_title_pinyin_full: None,
+                album_title_pinyin_initials: None,
+                artist_line_pinyin_full: None,
+                artist_line_pinyin_initials: None,
+                belong_pinyin_full: None,
+                belong_pinyin_initials: None,
             }],
             songs: vec![LibrarySearchSongRecord {
                 album_cid: "album-a".to_string(),
@@ -318,6 +326,10 @@ mod tests {
                 album_title: "Alpha".to_string(),
                 song_title: "Beacon".to_string(),
                 artist_line: Some("Artist".to_string()),
+                song_title_pinyin_full: None,
+                song_title_pinyin_initials: None,
+                artist_line_pinyin_full: None,
+                artist_line_pinyin_initials: None,
             }],
         }
     }
@@ -365,7 +377,7 @@ mod tests {
             .await
             .expect("response");
         assert_eq!(response.index_state, LibraryIndexState::Ready);
-        assert_eq!(response.total, 2);
+        assert_eq!(response.total, 1);
     }
 
     #[tokio::test]

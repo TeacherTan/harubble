@@ -6,8 +6,8 @@
   import type {
     Album,
     LibraryIndexState,
-    LibrarySearchResponse,
-    LibrarySearchResultItem,
+    SearchLibraryResponse,
+    SearchLibraryResultItem,
     LibrarySearchScope,
   } from "$lib/types";
 
@@ -20,11 +20,11 @@
     searchQuery?: string;
     searchScope?: LibrarySearchScope;
     searchLoading?: boolean;
-    searchResponse?: LibrarySearchResponse | null;
+    searchResponse?: SearchLibraryResponse | null;
     onSearchQueryChange: (query: string) => void;
     onSearchScopeChange: (scope: LibrarySearchScope) => void;
     onSelect: (album: Album) => void;
-    onSelectSearchResult: (item: LibrarySearchResultItem) => void;
+    onSelectSearchResult: (item: SearchLibraryResultItem) => void;
   }
 
   const scopeOptions: Array<{ value: LibrarySearchScope; label: string }> = [

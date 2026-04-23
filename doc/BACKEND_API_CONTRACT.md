@@ -340,15 +340,19 @@
 
 ### `LibrarySearchHitField`
 
-枚举值（12A）：
+枚举值（12B）：
 
 - `title`
 - `artist`
+- `intro`
+- `belong`
 
 说明：
 
-- 12A 只表达用户可理解的主检索字段命中来源
-- `intro` / `belong`、`lyric`、`pinyin` 不属于 12A 冻结范围
+- `matchedFields` 表达用户可理解的命中来源
+- 12B 新增 `intro` / `belong` 辅助字段命中表达
+- 拼音召回属于实现增强，不单独暴露为命中字段
+- `lyric` 不属于当前范围；若后续进入 12C，再扩展该枚举
 
 ### `SearchLibraryRequest`
 
@@ -558,8 +562,8 @@
 
 - `album_title` / `artist` 来自 `get_albums()` 返回的专辑列表
 - `song_title` / `song` 级 `artist` 来自 `get_album_detail()` 的歌曲列表
+- `intro` / `belong` 来自 `get_album_detail()` 的专辑详情字段，用于 12B 辅助召回
 - 12A 默认避免为建索引而对每首歌额外执行 `get_song_detail()`
-- `intro` / `belong` 不属于 12A 索引范围（属于 Phase 12B 规划）
 
 查询验证规则：
 
@@ -575,7 +579,7 @@
 返回约束：
 
 - `items` 只返回导航所需的最小字段，不返回歌词、preview、raw score 或 analyzer 细节
-- `matchedFields` 只表达 `title | artist` 命中，不暴露底层 tokenizer / n-gram / analyzer 细节
+- `matchedFields` 只表达 `title | artist | intro | belong` 命中，不暴露底层 tokenizer / n-gram / pinyin analyzer 细节
 - `total` 表示分页前的全量匹配数
 - 不返回全文歌词、整段 intro 或 `belong` 内容
 - 错误信息为前端安全字符串，不暴露索引文件路径、Tantivy 内部结构或歌词文本

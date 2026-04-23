@@ -97,7 +97,7 @@ export interface AlbumDetail {
 
 export type LibrarySearchScope = 'all' | 'albums' | 'songs';
 
-export type LibrarySearchHitField = 'title' | 'artist';
+export type LibrarySearchHitField = 'title' | 'artist' | 'intro' | 'belong';
 
 export type LibraryIndexState = 'notReady' | 'building' | 'stale' | 'ready';
 

@@ -19,6 +19,8 @@ pub enum LibrarySearchScope {
 pub enum LibrarySearchHitField {
     Title,
     Artist,
+    Intro,
+    Belong,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
