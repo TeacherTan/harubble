@@ -30,8 +30,8 @@ pub use download::model::{
 pub use download::service::DownloadService;
 pub use downloader::{
     album_cover_exists, album_output_dir, download_album_cover, download_song,
-    download_song_phase1, write_album_cover_bytes, write_payload_to_disk, DownloadProgress,
-    DownloadProvenanceSeed, MetaOverride, OwnedFlacMetadata, WritePayload,
+    write_album_cover_bytes, write_payload_to_disk, DownloadProgress, DownloadProvenanceSeed,
+    MetaOverride, OwnedFlacMetadata, WritePayload,
 };
 pub use local_inventory::{
     aggregate_album_download_badge, album_badge_for_status, album_badge_from_evidence,
