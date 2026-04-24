@@ -11,9 +11,9 @@
 </div>
 
 面向 [塞壬唱片](https://monster-siren.hypergryph.com/) 的桌面音乐播放器与下载器。  
-把专辑浏览、在线播放、整专下载、歌词和下载管理整合进同一个桌面应用里。
+把专辑浏览、库内搜索、在线播放、整专下载、歌词和下载管理整合进同一个桌面应用里。
 
-[下载发布版](https://github.com/Anselyuki/siren-music-download/releases) | [功能亮点](#功能亮点) | [使用方式](#使用方式) | [本地开发](#本地开发) | [开发文档](./doc/FRONTEND_GUIDE.md) | [后端契约](./doc/BACKEND_API_CONTRACT.md) | [Release 流程](./doc/RELEASE_PROCESS.md)
+[下载发布版](https://github.com/Anselyuki/siren-music-download/releases) | [功能亮点](#功能亮点) | [使用方式](#使用方式) | [本地开发](#本地开发) | [Rust 文档](#rustdoc-guide) | [开发文档](./doc/guides/frontend-guide.md) | [后端契约](./doc/reference/backend-api-contract.md) | [Release 流程](./doc/process/release-process.md)
 
 </div>
 
@@ -30,6 +30,7 @@
 ## 功能亮点
 
 - 专辑浏览与在线播放：启动后即可加载专辑列表，点选曲目直接播放。
+- 库内搜索与定位：支持按专辑 / 歌曲 / 艺术家搜索，并从结果直接定位到对应专辑或曲目。
 - 单曲与整专下载：既可以下载当前歌曲，也可以一键创建整张专辑的下载任务。
 - 完整播放器控制：支持暂停、继续、拖动进度、上一首、下一首、乱序和循环模式切换。
 - 歌词与播放队列：底部播放器可展开歌词面板和当前播放列表。
@@ -59,8 +60,6 @@
 
 ### 常用命令
 
-仓库前端依赖统一使用 `Bun` 管理，`bun.lock` 是唯一 JS 锁文件，需要提交到仓库。
-
 ```bash
 # 安装依赖与启动开发
 bun install
@@ -68,46 +67,48 @@ bun run tauri:dev
 ```
 
 ```bash
-# 格式化与检查
-bun run format              # 格式化前端代码与 Markdown 文档
-bun run format:check        # 检查格式是否符合规范
-bun run lint                # 运行前端 ESLint 与 Rust fmt 检查
-bun run check               # 运行格式、lint、类型、前端构建与 Rust workspace 检查
-cargo fmt --all             # 格式化 Rust 代码
-cargo test --workspace      # 运行 Rust 工作区测试
+# 检查与测试
+bun run format:check
+bun run lint
+bun run check
+cargo test --workspace
 ```
 
 ```bash
 # 构建
 bun run build
 bun run tauri:build
-cargo check --workspace
-cargo test --workspace
 ```
 
-文档相关命令（按需执行）：
+### <a id="rustdoc-guide"></a>生成 Rust 文档（rustdoc）
+
+项目中的 Rust API 文档统一通过 `cargo doc` 生成，产物默认输出到 `target/doc/`。
 
 ```bash
+# 生成核心库文档
 cargo doc -p siren_core --no-deps
+
+# 生成桌面应用库文档（包含 private items）
 cargo doc -p siren-music-download --lib --no-deps --document-private-items
+
+# 生成桌面应用二进制入口文档（包含 private items）
 cargo doc -p siren-music-download --bin siren-music-download --no-deps --document-private-items
 ```
 
-### 代码规范
+说明：
 
-- **前端代码与 Markdown 文档**：使用 Prettier 统一格式化
-- **前端静态规则检查**：使用 ESLint
-- **Rust 代码格式化**：使用 `cargo fmt --all`
+- `--no-deps` 表示只生成当前工作区包的文档，避免把依赖库文档一并展开。
+- `--document-private-items` 适合在本地排查模块职责、内部状态和入口 wiring，便于补全文档或核对实现。
+- 生成完成后，可直接打开 `target/doc/index.html` 查看文档首页，再按 crate 进入对应模块页。
+- 如果你刚修改了公开 API、模块导出或命令契约，建议在提交前重新生成一次 rustdoc，确认模块说明、函数文档和导出结构与实际实现一致。
 
-开发相关文档：
+更多实现细节与协作约定见：
 
-- [前端开发指南](./doc/FRONTEND_GUIDE.md)
-- [后端 API 契约](./doc/BACKEND_API_CONTRACT.md)
-- [后端已完成阶段](./doc/BACKEND_COMPLETED_PHASES.md)
-- [后端待办阶段](./doc/BACKEND_PENDING_PHASES.md)
-- [Release 流程](./doc/RELEASE_PROCESS.md)
-
-发布约定与版本标记方式见 [Release 流程](./doc/RELEASE_PROCESS.md)。
+- [前端开发指南](./doc/guides/frontend-guide.md)
+- [后端 API 契约](./doc/reference/backend-api-contract.md)
+- [Release 流程](./doc/process/release-process.md)
+- [后端阶段记录](./doc/history/backend-completed-phases.md)
+- [后端增强路线](./doc/history/backend-pending-phases.md)
 
 ## 说明
 

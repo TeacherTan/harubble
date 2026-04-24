@@ -8,6 +8,8 @@
 - [ ] `cargo check --workspace`
 - [ ] `cargo test --workspace`
 
+> 当前 CI workflow 会拆分执行前端格式、ESLint、TypeScript、Svelte、构建与 Rust 检查；这里保留为提交前推荐的人工自检组合。
+
 ## 发布信息
 
 - [ ] 合并到 `main` 后发布新版本
