@@ -1,13 +1,33 @@
 import { animate } from '@humanspeak/svelte-motion';
+import type { MotionTransition } from '@humanspeak/svelte-motion';
 
 export type MotionStyleValue = string | number;
 export type MotionStyleTarget = Record<string, MotionStyleValue>;
 
+type WritableStyleKey =
+  | 'backgroundColor'
+  | 'boxShadow'
+  | 'color'
+  | 'opacity'
+  | 'zIndex';
+
 type MotionStylesParams = {
   animate?: MotionStyleTarget;
-  transition?: Record<string, unknown>;
+  transition?: MotionTransition;
   reducedMotion?: boolean;
 };
+
+const PIXEL_LESS_STYLE_KEYS = new Set<WritableStyleKey>(['opacity', 'zIndex']);
+
+function isWritableStyleKey(key: string): key is WritableStyleKey {
+  return (
+    key === 'backgroundColor' ||
+    key === 'boxShadow' ||
+    key === 'color' ||
+    key === 'opacity' ||
+    key === 'zIndex'
+  );
+}
 
 function applyImmediate(node: HTMLElement, styles: MotionStyleTarget = {}) {
   for (const [key, value] of Object.entries(styles)) {
@@ -23,9 +43,11 @@ function applyImmediate(node: HTMLElement, styles: MotionStyleTarget = {}) {
       node.style.transform = `scale(${value})`;
       continue;
     }
-    // @ts-expect-error dynamic style assignment
+    if (!isWritableStyleKey(key)) {
+      continue;
+    }
     node.style[key] =
-      typeof value === 'number' && key !== 'opacity' && key !== 'zIndex'
+      typeof value === 'number' && !PIXEL_LESS_STYLE_KEYS.has(key)
         ? `${value}px`
         : String(value);
   }

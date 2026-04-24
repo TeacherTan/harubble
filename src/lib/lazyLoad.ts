@@ -71,15 +71,13 @@ export function lazyLoad(
               if (placeholder) {
                 placeholder.style.opacity = '1';
               }
-              console.warn(`Failed to load cover: ${src}`);
             };
             img.src = resolvedSrc;
-          } catch (error) {
+          } catch {
             stopAnimations();
             if (placeholder) {
               placeholder.style.opacity = '1';
             }
-            console.warn(`Failed to resolve cover: ${src}`, error);
           } finally {
             if (seq === loadSeq) {
               node.removeAttribute('data-src');

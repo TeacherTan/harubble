@@ -76,10 +76,9 @@
       }
       logViewerError = error instanceof Error ? error.message : String(error);
     } finally {
-      if (requestSeq !== logRequestSeq) {
-        return;
+      if (requestSeq === logRequestSeq) {
+        logViewerLoading = false;
       }
-      logViewerLoading = false;
     }
   }
 

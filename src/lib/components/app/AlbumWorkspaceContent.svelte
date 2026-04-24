@@ -95,10 +95,7 @@
     hasCurrentSelectionJob,
   }: Props = $props();
 
-  function motionTransition(
-    duration: number,
-    delay = 0
-  ): MotionTransition {
+  function motionTransition(duration: number, delay = 0): MotionTransition {
     return {
       duration: reducedMotion ? 0 : duration,
       delay: reducedMotion ? 0 : delay,

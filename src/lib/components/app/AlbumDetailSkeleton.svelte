@@ -18,10 +18,7 @@
 
   let props: Props = $props();
 
-  function motionTransition(
-    duration: number,
-    delay = 0
-  ): MotionTransition {
+  function motionTransition(duration: number, delay = 0): MotionTransition {
     return {
       duration: props.reducedMotion ? 0 : duration,
       delay: props.reducedMotion ? 0 : delay,

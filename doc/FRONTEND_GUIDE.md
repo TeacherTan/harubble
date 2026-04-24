@@ -263,6 +263,44 @@ if (import.meta.hot) {
 | `AlbumCard.svelte`          | 展示   | props + events                             |
 | `SongRow.svelte`            | 展示   | props + events                             |
 
+### 4.8 ESLint 收紧基线（2026-04）
+
+当前前端静态规则基线已收紧到以下状态：
+
+- `no-unused-vars`：`error`
+- `@typescript-eslint/no-unused-vars`：`error`
+- `@typescript-eslint/no-explicit-any`：`error`
+- `svelte/no-unused-svelte-ignore`：`error`
+
+这意味着：
+
+1. 未使用的导入、局部变量与参数默认必须清理；确实需要保留的占位参数沿用 `_` 前缀约定
+2. 展示层与壳层组件中的 motion helper、事件桥接与缓存调用不得再用 `any` 兜底
+3. `svelte-ignore` 只能在确有必要时保留，且应优先通过改交互或补语义来消除 suppression
+
+本轮同时确认以下规则**暂不直接恢复**：
+
+- `no-unused-expressions`
+- `@typescript-eslint/no-unused-expressions`
+- `svelte/prefer-svelte-reactivity`
+
+原因如下：
+
+1. `*.svelte` 中存在 Svelte 5 `$effect` 依赖表达式写法；直接开启 `no-unused-expressions` 会误伤这类合法模式
+2. `*.svelte.ts` 中已有一批基于 `Map` / `Set` 的领域状态实现；直接开启 `svelte/prefer-svelte-reactivity` 会要求系统性迁移到 `SvelteMap` / `SvelteSet`，已经超出“渐进收紧兼容性关闭约束”的范围
+
+后续如果要继续推进最后一轮收紧，应遵循：
+
+1. 先把 `*.svelte` 中依赖表达式模式收口成 lint 可识别的写法，再评估是否恢复 `no-unused-expressions`
+2. 先为 `features/*.svelte.ts` 制定专门的 `Map` / `Set` 迁移方案，再评估是否恢复 `svelte/prefer-svelte-reactivity`
+3. 在恢复上述规则前，必须至少跑通 `bun run lint:eslint`、`bun run check:types`、`bun run check:svelte` 与 `bun run check:build`
+
+与本轮收紧直接相关的典型改动包括：
+
+- `AlbumCard.svelte` 改为原生可访问按钮语义，避免依赖 `svelte-ignore` 掩盖 a11y 问题
+- 各处 Svelte motion transition helper 统一使用 `MotionTransition`，不再以 `any` 返回
+- `cache.ts` / `api.ts` 通过判别联合与类型守卫收口缓存命中分支，减少调用层断言
+
 ## 5. IPC 规则
 
 **UI 组件禁止直接调用 `invoke` 或 `listen`**。

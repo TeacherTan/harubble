@@ -45,7 +45,7 @@ export async function getAlbumDetail(
   const cacheKey = `${CACHE_KEY_ALBUM_DETAIL}${cacheScope}:${albumCid}`;
   const cached = await cacheManager.albums.get(cacheKey);
   if (cached.found) {
-    return cached.data as AlbumDetail;
+    return cached.data;
   }
 
   const data = await invoke<AlbumDetail>('get_album_detail', { albumCid });
@@ -64,7 +64,7 @@ export async function getSongDetail(
   const cacheKey = `${CACHE_KEY_SONG_DETAIL}${cacheScope}:${songCid}`;
   const cached = await cacheManager.songs.get(cacheKey);
   if (cached.found) {
-    return cached.data as SongDetail;
+    return cached.data;
   }
 
   const data = await invoke<SongDetail>('get_song_detail', { cid: songCid });
@@ -171,7 +171,7 @@ export async function extractImageTheme(
   const cacheKey = `${CACHE_KEY_IMAGE_THEME}${imageUrl}`;
   const cached = await cacheManager.themes.get(cacheKey);
   if (cached.found) {
-    return cached.data as ThemePalette;
+    return cached.data;
   }
 
   const data = await invoke<ThemePalette>('extract_image_theme', { imageUrl });
@@ -183,7 +183,7 @@ export async function getImageDataUrl(imageUrl: string): Promise<string> {
   const cacheKey = `${CACHE_KEY_IMAGE_DATA_URL}${imageUrl}`;
   const cached = await cacheManager.covers.get(cacheKey);
   if (cached.found) {
-    return cached.data as string;
+    return cached.data;
   }
 
   const data = await invoke<string>('get_image_data_url', { imageUrl });

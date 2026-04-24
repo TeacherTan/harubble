@@ -284,13 +284,7 @@
     const sourceUrl = album.coverDeUrl ?? album.coverUrl ?? null;
     if (!sourceUrl) return null;
 
-    let resolvedUrl = sourceUrl;
-    try {
-      resolvedUrl = await getImageDataUrl(sourceUrl);
-    } catch {
-      resolvedUrl = sourceUrl;
-    }
-
+    const resolvedUrl = await getImageDataUrl(sourceUrl).catch(() => sourceUrl);
     const meta = await preloadImage(resolvedUrl);
     return meta?.aspectRatio ?? null;
   }
@@ -939,52 +933,52 @@
     <!-- 歌曲列表内容区 -->
     <AlbumWorkspace {currentSong} {loadingDetail} {selectedAlbum}>
       <AlbumWorkspaceContent
-          {loadingDetail}
-          {showDetailSkeleton}
-          {albumRequestSeq}
-          {selectedAlbum}
-          {selectedAlbumArtworkUrl}
-          currentSongCid={currentSong?.cid ?? null}
-          isPlaybackActive={isPlaying || isPaused}
-          {downloadingAlbumCid}
-          {selectionModeEnabled}
-          {selectedSongCids}
-          reducedMotion={prefersReducedMotion}
-          {overlayScrollbarOptions}
-          {contentScrollbarEvents}
-          onContentWheel={handleContentWheel}
-          {albumStageStyle}
-          {albumStageMediaHeight}
-          {albumStageScrimOpacity}
-          {albumStageImageOpacity}
-          {albumStageImageTransform}
-          {albumStageSolidifyOpacity}
-          bind:albumStageElement
-          onToggleSelectionMode={toggleSelectionMode}
-          onSelectAllSongs={selectAllSongs}
-          onDeselectAllSongs={deselectAllSongs}
-          onInvertSongSelection={invertSongSelection}
-          onDownloadAlbum={downloadController.handleAlbumDownload}
-          onDownloadSelection={(songCids: string[]) =>
-            downloadController.handleSelectionDownload(songCids, {
-              afterCreated: () => {
-                clearSongSelection();
-                selectionModeEnabled = false;
-              },
-            })}
-          onPlaySong={handlePlay}
-          onDownloadSong={downloadController.handleSongDownload}
-          onToggleSongSelection={toggleSongSelection}
-          {isSongSelected}
-          getSongDownloadState={downloadController.getSongDownloadState}
-          isSongDownloadInteractionBlocked={downloadController.isSongDownloadInteractionBlocked}
-          hasAlbumDownloadJob={(albumCid: string) =>
-            !!downloadController.findAlbumDownloadJob(albumCid)}
-          isSelectionDownloadDisabled={downloadController.isSelectionDownloadActionDisabled}
-          isCurrentSelectionCreating={downloadController.isCurrentSelectionCreating}
-          hasCurrentSelectionJob={(songCids: string[]) =>
-            !!downloadController.getCurrentSelectionJob(songCids)}
-        />
+        {loadingDetail}
+        {showDetailSkeleton}
+        {albumRequestSeq}
+        {selectedAlbum}
+        {selectedAlbumArtworkUrl}
+        currentSongCid={currentSong?.cid ?? null}
+        isPlaybackActive={isPlaying || isPaused}
+        {downloadingAlbumCid}
+        {selectionModeEnabled}
+        {selectedSongCids}
+        reducedMotion={prefersReducedMotion}
+        {overlayScrollbarOptions}
+        {contentScrollbarEvents}
+        onContentWheel={handleContentWheel}
+        {albumStageStyle}
+        {albumStageMediaHeight}
+        {albumStageScrimOpacity}
+        {albumStageImageOpacity}
+        {albumStageImageTransform}
+        {albumStageSolidifyOpacity}
+        bind:albumStageElement
+        onToggleSelectionMode={toggleSelectionMode}
+        onSelectAllSongs={selectAllSongs}
+        onDeselectAllSongs={deselectAllSongs}
+        onInvertSongSelection={invertSongSelection}
+        onDownloadAlbum={downloadController.handleAlbumDownload}
+        onDownloadSelection={(songCids: string[]) =>
+          downloadController.handleSelectionDownload(songCids, {
+            afterCreated: () => {
+              clearSongSelection();
+              selectionModeEnabled = false;
+            },
+          })}
+        onPlaySong={handlePlay}
+        onDownloadSong={downloadController.handleSongDownload}
+        onToggleSongSelection={toggleSongSelection}
+        {isSongSelected}
+        getSongDownloadState={downloadController.getSongDownloadState}
+        isSongDownloadInteractionBlocked={downloadController.isSongDownloadInteractionBlocked}
+        hasAlbumDownloadJob={(albumCid: string) =>
+          !!downloadController.findAlbumDownloadJob(albumCid)}
+        isSelectionDownloadDisabled={downloadController.isSelectionDownloadActionDisabled}
+        isCurrentSelectionCreating={downloadController.isCurrentSelectionCreating}
+        hasCurrentSelectionJob={(songCids: string[]) =>
+          !!downloadController.getCurrentSelectionJob(songCids)}
+      />
     </AlbumWorkspace>
 
     <PlayerFlyoutStack

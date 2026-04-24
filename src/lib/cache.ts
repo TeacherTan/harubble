@@ -31,10 +31,15 @@ interface TieredCacheOptions {
   persistent: boolean;
 }
 
-interface CacheLookup<T> {
-  found: boolean;
-  data: T | null;
-}
+type CacheLookup<T> =
+  | {
+      found: true;
+      data: T;
+    }
+  | {
+      found: false;
+      data: null;
+    };
 
 interface LatestAlbumsSnapshot {
   keys: string[];
@@ -79,6 +84,34 @@ function persistenceKey(type: CacheType, key: string): string {
 
 function isEntryValid(entry: CacheEntry<unknown>, ttlMs: number): boolean {
   return Date.now() - entry.timestamp < ttlMs;
+}
+
+function isCacheType(value: string): value is CacheType {
+  return (
+    value === 'albums' ||
+    value === 'songs' ||
+    value === 'lyrics' ||
+    value === 'themes' ||
+    value === 'covers'
+  );
+}
+
+function isSerializedCacheEntry<T>(
+  value: unknown
+): value is SerializedCacheEntry<T> {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<SerializedCacheEntry<T>>;
+  return (
+    typeof candidate.type === 'string' &&
+    isCacheType(candidate.type) &&
+    typeof candidate.key === 'string' &&
+    typeof candidate.timestamp === 'number' &&
+    typeof candidate.lastAccessedAt === 'number' &&
+    Array.isArray(candidate.tags)
+  );
 }
 
 function cloneEntry<T>(entry: CacheEntry<T>): CacheEntry<T> {
@@ -335,15 +368,22 @@ class TieredCache<T> {
 
     const persistentEntries = await entries();
     const scopedEntries = persistentEntries
-      .filter(
-        ([key]: [IDBValidKey, unknown]) =>
-          typeof key === 'string' &&
-          key.startsWith(`${PERSISTENCE_KEY_PREFIX}${this.type}:`)
-      )
-      .map(([key, value]: [IDBValidKey, unknown]) => ({
-        storageKey: String(key),
-        entry: value as SerializedCacheEntry<T>,
-      }))
+      .flatMap(([key, value]: [IDBValidKey, unknown]) => {
+        if (
+          typeof key !== 'string' ||
+          !key.startsWith(`${PERSISTENCE_KEY_PREFIX}${this.type}:`) ||
+          !isSerializedCacheEntry<T>(value)
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            storageKey: String(key),
+            entry: value,
+          },
+        ];
+      })
       .sort(
         (left, right) => right.entry.lastAccessedAt - left.entry.lastAccessedAt
       );
@@ -443,11 +483,11 @@ class CacheManager {
   async invalidateKey(key: string): Promise<void> {
     const [type, ...rest] = key.split(':');
     const unscopedKey = rest.join(':');
-    if (!type || !unscopedKey) {
+    if (!type || !unscopedKey || !isCacheType(type)) {
       return;
     }
 
-    switch (type as CacheType) {
+    switch (type) {
       case 'albums':
         await this.albums.delete(unscopedKey);
         break;
@@ -472,19 +512,21 @@ class CacheManager {
     const scopedKeys = new Set<string>(this.tagIndex.get(tag) ?? []);
 
     const persistentEntries = await entries();
-    for (const [key, value] of persistentEntries as [IDBValidKey, unknown][]) {
+    for (const [key, value] of persistentEntries) {
       if (typeof key !== 'string' || !key.startsWith(PERSISTENCE_KEY_PREFIX)) {
         continue;
       }
       if (key === PERSISTENCE_LATEST_ALBUMS_KEY) {
         continue;
       }
-
-      const entry = value as SerializedCacheEntry<unknown>;
-      if (!entry.tags.includes(tag)) {
+      if (!isSerializedCacheEntry<unknown>(value)) {
         continue;
       }
-      scopedKeys.add(`${entry.type}:${entry.key}`);
+
+      if (!value.tags.includes(tag)) {
+        continue;
+      }
+      scopedKeys.add(`${value.type}:${value.key}`);
     }
 
     await Promise.all([...scopedKeys].map((key) => this.invalidateKey(key)));
@@ -549,17 +591,21 @@ class CacheManager {
   async syncLatestAlbumKeys(): Promise<void> {
     const cachedEntries = await entries();
     const latestAlbumKeys = cachedEntries
-      .filter(
-        ([key]: [IDBValidKey, unknown]) =>
-          typeof key === 'string' &&
-          key.startsWith(`${PERSISTENCE_KEY_PREFIX}albums:`)
-      )
-      .map(([key, value]: [IDBValidKey, unknown]) => {
-        const entry = value as SerializedCacheEntry<unknown>;
-        return {
-          key: String(key).replace(`${PERSISTENCE_KEY_PREFIX}albums:`, ''),
-          lastAccessedAt: entry.lastAccessedAt ?? entry.timestamp ?? 0,
-        };
+      .flatMap(([key, value]: [IDBValidKey, unknown]) => {
+        if (
+          typeof key !== 'string' ||
+          !key.startsWith(`${PERSISTENCE_KEY_PREFIX}albums:`) ||
+          !isSerializedCacheEntry<unknown>(value)
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            key: String(key).replace(`${PERSISTENCE_KEY_PREFIX}albums:`, ''),
+            lastAccessedAt: value.lastAccessedAt ?? value.timestamp ?? 0,
+          },
+        ];
       })
       .sort(
         (
