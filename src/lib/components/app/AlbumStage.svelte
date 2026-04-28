@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
   import MotionPulseBlock from '$lib/components/MotionPulseBlock.svelte';
 
   interface Props {
@@ -16,7 +17,7 @@
   }
 
   let {
-    albumName = '专辑',
+    albumName = m.library_album_stage_default_name(),
     artworkUrl = null,
     loading = false,
     reducedMotion = false,

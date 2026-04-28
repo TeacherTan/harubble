@@ -5,26 +5,31 @@
 >
 > 首轮语言：`zh-CN`（基准）、`en-US`
 >
-> 最后更新：2026-04-27
+> 最后更新：2026-04-28
 
 ## 前端文案清单
 
 | 文件                                                  | 业务域   | 主要类型                 | 估算条数 | 状态    |
 | ----------------------------------------------------- | -------- | ------------------------ | -------- | ------- |
-| `src/App.svelte`                                      | shell    | toast / dynamic          | 4        | pending |
-| `src/lib/components/app/TopToolbar.svelte`            | shell    | title / aria             | 3        | pending |
-| `src/lib/components/app/AlbumWorkspaceContent.svelte` | library  | static                   | 2        | pending |
-| `src/lib/components/app/AlbumDetailSkeleton.svelte`   | library  | static                   | 1        | pending |
-| `src/lib/components/app/AlbumSidebar.svelte`          | library  | static / dynamic / aria  | 14       | pending |
-| `src/lib/components/app/AlbumDetailPanel.svelte`      | library  | static / dynamic         | 12       | pending |
-| `src/lib/components/SongRow.svelte`                   | library  | aria / title / dynamic   | 8        | pending |
-| `src/lib/components/AudioPlayer.svelte`               | player   | aria / dynamic           | 14       | pending |
-| `src/lib/components/app/PlayerFlyoutStack.svelte`     | player   | static / aria            | 4        | pending |
-| `src/lib/components/app/SettingsSheet.svelte`         | settings | static / toast / dynamic | 28       | pending |
-| `src/lib/components/app/DownloadTasksSheet.svelte`    | download | static / aria            | 18       | pending |
-| `src/lib/features/download/controller.svelte.ts`      | download | toast / dynamic          | 10       | pending |
-| `src/lib/features/download/formatters.ts`             | download | dynamic                  | 9        | pending |
-| `src/lib/downloadBadge.ts`                            | common   | static                   | 6        | pending |
+| `src/App.svelte`                                      | shell    | toast / dynamic          | 3        | done    |
+| `src/lib/components/app/TopToolbar.svelte`            | shell    | title / aria             | 3        | done    |
+| `src/lib/components/app/AlbumWorkspaceContent.svelte` | library  | static                   | 2        | done    |
+| `src/lib/components/app/AlbumDetailSkeleton.svelte`   | library  | static                   | 1        | done    |
+| `src/lib/components/app/AlbumSidebar.svelte`          | library  | static / dynamic / aria  | 14       | done    |
+| `src/lib/components/app/AlbumDetailPanel.svelte`      | library  | static / dynamic         | 12       | done    |
+| `src/lib/components/SongRow.svelte`                   | library  | aria / title / dynamic   | 8        | done    |
+| `src/lib/components/AudioPlayer.svelte`               | player   | aria / dynamic           | 21       | done    |
+| `src/lib/components/app/PlayerFlyoutStack.svelte`     | player   | static / aria            | 4        | done    |
+| `src/lib/components/app/SettingsSheet.svelte`         | settings | static / toast / dynamic | 28       | done    |
+| `src/lib/components/app/DownloadTasksSheet.svelte`    | download | static / aria            | 18       | done    |
+| `src/lib/features/download/controller.svelte.ts`      | download | toast / dynamic          | 30       | done    |
+| `src/lib/features/download/formatters.ts`             | download | dynamic                  | 9        | done    |
+| `src/lib/downloadBadge.ts`                            | common   | static                   | 6        | done    |
+| `src/lib/features/player/controller.svelte.ts`        | player   | toast                    | 4        | done    |
+| `src/lib/features/shell/settings.svelte.ts`           | settings | toast                    | 1        | done    |
+| `src/lib/features/shell/store.svelte.ts`              | shell    | toast                    | 2        | done    |
+| `src/lib/features/library/controller.svelte.ts`       | library  | toast                    | 2        | done    |
+| `src/lib/components/app/AlbumStage.svelte`            | library  | dynamic                  | 1        | done    |
 
 ## 后端文案清单
 

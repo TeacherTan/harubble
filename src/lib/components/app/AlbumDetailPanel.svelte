@@ -5,6 +5,8 @@
     getDownloadBadgeLabel,
     shouldShowDownloadBadge,
   } from '$lib/downloadBadge';
+  import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import type { AlbumDetail, SongEntry } from '$lib/types';
 
   type SongDownloadState = 'idle' | 'creating' | 'queued' | 'running';
@@ -43,9 +45,13 @@
 
   const selectedSongCount = $derived.by(() => props.selectedSongCids.length);
   const selectedSongsLabel = $derived.by(() => {
-    if (selectedSongCount === 0) return '未选择歌曲';
-    if (selectedSongCount === 1) return '已选择 1 首';
-    return `已选择 ${selectedSongCount} 首`;
+    void localeState.current;
+    if (selectedSongCount === 0) return m.library_selection_none();
+    return m.library_selection_count({ count: selectedSongCount });
+  });
+  const songCountLabel = $derived.by(() => {
+    void localeState.current;
+    return m.library_song_count({ count: props.album.songs.length });
   });
   const isAlbumDownloadCreating = $derived.by(
     () => props.downloadingAlbumCid === props.album.cid
@@ -69,6 +75,22 @@
   const isSelectionDownloadDisabled = $derived.by(() =>
     props.isSelectionDownloadDisabled(props.selectedSongCids)
   );
+
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      downloadAlbum: m.library_download_album(),
+      downloadCreating: m.library_download_creating(),
+      downloadQueued: m.library_download_queued(),
+      selectionToggleOn: m.library_selection_toggle_on(),
+      selectionToggleOff: m.library_selection_toggle_off(),
+      selectAll: m.library_selection_select_all(),
+      deselectAll: m.library_selection_deselect_all(),
+      invert: m.library_selection_invert(),
+      selectionDownload: m.library_selection_download(),
+      selectionCreatingBatch: m.library_selection_creating_batch(),
+    };
+  });
 </script>
 
 <div
@@ -94,7 +116,7 @@
         <p class="album-hero-intro">{props.album.intro}</p>
       {/if}
       <div class="album-hero-meta">
-        <span class="album-song-count">{props.album.songs.length} 首歌曲</span>
+        <span class="album-song-count">{songCountLabel}</span>
         {#if shouldShowDownloadBadge(props.album.download.downloadStatus)}
           <span class="album-download-status-badge">
             {getDownloadBadgeLabel(props.album.download.downloadStatus)}
@@ -110,15 +132,17 @@
           disabled={isAlbumDownloadDisabled}
         >
           {#if isAlbumDownloadCreating}
-            正在创建任务...
+            {labels.downloadCreating}
           {:else if hasAlbumDownloadJob}
-            已在队列中
+            {labels.downloadQueued}
           {:else}
-            下载整张专辑
+            {labels.downloadAlbum}
           {/if}
         </button>
         <button type="button" class="btn" onclick={props.onToggleSelectionMode}>
-          {props.selectionModeEnabled ? '取消多选' : '多选下载'}
+          {props.selectionModeEnabled
+            ? labels.selectionToggleOn
+            : labels.selectionToggleOff}
         </button>
         {#if props.selectionModeEnabled}
           <button
@@ -128,7 +152,7 @@
             onclick={props.onSelectAllSongs}
             disabled={isAllSongsSelected}
           >
-            全选
+            {labels.selectAll}
           </button>
           <button
             type="button"
@@ -137,7 +161,7 @@
             onclick={props.onDeselectAllSongs}
             disabled={selectedSongCount === 0}
           >
-            清空
+            {labels.deselectAll}
           </button>
           <button
             type="button"
@@ -146,7 +170,7 @@
             onclick={props.onInvertSongSelection}
             disabled={!canInvertSelection}
           >
-            反选
+            {labels.invert}
           </button>
           <button
             type="button"
@@ -156,11 +180,11 @@
             disabled={isSelectionDownloadDisabled}
           >
             {#if isSelectionCreating}
-              正在创建批量任务...
+              {labels.selectionCreatingBatch}
             {:else if hasCurrentSelectionJob}
-              已在队列中
+              {labels.downloadQueued}
             {:else}
-              下载所选歌曲
+              {labels.selectionDownload}
             {/if}
           </button>
           <span class="album-selection-summary">{selectedSongsLabel}</span>

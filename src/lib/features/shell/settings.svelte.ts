@@ -1,3 +1,4 @@
+import * as m from '$lib/paraglide/messages.js';
 import type { Locale } from '$lib/i18n/types';
 import type { AppPreferences, LogLevel, OutputFormat } from '$lib/types';
 
@@ -180,7 +181,9 @@ export function createSettingsController(deps: SettingsControllerDeps) {
       } catch (error) {
         state.lastSaveFailedSnapshot = requestSnapshot;
         deps.notifyError(
-          `保存设置失败：${error instanceof Error ? error.message : String(error)}`
+          m.shell_error_save_settings_failed({
+            error: error instanceof Error ? error.message : String(error),
+          })
         );
         return false;
       } finally {

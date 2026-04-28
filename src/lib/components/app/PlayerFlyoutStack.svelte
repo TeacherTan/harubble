@@ -1,19 +1,18 @@
 <script lang="ts">
   import { fade, fly } from 'svelte/transition';
   import PlayerDock from '$lib/components/app/PlayerDock.svelte';
+  import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import type { PlaybackQueueEntry } from '$lib/types';
   import type { LyricLine } from '$lib/features/player/lyrics';
-
   interface Song {
     cid: string;
     name: string;
     artists: string[];
     coverUrl: string | null;
   }
-
   type RepeatMode = 'all' | 'one';
   type SongDownloadState = 'idle' | 'creating' | 'queued' | 'running';
-
   interface Props {
     song: Song | null;
     isPlaying: boolean;
@@ -50,12 +49,31 @@
       index: number
     ) => void | Promise<void>;
   }
-
   let props: Props = $props();
-
   function dur(base: number): number {
     return props.reducedMotion ? 0 : base;
   }
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      lyricsEyebrow: m.player_lyrics_eyebrow(),
+      lyricsLoading: m.player_lyrics_loading(),
+      lyricsEmpty: m.player_lyrics_empty(),
+      queueEyebrow: m.player_queue_eyebrow(),
+      queueTitle: m.player_queue_title(),
+      queueEmpty: m.player_queue_empty(),
+    };
+  });
+  const lyricsCountLabel = $derived.by(() => {
+    void localeState.current;
+    return props.lyricsLines.length > 0
+      ? m.player_lyrics_line_count({ count: props.lyricsLines.length })
+      : labels.lyricsEyebrow;
+  });
+  const queueCountLabel = $derived.by(() => {
+    void localeState.current;
+    return m.player_queue_count({ count: props.playbackOrder.length });
+  });
 </script>
 
 {#if props.song}
@@ -81,18 +99,13 @@
         >
           <div class="player-flyout-header">
             <div>
-              <p class="player-flyout-eyebrow">歌词</p>
+              <p class="player-flyout-eyebrow">{labels.lyricsEyebrow}</p>
               <h3 class="player-flyout-title">{props.song.name}</h3>
             </div>
-            <span class="player-flyout-count"
-              >{props.lyricsLines.length > 0
-                ? `${props.lyricsLines.length} 行`
-                : '歌词'}</span
-            >
+            <span class="player-flyout-count">{lyricsCountLabel}</span>
           </div>
-
           {#if props.lyricsLoading}
-            <div class="player-flyout-empty">正在加载歌词…</div>
+            <div class="player-flyout-empty">{labels.lyricsLoading}</div>
           {:else if props.lyricsError}
             <div class="player-flyout-empty">{props.lyricsError}</div>
           {:else if props.lyricsLines.length > 0}
@@ -106,7 +119,7 @@
               {/each}
             </div>
           {:else}
-            <div class="player-flyout-empty">这首歌暂时没有歌词。</div>
+            <div class="player-flyout-empty">{labels.lyricsEmpty}</div>
           {/if}
         </section>
       {:else if props.playlistOpen}
@@ -118,14 +131,11 @@
         >
           <div class="player-flyout-header">
             <div>
-              <p class="player-flyout-eyebrow">播放列表</p>
-              <h3 class="player-flyout-title">当前队列</h3>
+              <p class="player-flyout-eyebrow">{labels.queueEyebrow}</p>
+              <h3 class="player-flyout-title">{labels.queueTitle}</h3>
             </div>
-            <span class="player-flyout-count"
-              >{props.playbackOrder.length} 首</span
-            >
+            <span class="player-flyout-count">{queueCountLabel}</span>
           </div>
-
           {#if props.playbackOrder.length > 0}
             <div class="player-playlist-list">
               {#each props.playbackOrder as entry, index (entry.cid)}
@@ -143,21 +153,20 @@
                   <span class="player-playlist-index"
                     >{String(index + 1).padStart(2, '0')}</span
                   >
-                  <span class="player-playlist-meta">
-                    <span class="player-playlist-name">{entry.name}</span>
-                    <span class="player-playlist-artists"
+                  <span class="player-playlist-meta"
+                    ><span class="player-playlist-name">{entry.name}</span><span
+                      class="player-playlist-artists"
                       >{entry.artists.join(' · ')}</span
-                    >
-                  </span>
+                    ></span
+                  >
                 </button>
               {/each}
             </div>
           {:else}
-            <div class="player-flyout-empty">当前没有可播放的队列。</div>
+            <div class="player-flyout-empty">{labels.queueEmpty}</div>
           {/if}
         </section>
       {/if}
-
       <PlayerDock
         song={props.song}
         isPlaying={props.isPlaying}

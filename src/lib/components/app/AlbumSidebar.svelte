@@ -4,6 +4,8 @@
   import SearchIcon from '@lucide/svelte/icons/search';
   import AlbumCard from '$lib/components/AlbumCard.svelte';
   import MotionSpinner from '$lib/components/MotionSpinner.svelte';
+  import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import type {
     Album,
     LibraryIndexState,
@@ -28,12 +30,6 @@
     onSelectSearchResult: (item: SearchLibraryResultItem) => void;
   }
 
-  const scopeOptions: { value: LibrarySearchScope; label: string }[] = [
-    { value: 'all', label: 'ALL' },
-    { value: 'albums', label: '专辑' },
-    { value: 'songs', label: '歌曲' },
-  ];
-
   let {
     albums,
     selectedAlbumCid,
@@ -50,6 +46,21 @@
     onSelectSearchResult,
   }: Props = $props();
 
+  const scopeOptions = $derived.by(() => {
+    void localeState.current;
+    return [
+      { value: 'all' as LibrarySearchScope, label: 'ALL' },
+      {
+        value: 'albums' as LibrarySearchScope,
+        label: m.library_search_scope_albums(),
+      },
+      {
+        value: 'songs' as LibrarySearchScope,
+        label: m.library_search_scope_songs(),
+      },
+    ];
+  });
+
   const trimmedSearchQuery = $derived.by(() => searchQuery.trim());
   const isSearchMode = $derived.by(() => trimmedSearchQuery.length > 0);
   const searchIndexState = $derived.by<LibraryIndexState>(
@@ -58,14 +69,32 @@
   const isSearchIndexBuilding = $derived.by(
     () => isSearchMode && !searchLoading && searchIndexState === 'building'
   );
+
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      searchAria: m.library_search_aria(),
+      loadingAlbums: m.library_loading_albums(),
+      loadFailed: m.library_load_failed(),
+      indexBuildingTitle: m.library_search_index_building_title(),
+      indexBuildingAria: m.library_search_index_building_aria(),
+      indexBuildingValuetext: m.library_search_index_building_valuetext(),
+      indexBuildingHint: m.library_search_index_building_hint(),
+      resultKindAlbum: m.library_search_result_kind_album(),
+      resultKindSong: m.library_search_result_kind_song(),
+      noResults: m.library_search_no_results(),
+    };
+  });
+
   const searchStatusMessage = $derived.by(() => {
     if (!isSearchMode) return '';
-    if (searchLoading) return '正在搜索…';
+    void localeState.current;
+    if (searchLoading) return m.library_search_searching();
     switch (searchIndexState) {
       case 'stale':
-        return '索引正在刷新，暂时不可用。';
+        return m.library_search_index_stale();
       case 'notReady':
-        return '搜索索引尚未就绪。';
+        return m.library_search_index_not_ready();
       default:
         return '';
     }
@@ -91,7 +120,7 @@
     <Input
       value={searchQuery}
       placeholder=""
-      aria-label="搜索专辑、歌曲或艺术家"
+      aria-label={labels.searchAria}
       class="library-search-input"
       oninput={(event) => {
         const target = event.currentTarget as HTMLInputElement;
@@ -102,8 +131,8 @@
       variant="outline"
       size="icon"
       class="library-search-scope-button"
-      aria-label={`搜索范围：${activeScopeLabel}，点击切换`}
-      title={`搜索范围：${activeScopeLabel}`}
+      aria-label={m.library_search_scope_aria({ scope: activeScopeLabel })}
+      title={m.library_search_scope_title({ scope: activeScopeLabel })}
       onclick={cycleSearchScope}
     >
       {activeScopeLabel}
@@ -113,7 +142,7 @@
 
   {#if loadingAlbums}
     <div class="loading">
-      <span>正在加载专辑...</span><MotionSpinner
+      <span>{labels.loadingAlbums}</span><MotionSpinner
         className="inline-loading-spinner"
         {reducedMotion}
       />
@@ -121,7 +150,7 @@
   {:else if errorMsg && albums.length === 0}
     <div class="empty-state">
       <div class="empty-icon">⚠️</div>
-      <div class="empty-text">加载失败</div>
+      <div class="empty-text">{labels.loadFailed}</div>
       <div class="empty-text" style="margin-top: 8px; font-size: 12px;">
         {errorMsg}
       </div>
@@ -129,18 +158,18 @@
   {:else if isSearchMode}
     {#if isSearchIndexBuilding}
       <div class="search-status-card" aria-live="polite">
-        <div class="search-status-title">正在构建搜索索引</div>
+        <div class="search-status-title">{labels.indexBuildingTitle}</div>
         <div
           class="search-status-progress"
           role="progressbar"
-          aria-label="搜索索引构建进度"
-          aria-valuetext="索引正在构建中"
+          aria-label={labels.indexBuildingAria}
+          aria-valuetext={labels.indexBuildingValuetext}
         >
           <div
             class={`search-status-progress-bar${reducedMotion ? ' is-reduced-motion' : ''}`}
           ></div>
         </div>
-        <div class="search-status-hint">首次扫描完成后即可看到搜索结果。</div>
+        <div class="search-status-hint">{labels.indexBuildingHint}</div>
       </div>
     {:else if searchStatusMessage}
       <div class="empty-state">
@@ -155,7 +184,9 @@
             onclick={() => onSelectSearchResult(item)}
           >
             <div class="search-result-kind">
-              {item.kind === 'album' ? '专辑' : '歌曲'}
+              {item.kind === 'album'
+                ? labels.resultKindAlbum
+                : labels.resultKindSong}
             </div>
             <div class="search-result-title">
               {item.kind === 'song' && item.songTitle
@@ -175,7 +206,7 @@
       </div>
     {:else}
       <div class="empty-state">
-        <div class="empty-text">没有匹配的搜索结果</div>
+        <div class="empty-text">{labels.noResults}</div>
       </div>
     {/if}
   {:else}

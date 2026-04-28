@@ -1,3 +1,4 @@
+import * as m from '$lib/paraglide/messages.js';
 import type SettingsSheet from '$lib/components/app/SettingsSheet.svelte';
 import type DownloadTasksSheet from '$lib/components/app/DownloadTasksSheet.svelte';
 
@@ -54,7 +55,9 @@ async function ensureSettingsSheetLoaded(
     return true;
   } catch (error: unknown) {
     notifyError(
-      `打开设置面板失败：${error instanceof Error ? error.message : String(error)}`
+      m.shell_error_open_settings_failed({
+        error: error instanceof Error ? error.message : String(error),
+      })
     );
     return false;
   }
@@ -84,7 +87,9 @@ async function ensureDownloadTasksSheetLoaded(
     return true;
   } catch (error: unknown) {
     notifyError(
-      `打开下载任务面板失败：${error instanceof Error ? error.message : String(error)}`
+      m.shell_error_open_downloads_failed({
+        error: error instanceof Error ? error.message : String(error),
+      })
     );
     return false;
   }

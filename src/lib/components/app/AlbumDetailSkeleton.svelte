@@ -1,5 +1,7 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
+  import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import MotionPulseBlock from '$lib/components/MotionPulseBlock.svelte';
   import MotionSpinner from '$lib/components/MotionSpinner.svelte';
 
@@ -12,6 +14,13 @@
   function fadeDuration(base: number): number {
     return props.reducedMotion ? 0 : base;
   }
+
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      loadingSongs: m.library_loading_songs(),
+    };
+  });
 </script>
 
 <div
@@ -47,7 +56,7 @@
     }}
     out:fade={{ duration: fadeDuration(200) }}
   >
-    <span>正在加载歌曲...</span><MotionSpinner
+    <span>{labels.loadingSongs}</span><MotionSpinner
       className="inline-loading-spinner"
       reducedMotion={props.reducedMotion}
     />

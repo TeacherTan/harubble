@@ -21,6 +21,7 @@ import {
   matchesJobStatusFilter,
   sortDownloadJobs,
 } from './guards';
+import * as m from '$lib/paraglide/messages.js';
 
 interface DownloadControllerDeps {
   createDownloadJob: (
@@ -305,11 +306,13 @@ export function createDownloadController(deps: DownloadControllerDeps) {
       const existingJob = getSongDownloadJob(songCid);
       await performSongDownload(songCid);
       if (existingJob) {
-        deps.notifyInfo('这首歌的下载任务已在队列中或正在执行。');
+        deps.notifyInfo(m.download_notify_song_exists());
       }
     } catch (error) {
       deps.notifyError(
-        `下载失败：${error instanceof Error ? error.message : String(error)}`
+        m.download_error_song_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -353,11 +356,13 @@ export function createDownloadController(deps: DownloadControllerDeps) {
       const existingJob = findAlbumDownloadJob(albumCid);
       await performAlbumDownload(albumCid);
       if (existingJob) {
-        deps.notifyInfo('这张专辑的下载任务已在队列中或正在执行。');
+        deps.notifyInfo(m.download_notify_album_exists());
       }
     } catch (error) {
       deps.notifyError(
-        `整专下载失败：${error instanceof Error ? error.message : String(error)}`
+        m.download_error_album_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -407,7 +412,7 @@ export function createDownloadController(deps: DownloadControllerDeps) {
       const existingJob = findSelectionDownloadJob(songCids);
       const jobId = await performSelectionDownload(songCids);
       if (existingJob) {
-        deps.notifyInfo('这组歌曲的下载任务已在队列中或正在执行。');
+        deps.notifyInfo(m.download_notify_selection_exists());
         return;
       }
       if (jobId) {
@@ -415,7 +420,9 @@ export function createDownloadController(deps: DownloadControllerDeps) {
       }
     } catch (error) {
       deps.notifyError(
-        `批量下载失败：${error instanceof Error ? error.message : String(error)}`
+        m.download_error_selection_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -440,10 +447,14 @@ export function createDownloadController(deps: DownloadControllerDeps) {
     }
 
     if (task.bytesDone > 0) {
-      return `${formatByteSize(task.bytesDone)} 已处理`;
+      return m.download_progress_bytes_processed({
+        size: formatByteSize(task.bytesDone),
+      });
     }
 
-    return task.status === 'writing' ? '正在整理文件...' : '正在接收数据...';
+    return task.status === 'writing'
+      ? m.download_progress_writing_file()
+      : m.download_progress_receiving_data();
   }
 
   function getTaskErrorLabel(task: DownloadTaskSnapshot): string | null {
@@ -490,14 +501,17 @@ export function createDownloadController(deps: DownloadControllerDeps) {
         task.status === 'writing'
     );
 
-    const base = `${terminalCount}/${job.taskCount} 首已结束`;
+    const base = m.download_progress_terminal_count({
+      done: terminalCount,
+      total: job.taskCount,
+    });
     if (!activeTask) {
       return base;
     }
 
     const progressLabel = getTaskProgressLabel(activeTask);
     if (!progressLabel) {
-      return `${base} · 正在处理 ${activeTask.songName}`;
+      return `${base} · ${m.download_progress_processing({ name: activeTask.songName })}`;
     }
 
     return `${base} · ${activeTask.songName} · ${progressLabel}`;
@@ -532,7 +546,7 @@ export function createDownloadController(deps: DownloadControllerDeps) {
   function getJobStatusLabel(job: DownloadJobSnapshot): string {
     switch (job.status) {
       case 'queued':
-        return '排队中';
+        return m.download_job_status_queued();
       case 'running': {
         const activeTask = job.tasks.find(
           (task) =>
@@ -543,16 +557,22 @@ export function createDownloadController(deps: DownloadControllerDeps) {
         const currentIndex = activeTask
           ? activeTask.songIndex + 1
           : job.completedTaskCount;
-        return `下载中 (${currentIndex}/${job.taskCount})`;
+        return m.download_job_status_running({
+          current: currentIndex,
+          total: job.taskCount,
+        });
       }
       case 'completed':
-        return '已完成';
+        return m.download_job_status_completed();
       case 'partiallyFailed':
-        return `部分失败 (${job.failedTaskCount}/${job.taskCount})`;
+        return m.download_job_status_partially_failed({
+          failed: job.failedTaskCount,
+          total: job.taskCount,
+        });
       case 'failed':
-        return '失败';
+        return m.download_job_status_failed();
       case 'cancelled':
-        return '已取消';
+        return m.download_job_status_cancelled();
       default:
         return job.status;
     }
@@ -561,23 +581,27 @@ export function createDownloadController(deps: DownloadControllerDeps) {
   function getTaskStatusLabel(task: DownloadTaskSnapshot): string {
     switch (task.status) {
       case 'queued':
-        return '排队中';
+        return m.download_job_task_queued();
       case 'preparing':
-        return '准备中';
+        return m.download_job_task_preparing();
       case 'downloading': {
         const progressLabel = getTaskProgressLabel(task);
-        return progressLabel ?? '下载中...';
+        return progressLabel ?? m.download_job_task_downloading();
       }
       case 'writing': {
         const progressLabel = getTaskProgressLabel(task);
-        return progressLabel ? `写入中 · ${progressLabel}` : '写入中';
+        return progressLabel
+          ? m.download_job_task_writing_with_progress({
+              progress: progressLabel,
+            })
+          : m.download_job_task_writing();
       }
       case 'completed':
-        return '已完成';
+        return m.download_job_task_completed();
       case 'failed':
-        return '失败';
+        return m.download_job_task_failed();
       case 'cancelled':
-        return '已取消';
+        return m.download_job_task_cancelled();
       default:
         return task.status;
     }
@@ -586,11 +610,11 @@ export function createDownloadController(deps: DownloadControllerDeps) {
   function getJobKindLabel(job: DownloadJobSnapshot): string {
     switch (job.kind) {
       case 'song':
-        return '单曲下载';
+        return m.download_job_kind_song();
       case 'album':
-        return '整专下载';
+        return m.download_job_kind_album();
       case 'selection':
-        return '多选下载';
+        return m.download_job_kind_selection();
       default:
         return job.kind;
     }
@@ -605,20 +629,24 @@ export function createDownloadController(deps: DownloadControllerDeps) {
     const albumCount = getSelectionJobAlbumCount(job);
     if (albumCount <= 1) {
       const albumName = job.tasks[0]?.albumName;
-      return albumName ? `来自《${albumName}》` : '来自同一张专辑';
+      return albumName
+        ? m.download_job_scope_from_album({ album: albumName })
+        : m.download_job_scope_same_album();
     }
 
-    return `跨 ${albumCount} 张专辑`;
+    return m.download_job_scope_cross_albums({ count: albumCount });
   }
 
   function getJobSummaryLabel(job: DownloadJobSnapshot): string {
     switch (job.kind) {
       case 'song': {
         const task = job.tasks[0];
-        return task.albumName ? `来自《${task.albumName}》` : '单曲任务';
+        return task.albumName
+          ? m.download_job_scope_from_album({ album: task.albumName })
+          : m.download_job_summary_single_task();
       }
       case 'album':
-        return `${job.taskCount} 首歌曲`;
+        return m.download_job_summary_song_count({ count: job.taskCount });
       case 'selection': {
         if (job.taskCount <= 1) {
           return getSelectionJobScopeLabel(job);
@@ -626,13 +654,16 @@ export function createDownloadController(deps: DownloadControllerDeps) {
 
         const albumCount = getSelectionJobAlbumCount(job);
         if (albumCount <= 1) {
-          return `${job.taskCount} 首歌曲`;
+          return m.download_job_summary_song_count({ count: job.taskCount });
         }
 
-        return `${job.taskCount} 首歌曲 · 跨 ${albumCount} 张专辑`;
+        return m.download_job_summary_song_count_cross_albums({
+          count: job.taskCount,
+          albumCount,
+        });
       }
       default:
-        return `${job.taskCount} 首歌曲`;
+        return m.download_job_summary_song_count({ count: job.taskCount });
     }
   }
 
@@ -662,7 +693,9 @@ export function createDownloadController(deps: DownloadControllerDeps) {
       await deps.cancelDownloadJob(jobId);
     } catch (error) {
       deps.notifyError(
-        `取消下载任务失败：${error instanceof Error ? error.message : String(error)}`
+        m.download_error_cancel_job_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -672,7 +705,9 @@ export function createDownloadController(deps: DownloadControllerDeps) {
       await deps.cancelDownloadTask(jobId, taskId);
     } catch (error) {
       deps.notifyError(
-        `取消下载子任务失败：${error instanceof Error ? error.message : String(error)}`
+        m.download_error_cancel_task_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -682,7 +717,9 @@ export function createDownloadController(deps: DownloadControllerDeps) {
       await deps.retryDownloadJob(jobId);
     } catch (error) {
       deps.notifyError(
-        `重试下载任务失败：${error instanceof Error ? error.message : String(error)}`
+        m.download_error_retry_job_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -692,7 +729,9 @@ export function createDownloadController(deps: DownloadControllerDeps) {
       await deps.retryDownloadTask(jobId, taskId);
     } catch (error) {
       deps.notifyError(
-        `重试下载子任务失败：${error instanceof Error ? error.message : String(error)}`
+        m.download_error_retry_task_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -701,11 +740,13 @@ export function createDownloadController(deps: DownloadControllerDeps) {
     try {
       const removed = await deps.clearDownloadHistory();
       if (removed === 0) {
-        deps.notifyInfo('当前没有可清理的下载历史。');
+        deps.notifyInfo(m.download_notify_history_empty());
       }
     } catch (error) {
       deps.notifyError(
-        `清理下载历史失败：${error instanceof Error ? error.message : String(error)}`
+        m.download_error_clear_history_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }

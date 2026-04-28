@@ -5,6 +5,7 @@ import type {
   LocalInventorySnapshot,
   SearchLibraryResponse,
 } from '$lib/types';
+import * as m from '$lib/paraglide/messages.js';
 
 interface LibraryControllerDeps {
   delay: (ms: number) => Promise<void>;
@@ -119,7 +120,7 @@ export function createLibraryController(deps: LibraryControllerDeps) {
         scope,
         indexState: 'notReady',
       };
-      deps.notifyError(`搜索失败：${message}`);
+      deps.notifyError(m.library_error_search_failed({ error: message }));
     } finally {
       if (requestSeq === librarySearchRequestSeq) {
         librarySearchLoading = false;
@@ -272,7 +273,9 @@ export function createLibraryController(deps: LibraryControllerDeps) {
     } catch (error) {
       if (shouldDispose?.() || requestSeq !== albumRequestSeq) return;
       deps.notifyError(
-        `刷新当前专辑失败：${error instanceof Error ? error.message : String(error)}`
+        m.library_error_refresh_album_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     } finally {
       if (!shouldDispose?.() && requestSeq === albumRequestSeq) {

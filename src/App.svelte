@@ -62,6 +62,7 @@
     getSelectedAlbumCoverUrl,
   } from '$lib/features/library/selectors';
   import { localeState, type Locale } from '$lib/i18n';
+  import * as m from '$lib/paraglide/messages.js';
   import { toast } from 'svelte-sonner';
   import TopToolbar from '$lib/components/app/TopToolbar.svelte';
   import StatusToastHost from '$lib/components/app/StatusToastHost.svelte';
@@ -765,7 +766,9 @@
           return;
         }
         notifyError(
-          `初始化应用失败：${error instanceof Error ? error.message : String(error)}`
+          m.app_error_init_failed({
+            error: error instanceof Error ? error.message : String(error),
+          })
         );
       }
     })();
@@ -809,7 +812,7 @@
   async function handleSelectSearchResult(item: SearchLibraryResultItem) {
     const album = albums.find((candidate) => candidate.cid === item.albumCid);
     if (!album) {
-      notifyError('未找到对应专辑，可能需要先刷新列表。');
+      notifyError(m.app_error_album_not_found());
       return;
     }
 
@@ -904,7 +907,9 @@
       });
     } catch (e) {
       notifyError(
-        `刷新专辑列表失败：${e instanceof Error ? e.message : String(e)}`
+        m.app_error_refresh_failed({
+          error: e instanceof Error ? e.message : String(e),
+        })
       );
     } finally {
       await delay(400);
@@ -924,7 +929,6 @@
 <StatusToastHost />
 
 <div class="container" class:macos-overlay={isMacOS}>
-  <!-- 专辑列表侧边栏 -->
   <AlbumSidebarContainer
     {isMacOS}
     {albums}
@@ -966,7 +970,6 @@
       }}
     />
 
-    <!-- 歌曲列表内容区 -->
     <AlbumWorkspace {currentSong} {loadingDetail} {selectedAlbum}>
       <AlbumWorkspaceContent
         {loadingDetail}

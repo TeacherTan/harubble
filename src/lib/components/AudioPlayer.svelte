@@ -1,15 +1,15 @@
 <script lang="ts">
   import { getImageDataUrl } from '$lib/api';
+  import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   type RepeatMode = 'all' | 'one';
   type SongDownloadState = 'idle' | 'creating' | 'queued' | 'running';
-
   interface Song {
     cid: string;
     name: string;
     artists: string[];
     coverUrl: string | null;
   }
-
   interface Props {
     song: Song | null;
     isPlaying: boolean;
@@ -36,7 +36,6 @@
     onTogglePlaylist?: () => void;
     onDownload?: () => void | Promise<void>;
   }
-
   let {
     song,
     isPlaying,
@@ -63,33 +62,27 @@
     onTogglePlaylist,
     onDownload,
   }: Props = $props();
-
   let seekPreview = $state<number | null>(null);
   let draggingSeek = $state(false);
   let activeCid: string | null = null;
   let activeCoverUrl: string | null = null;
   let resolvedCoverUrl = $state<string | null>(null);
   let coverRequestSeq = 0;
-
   function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
   }
-
   function formatTime(seconds: number): string {
     if (!isFinite(seconds) || isNaN(seconds) || seconds < 0) return '0:00';
     const minute = Math.floor(seconds / 60);
     const second = Math.floor(seconds % 60);
     return `${minute}:${second.toString().padStart(2, '0')}`;
   }
-
   function nextRepeatMode(mode: RepeatMode): RepeatMode {
     return mode === 'all' ? 'one' : 'all';
   }
-
   function readRangeValue(event: Event): number {
     return Number((event.currentTarget as HTMLInputElement).value);
   }
-
   const canSeek = $derived.by(
     () => !!song && duration > 0 && !isLoading && !!onSeek
   );
@@ -109,18 +102,44 @@
   const progressRatio = $derived.by(() =>
     clamp(shownProgress / safeDuration, 0, 1)
   );
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      unknownArtist: m.player_unknown_artist(),
+      statusLoading: m.player_status_loading(),
+      statusPaused: m.player_status_paused(),
+      repeatOne: m.player_repeat_one(),
+      repeatAll: m.player_repeat_all(),
+      lyricsClose: m.player_lyrics_close(),
+      lyricsOpen: m.player_lyrics_open(),
+      playlistClose: m.player_playlist_close(),
+      playlistOpen: m.player_playlist_open(),
+      downloadIdle: m.player_download_idle(),
+      ariaControls: m.player_aria_controls(),
+      ariaTimeline: m.player_aria_timeline(),
+      ariaSeek: m.player_aria_seek(),
+      ariaTransport: m.player_aria_transport(),
+      ariaShuffle: m.player_aria_shuffle(),
+      ariaPrevious: m.player_aria_previous(),
+      ariaNext: m.player_aria_next(),
+      ariaPause: m.player_aria_pause(),
+      ariaResume: m.player_aria_resume(),
+      ariaPlay: m.player_aria_play(),
+      ariaExtras: m.player_aria_extras(),
+    };
+  });
   const artistText = $derived.by(() =>
-    song?.artists.length ? song.artists.join(' · ') : '未知艺术家'
+    song?.artists.length ? song.artists.join(' · ') : labels.unknownArtist
   );
   const subtitle = $derived.by(() =>
     isLoading
-      ? `${artistText} · 加载中`
+      ? `${artistText} · ${labels.statusLoading}`
       : isPaused
-        ? `${artistText} · 已暂停`
+        ? `${artistText} · ${labels.statusPaused}`
         : artistText
   );
   const repeatLabel = $derived.by(() =>
-    repeatMode === 'one' ? '单曲循环' : '列表循环'
+    repeatMode === 'one' ? labels.repeatOne : labels.repeatAll
   );
   const playerState = $derived.by(() =>
     isLoading ? 'loading' : isPlaying ? 'playing' : isPaused ? 'paused' : 'idle'
@@ -129,27 +148,26 @@
     lyricsActive ? 'lyrics' : playlistActive ? 'playlist' : 'none'
   );
   const lyricsButtonLabel = $derived.by(() =>
-    lyricsActive ? '关闭歌词' : '打开歌词'
+    lyricsActive ? labels.lyricsClose : labels.lyricsOpen
   );
   const playlistButtonLabel = $derived.by(() =>
-    playlistActive ? '关闭播放列表' : '打开播放列表'
+    playlistActive ? labels.playlistClose : labels.playlistOpen
   );
   const lyricsToggleDisabled = $derived(!song || isLoading || !onToggleLyrics);
   const playlistToggleDisabled = $derived(
     !song || isLoading || !onTogglePlaylist
   );
   const downloadButtonLabel = $derived.by(() => {
-    if (!song) return '下载当前歌曲';
-
+    if (!song) return labels.downloadIdle;
     switch (downloadState) {
       case 'creating':
-        return `正在创建 ${song.name} 的下载任务`;
+        return m.common_download_creating_aria({ name: song.name });
       case 'queued':
-        return `${song.name} 已在下载队列中`;
+        return m.common_download_queued_aria({ name: song.name });
       case 'running':
-        return `${song.name} 正在下载中`;
+        return m.common_download_running_aria({ name: song.name });
       default:
-        return `下载 ${song.name}`;
+        return m.common_download_idle_aria({ name: song.name });
     }
   });
   const canDownload = $derived.by(
@@ -167,7 +185,6 @@
     () =>
       `--motion-duration:${reducedMotion ? '0ms' : 'var(--motion-base)'};--player-progress-percent:${progressRatio * 100}%`
   );
-
   $effect(() => {
     const currentCid = song?.cid ?? null;
     if (currentCid !== activeCid) {
@@ -176,21 +193,15 @@
       draggingSeek = false;
     }
   });
-
   $effect(() => {
     const coverUrl = song?.coverUrl ?? null;
-    if (coverUrl === activeCoverUrl) {
-      return;
-    }
-
+    if (coverUrl === activeCoverUrl) return;
     activeCoverUrl = coverUrl;
     const requestSeq = ++coverRequestSeq;
-
     if (!coverUrl) {
       resolvedCoverUrl = null;
       return;
     }
-
     void (async () => {
       try {
         const dataUrl = await getImageDataUrl(coverUrl);
@@ -202,7 +213,6 @@
       }
     })();
   });
-
   $effect(() => {
     if (
       !draggingSeek &&
@@ -212,7 +222,6 @@
       seekPreview = null;
     }
   });
-
   async function commitSeek(nextValue: number) {
     draggingSeek = false;
     if (!canSeek) {
@@ -231,17 +240,14 @@
       seekPreview = null;
     }
   }
-
   function handleSeekInput(event: Event) {
     if (!canSeek) return;
     draggingSeek = true;
     seekPreview = clamp(readRangeValue(event), 0, duration || 0);
   }
-
   function handleSeekChange(event: Event) {
     void commitSeek(readRangeValue(event));
   }
-
   async function handleShuffleToggle() {
     if (!canShuffle) return;
     try {
@@ -250,7 +256,6 @@
       return;
     }
   }
-
   async function handleRepeatToggle() {
     if (!canRepeat) return;
     const next = nextRepeatMode(repeatMode);
@@ -265,14 +270,14 @@
 {#if song}
   <section
     class="am-player"
-    aria-label="播放控制条"
+    aria-label={labels.ariaControls}
     style={playerStyle}
     data-loading={isLoading ? 'true' : 'false'}
     data-state={playerState}
     data-panel={detailPanel}
     data-dragging={draggingSeek ? 'true' : 'false'}
   >
-    <div class="timeline" role="group" aria-label="播放进度">
+    <div class="timeline" role="group" aria-label={labels.ariaTimeline}>
       <div class="progress-track">
         <div class="track-bg" aria-hidden="true"></div>
         <input
@@ -282,7 +287,7 @@
           max={safeDuration}
           value={shownProgress}
           step="0.1"
-          aria-label="调整播放进度"
+          aria-label={labels.ariaSeek}
           disabled={!canSeek}
           oninput={handleSeekInput}
           onchange={handleSeekChange}
@@ -290,11 +295,11 @@
       </div>
     </div>
 
-    <div class="left-controls" role="group" aria-label="传输控制">
+    <div class="left-controls" role="group" aria-label={labels.ariaTransport}>
       <button
         type="button"
         class="icon-button side-toggle"
-        aria-label="乱序播放"
+        aria-label={labels.ariaShuffle}
         aria-pressed={isShuffled}
         disabled={!canShuffle}
         onclick={handleShuffleToggle}
@@ -311,7 +316,7 @@
         <button
           type="button"
           class="icon-button transport-button"
-          aria-label="上一首"
+          aria-label={labels.ariaPrevious}
           disabled={!hasPrevious || isLoading}
           onclick={() => onPrevious?.()}
         >
@@ -330,7 +335,11 @@
           type="button"
           class="icon-button play-button"
           class:playing={isPlaying}
-          aria-label={isPlaying ? '暂停播放' : isPaused ? '继续播放' : '播放'}
+          aria-label={isPlaying
+            ? labels.ariaPause
+            : isPaused
+              ? labels.ariaResume
+              : labels.ariaPlay}
           disabled={isLoading || !onTogglePlay}
           onclick={() => onTogglePlay?.()}
         >
@@ -356,7 +365,7 @@
         <button
           type="button"
           class="icon-button transport-button"
-          aria-label="下一首"
+          aria-label={labels.ariaNext}
           disabled={!hasNext || isLoading}
           onclick={() => onNext?.()}
         >
@@ -375,7 +384,7 @@
       <button
         type="button"
         class="icon-button side-toggle"
-        aria-label={`切换循环模式，当前${repeatLabel}`}
+        aria-label={m.player_aria_repeat_toggle({ mode: repeatLabel })}
         aria-pressed={repeatMode === 'one'}
         disabled={!canRepeat}
         onclick={handleRepeatToggle}
@@ -400,7 +409,7 @@
           {#if resolvedCoverUrl}
             <img
               src={resolvedCoverUrl}
-              alt={`${song.name} 封面`}
+              alt={m.player_cover_alt({ name: song.name })}
               class="cover"
             />
           {:else}
@@ -419,10 +428,13 @@
       </div>
     </div>
 
-    <div class="right-controls" role="group" aria-label="附加控制">
+    <div class="right-controls" role="group" aria-label={labels.ariaExtras}>
       <div
         class="time-readout"
-        aria-label={`播放进度 ${formatTime(shownProgress)}，剩余 ${remainingLabel}`}
+        aria-label={m.player_aria_progress({
+          time: formatTime(shownProgress),
+          remaining: remainingLabel,
+        })}
       >
         <span class="time">{formatTime(shownProgress)}</span>
         <span class="time-separator" aria-hidden="true">/</span>

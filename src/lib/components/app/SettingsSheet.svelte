@@ -24,7 +24,6 @@
     LogViewerRecord,
     OutputFormat,
   } from '$lib/types';
-
   interface Props {
     open?: boolean;
     format?: OutputFormat;
@@ -39,7 +38,6 @@
     notifyError: (message: string) => void;
     onOutputDirChange: (outputDir: string) => boolean | Promise<boolean>;
   }
-
   let {
     open = $bindable(false),
     format = $bindable<OutputFormat>('flac'),
@@ -54,7 +52,6 @@
     notifyError,
     onOutputDirChange,
   }: Props = $props();
-
   let logFileKind = $state<LogFileKind>('session');
   let logRecords = $state<LogViewerRecord[]>([]);
   let logFileStatus = $state<LogFileStatus | null>(null);
@@ -64,20 +61,73 @@
   let isSendingTestNotification = $state(false);
   let isClearingAudioCache = $state(false);
   let lastLoadedWhileOpen = $state(false);
-
-  const formatOptions: { value: OutputFormat; label: string }[] = [
-    { value: 'flac', label: 'FLAC（无损压缩）' },
-    { value: 'wav', label: 'WAV（无损）' },
-    { value: 'mp3', label: 'MP3' },
-  ];
-
-  const logLevelOptions: { value: LogLevel; label: string }[] = [
-    { value: 'error', label: 'Error（仅严重错误）' },
-    { value: 'warn', label: 'Warn（警告及以上）' },
-    { value: 'info', label: 'Info（信息及以上）' },
-    { value: 'debug', label: 'Debug（记录全部调试信息）' },
-  ];
-
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      title: m.settings_title(),
+      description: m.settings_description(),
+      sectionPreferences: m.settings_section_preferences(),
+      sectionNotifications: m.settings_section_notifications(),
+      sectionCache: m.settings_section_cache(),
+      sectionLogs: m.settings_section_logs(),
+      languageLabel: m.settings_language_label(),
+      zhCN: m.settings_language_zh_cn(),
+      enUS: m.settings_language_en_us(),
+      outputFormat: m.settings_output_format(),
+      logLevel: m.settings_log_level(),
+      outputDir: m.settings_output_dir(),
+      outputDirSelect: m.settings_output_dir_select(),
+      notificationTest: m.settings_notification_test(),
+      notificationTestSending: m.settings_notification_test_sending(),
+      lyricsTitle: m.settings_lyrics_title(),
+      lyricsDescription: m.settings_lyrics_description(),
+      notifyDownloadTitle: m.settings_notify_download_title(),
+      notifyDownloadDescription: m.settings_notify_download_description(),
+      notifyPlaybackTitle: m.settings_notify_playback_title(),
+      notifyPlaybackDescription: m.settings_notify_playback_description(),
+      cacheDescription: m.settings_cache_description(),
+      cacheClear: m.settings_cache_clear(),
+      cacheClearing: m.settings_cache_clearing(),
+      logsDescription: m.settings_logs_description(),
+      logSegmentAria: m.settings_log_segment_aria(),
+      logSession: m.settings_log_session(),
+      logPersistent: m.settings_log_persistent(),
+      logStatusAvailable: m.settings_log_status_available(),
+      logStatusNone: m.settings_log_status_none(),
+      logLoading: m.settings_log_loading(),
+      logEmpty: m.settings_log_empty(),
+    };
+  });
+  const formatOptions = $derived.by(() => {
+    void localeState.current;
+    return [
+      { value: 'flac' as OutputFormat, label: m.settings_format_flac() },
+      { value: 'wav' as OutputFormat, label: m.settings_format_wav() },
+      { value: 'mp3' as OutputFormat, label: m.settings_format_mp3() },
+    ];
+  });
+  const logLevelOptions = $derived.by(() => {
+    void localeState.current;
+    return [
+      { value: 'error' as LogLevel, label: m.settings_loglevel_error() },
+      { value: 'warn' as LogLevel, label: m.settings_loglevel_warn() },
+      { value: 'info' as LogLevel, label: m.settings_loglevel_info() },
+      { value: 'debug' as LogLevel, label: m.settings_loglevel_debug() },
+    ];
+  });
+  const localeOptions = $derived([
+    { value: 'zh-CN' as Locale, label: labels.zhCN },
+    { value: 'en-US' as Locale, label: labels.enUS },
+  ]);
+  const currentLocaleLabel = $derived(
+    localeOptions.find((o) => o.value === locale)?.label ?? labels.zhCN
+  );
+  const currentFormatLabel = $derived(
+    formatOptions.find((o) => o.value === format)?.label ?? 'FLAC'
+  );
+  const currentLogLevelLabel = $derived(
+    logLevelOptions.find((o) => o.value === logLevel)?.label ?? 'Error'
+  );
   async function refreshLogs(kind = logFileKind) {
     const requestSeq = ++logRequestSeq;
     logViewerLoading = true;
@@ -87,39 +137,28 @@
         listLogRecords({ kind, limit: 100 }),
         getLogFileStatus(),
       ]);
-      if (requestSeq !== logRequestSeq || !open) {
-        return;
-      }
+      if (requestSeq !== logRequestSeq || !open) return;
       logRecords = page.records;
       logFileStatus = status;
       logFileKind = kind;
     } catch (error) {
-      if (requestSeq !== logRequestSeq || !open) {
-        return;
-      }
+      if (requestSeq !== logRequestSeq || !open) return;
       logViewerError = error instanceof Error ? error.message : String(error);
     } finally {
-      if (requestSeq === logRequestSeq) {
-        logViewerLoading = false;
-      }
+      if (requestSeq === logRequestSeq) logViewerLoading = false;
     }
   }
-
   async function handleSelectDirectory() {
     const currentOutputDir = outputDir;
     const dir = await selectDirectory(currentOutputDir);
-    if (!dir || dir === currentOutputDir) {
-      return;
-    }
-
+    if (!dir || dir === currentOutputDir) return;
     outputDir = dir;
     const saved = await onOutputDirChange(dir);
     if (!saved) {
       outputDir = currentOutputDir;
-      notifyError('保存下载目录失败，已恢复为之前的设置。');
+      notifyError(m.settings_toast_dir_save_failed());
     }
   }
-
   async function handleClearAudioCache() {
     if (isClearingAudioCache) return;
     isClearingAudioCache = true;
@@ -127,33 +166,35 @@
       const removed = await clearAudioCache();
       notifyInfo(
         removed > 0
-          ? `已清除 ${removed} 个音频缓存文件`
-          : '当前没有可清除的音频缓存'
+          ? m.settings_toast_cache_cleared({ count: removed })
+          : m.settings_toast_cache_empty()
       );
     } catch (error) {
       notifyError(
-        `清除音频缓存失败：${error instanceof Error ? error.message : String(error)}`
+        m.settings_toast_cache_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     } finally {
       isClearingAudioCache = false;
     }
   }
-
   async function handleSendTestNotification() {
     if (isSendingTestNotification) return;
     isSendingTestNotification = true;
     try {
       await sendTestNotification();
-      notifyInfo('测试通知已请求发送，请观察系统通知中心或终端日志。');
+      notifyInfo(m.settings_toast_notification_sent());
     } catch (error) {
       notifyError(
-        `发送测试通知失败：${error instanceof Error ? error.message : String(error)}`
+        m.settings_toast_notification_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     } finally {
       isSendingTestNotification = false;
     }
   }
-
   $effect(() => {
     if (!open) {
       lastLoadedWhileOpen = false;
@@ -161,51 +202,15 @@
       logViewerLoading = false;
       return;
     }
-
-    if (lastLoadedWhileOpen) {
-      return;
-    }
-
+    if (lastLoadedWhileOpen) return;
     lastLoadedWhileOpen = true;
     void refreshLogs(logFileKind);
   });
-
   $effect(() => {
     const refreshToken = logRefreshToken;
-    if (!open || !lastLoadedWhileOpen || refreshToken === 0) {
-      return;
-    }
-
+    if (!open || !lastLoadedWhileOpen || refreshToken === 0) return;
     void refreshLogs(logFileKind);
   });
-
-  const localeLabels = $derived.by(() => {
-    void localeState.current;
-    return {
-      languageLabel: m.settings_language_label(),
-      zhCN: m.settings_language_zh_cn(),
-      enUS: m.settings_language_en_us(),
-    };
-  });
-
-  const localeOptions = $derived([
-    { value: 'zh-CN' as Locale, label: localeLabels.zhCN },
-    { value: 'en-US' as Locale, label: localeLabels.enUS },
-  ]);
-
-  const currentLocaleLabel = $derived(
-    localeOptions.find((option) => option.value === locale)?.label ??
-      localeLabels.zhCN
-  );
-
-  const currentFormatLabel = $derived(
-    formatOptions.find((option) => option.value === format)?.label ?? 'FLAC'
-  );
-
-  const currentLogLevelLabel = $derived(
-    logLevelOptions.find((option) => option.value === logLevel)?.label ??
-      'Error'
-  );
 </script>
 
 <Sheet.Root bind:open>
@@ -213,70 +218,62 @@
     class="app-side-sheet settings-sheet gap-0 overflow-hidden border-[var(--settings-border)] bg-[var(--surface-sheet)] p-0 text-[var(--text-primary)] shadow-[0_24px_64px_rgba(15,23,42,0.18)] backdrop-blur-xl"
   >
     <Sheet.Header class="settings-sheet-header">
-      <Sheet.Title>下载设置</Sheet.Title>
-      <Sheet.Description>音频格式、通知和缓存管理</Sheet.Description>
+      <Sheet.Title>{labels.title}</Sheet.Title>
+      <Sheet.Description>{labels.description}</Sheet.Description>
     </Sheet.Header>
-
     <div class="settings-sheet-body">
       <section class="settings-section">
         <div class="settings-section-heading">
-          <h3>基础偏好</h3>
+          <h3>{labels.sectionPreferences}</h3>
         </div>
-
         <div class="settings-field-grid">
           <label class="settings-field" for="locale-select">
-            <span>{localeLabels.languageLabel}</span>
-            <Select.Root type="single" bind:value={locale}>
-              <Select.Trigger
+            <span>{labels.languageLabel}</span>
+            <Select.Root type="single" bind:value={locale}
+              ><Select.Trigger
                 id="locale-select"
                 class="h-9 w-full border-[var(--settings-border)] bg-[var(--settings-control-bg)]"
-              >
-                {currentLocaleLabel}
-              </Select.Trigger>
-              <Select.Content>
-                {#each localeOptions as option (option.value)}
-                  <Select.Item value={option.value} label={option.label} />
-                {/each}
-              </Select.Content>
-            </Select.Root>
+                >{currentLocaleLabel}</Select.Trigger
+              ><Select.Content
+                >{#each localeOptions as option (option.value)}<Select.Item
+                    value={option.value}
+                    label={option.label}
+                  />{/each}</Select.Content
+              ></Select.Root
+            >
           </label>
-
           <label class="settings-field" for="format-select">
-            <span>输出格式</span>
-            <Select.Root type="single" bind:value={format}>
-              <Select.Trigger
+            <span>{labels.outputFormat}</span>
+            <Select.Root type="single" bind:value={format}
+              ><Select.Trigger
                 id="format-select"
                 class="h-9 w-full border-[var(--settings-border)] bg-[var(--settings-control-bg)]"
-              >
-                {currentFormatLabel}
-              </Select.Trigger>
-              <Select.Content>
-                {#each formatOptions as option (option.value)}
-                  <Select.Item value={option.value} label={option.label} />
-                {/each}
-              </Select.Content>
-            </Select.Root>
+                >{currentFormatLabel}</Select.Trigger
+              ><Select.Content
+                >{#each formatOptions as option (option.value)}<Select.Item
+                    value={option.value}
+                    label={option.label}
+                  />{/each}</Select.Content
+              ></Select.Root
+            >
           </label>
-
           <label class="settings-field" for="log-level-select">
-            <span>持久化日志等级</span>
-            <Select.Root type="single" bind:value={logLevel}>
-              <Select.Trigger
+            <span>{labels.logLevel}</span>
+            <Select.Root type="single" bind:value={logLevel}
+              ><Select.Trigger
                 id="log-level-select"
                 class="h-9 w-full border-[var(--settings-border)] bg-[var(--settings-control-bg)]"
-              >
-                {currentLogLevelLabel}
-              </Select.Trigger>
-              <Select.Content>
-                {#each logLevelOptions as option (option.value)}
-                  <Select.Item value={option.value} label={option.label} />
-                {/each}
-              </Select.Content>
-            </Select.Root>
+                >{currentLogLevelLabel}</Select.Trigger
+              ><Select.Content
+                >{#each logLevelOptions as option (option.value)}<Select.Item
+                    value={option.value}
+                    label={option.label}
+                  />{/each}</Select.Content
+              ></Select.Root
+            >
           </label>
-
           <div class="settings-field">
-            <label for="output-dir">保存位置</label>
+            <label for="output-dir">{labels.outputDir}</label>
             <div class="settings-path-row">
               <Input
                 id="output-dir"
@@ -287,129 +284,117 @@
               <Button
                 class="h-9 shrink-0"
                 onclick={() => void handleSelectDirectory()}
+                ><FolderOpenIcon
+                  data-icon="inline-start"
+                />{labels.outputDirSelect}</Button
               >
-                <FolderOpenIcon data-icon="inline-start" />
-                选择
-              </Button>
             </div>
           </div>
         </div>
       </section>
-
       <section class="settings-section">
         <div class="settings-section-heading">
-          <h3>通知与附加文件</h3>
+          <h3>{labels.sectionNotifications}</h3>
           <Button
             variant="secondary"
             disabled={isSendingTestNotification}
             onclick={() => void handleSendTestNotification()}
+            ><BellIcon data-icon="inline-start" />{isSendingTestNotification
+              ? labels.notificationTestSending
+              : labels.notificationTest}</Button
           >
-            <BellIcon data-icon="inline-start" />
-            {isSendingTestNotification ? '发送中' : '测试'}
-          </Button>
         </div>
-
         <div class="settings-toggle-list">
-          <label class="settings-toggle">
-            <span>
-              <strong>歌词文件</strong>
-              <small>有歌词时，在音频旁生成同名 `.lrc`。</small>
-            </span>
-            <Switch bind:checked={downloadLyrics} />
-          </label>
-
-          <label class="settings-toggle">
-            <span>
-              <strong>下载完成通知</strong>
-              <small>下载任务完成时显示通知。</small>
-            </span>
-            <Switch bind:checked={notifyOnDownloadComplete} />
-          </label>
-
-          <label class="settings-toggle">
-            <span>
-              <strong>播放切换通知</strong>
-              <small>播放新歌曲时显示通知。</small>
-            </span>
-            <Switch bind:checked={notifyOnPlaybackChange} />
-          </label>
+          <label class="settings-toggle"
+            ><span
+              ><strong>{labels.lyricsTitle}</strong><small
+                >{labels.lyricsDescription}</small
+              ></span
+            ><Switch bind:checked={downloadLyrics} /></label
+          >
+          <label class="settings-toggle"
+            ><span
+              ><strong>{labels.notifyDownloadTitle}</strong><small
+                >{labels.notifyDownloadDescription}</small
+              ></span
+            ><Switch bind:checked={notifyOnDownloadComplete} /></label
+          >
+          <label class="settings-toggle"
+            ><span
+              ><strong>{labels.notifyPlaybackTitle}</strong><small
+                >{labels.notifyPlaybackDescription}</small
+              ></span
+            ><Switch bind:checked={notifyOnPlaybackChange} /></label
+          >
         </div>
       </section>
-
       <section class="settings-section settings-action-section">
         <div class="settings-section-heading">
           <div>
-            <h3>音乐缓存</h3>
-            <p>播放时的音频缓存保存在系统缓存目录。</p>
+            <h3>{labels.sectionCache}</h3>
+            <p>{labels.cacheDescription}</p>
           </div>
           <Button
             variant="secondary"
             disabled={isClearingAudioCache}
             onclick={() => void handleClearAudioCache()}
+            ><Trash2Icon data-icon="inline-start" />{isClearingAudioCache
+              ? labels.cacheClearing
+              : labels.cacheClear}</Button
           >
-            <Trash2Icon data-icon="inline-start" />
-            {isClearingAudioCache ? '清除中' : '清除'}
-          </Button>
         </div>
       </section>
-
       <section class="settings-section">
         <div class="settings-section-heading settings-log-heading">
           <div>
-            <h3>日志与诊断</h3>
-            <p>本次运行日志会在正常退出时按等级写入持久化日志。</p>
+            <h3>{labels.sectionLogs}</h3>
+            <p>{labels.logsDescription}</p>
           </div>
-          <div class="settings-segment" aria-label="日志文件类型">
+          <div class="settings-segment" aria-label={labels.logSegmentAria}>
             <button
               type="button"
               class:active={logFileKind === 'session'}
               onclick={() => void refreshLogs('session')}
+              >{labels.logSession}</button
             >
-              本次运行
-            </button>
             <button
               type="button"
               class:active={logFileKind === 'persistent'}
               onclick={() => void refreshLogs('persistent')}
+              >{labels.logPersistent}</button
             >
-              持久化
-            </button>
           </div>
         </div>
-
         <p class="settings-log-status">
-          session: {logFileStatus?.hasSessionLog ? '可用' : '暂无'} · persistent:
-          {logFileStatus?.hasPersistentLog ? '可用' : '暂无'}
+          session: {logFileStatus?.hasSessionLog
+            ? labels.logStatusAvailable
+            : labels.logStatusNone} · persistent: {logFileStatus?.hasPersistentLog
+            ? labels.logStatusAvailable
+            : labels.logStatusNone}
         </p>
-
         {#if logViewerLoading}
-          <div class="settings-empty-state">正在加载日志…</div>
+          <div class="settings-empty-state">{labels.logLoading}</div>
         {:else if logViewerError}
-          <div class="settings-error-state">
-            {logViewerError}
-          </div>
+          <div class="settings-error-state">{logViewerError}</div>
         {:else if logRecords.length > 0}
           <div class="settings-log-list">
             {#each logRecords as record (record.id)}
               <article class="settings-log-record">
                 <div class="settings-log-meta">
-                  <span>{record.level}</span>
-                  <time>{record.ts}</time>
+                  <span>{record.level}</span><time>{record.ts}</time>
                 </div>
                 <p class="settings-log-message">{record.message}</p>
                 <p class="settings-log-source">
                   {record.domain} · {record.code}
                 </p>
-                {#if record.details}
-                  <p class="settings-log-details">
+                {#if record.details}<p class="settings-log-details">
                     {record.details}
-                  </p>
-                {/if}
+                  </p>{/if}
               </article>
             {/each}
           </div>
         {:else}
-          <div class="settings-empty-state">当前没有可显示的日志记录。</div>
+          <div class="settings-empty-state">{labels.logEmpty}</div>
         {/if}
       </section>
     </div>
@@ -436,7 +421,6 @@
       transparent
     );
   }
-
   :global(.settings-sheet-header) {
     padding: 18px 48px 14px 18px;
     border-bottom: 1px solid var(--settings-border);
@@ -446,7 +430,6 @@
       transparent
     );
   }
-
   .settings-sheet-body {
     display: flex;
     min-height: 0;
@@ -456,7 +439,6 @@
     overflow-y: auto;
     padding: 14px 14px 18px;
   }
-
   .settings-section {
     display: grid;
     gap: 12px;
@@ -465,14 +447,12 @@
     background: var(--settings-section-bg);
     padding: 12px;
   }
-
   .settings-section-heading {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
   }
-
   .settings-section-heading h3 {
     margin: 0;
     color: var(--text-primary);
@@ -480,19 +460,16 @@
     font-weight: 700;
     letter-spacing: 0;
   }
-
   .settings-section-heading p {
     margin: 3px 0 0;
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.45;
   }
-
   .settings-field-grid {
     display: grid;
     gap: 10px;
   }
-
   .settings-field {
     display: grid;
     gap: 6px;
@@ -501,20 +478,17 @@
     font-size: 12px;
     font-weight: 600;
   }
-
   .settings-path-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
   }
-
   .settings-toggle-list {
     display: grid;
     overflow: hidden;
     border: 1px solid var(--settings-border);
     border-radius: 8px;
   }
-
   .settings-toggle {
     display: flex;
     align-items: center;
@@ -526,41 +500,33 @@
     cursor: pointer;
     transition: background var(--motion-fast) var(--ease-standard);
   }
-
   .settings-toggle + .settings-toggle {
     border-top: 1px solid var(--settings-border);
   }
-
   .settings-toggle:hover {
     background: var(--settings-row-hover-bg);
   }
-
   .settings-toggle span {
     display: grid;
     gap: 3px;
     min-width: 0;
   }
-
   .settings-toggle strong {
     color: var(--text-primary);
     font-size: 13px;
     font-weight: 600;
   }
-
   .settings-toggle small {
     color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.35;
   }
-
   .settings-action-section {
     padding-block: 13px;
   }
-
   .settings-log-heading {
     align-items: center;
   }
-
   .settings-segment {
     display: inline-grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -570,7 +536,6 @@
     background: var(--settings-row-bg);
     padding: 2px;
   }
-
   .settings-segment button {
     height: 26px;
     border: 0;
@@ -585,19 +550,16 @@
       background var(--motion-fast) var(--ease-standard),
       color var(--motion-fast) var(--ease-standard);
   }
-
   .settings-segment button.active {
     background: var(--accent);
     color: white;
   }
-
   .settings-log-status {
     margin: -4px 0 0;
     color: var(--text-secondary);
     font-size: 11px;
     line-height: 1.4;
   }
-
   .settings-log-list {
     display: grid;
     gap: 8px;
@@ -608,7 +570,6 @@
     background: var(--settings-row-bg);
     padding: 8px;
   }
-
   .settings-log-record {
     display: grid;
     gap: 4px;
@@ -617,7 +578,6 @@
     background: color-mix(in srgb, var(--bg-primary) 52%, transparent);
     padding: 8px 10px;
   }
-
   .settings-log-meta {
     display: flex;
     align-items: center;
@@ -627,12 +587,10 @@
     font-size: 11px;
     line-height: 1.35;
   }
-
   .settings-log-meta span {
     font-weight: 700;
     text-transform: uppercase;
   }
-
   .settings-log-message {
     margin: 0;
     color: var(--text-primary);
@@ -640,7 +598,6 @@
     font-weight: 600;
     line-height: 1.45;
   }
-
   .settings-log-source,
   .settings-log-details {
     margin: 0;
@@ -648,12 +605,10 @@
     font-size: 11px;
     line-height: 1.4;
   }
-
   .settings-log-details {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
-
   .settings-empty-state,
   .settings-error-state {
     border: 1px solid var(--settings-border);
@@ -664,23 +619,19 @@
     font-size: 12px;
     line-height: 1.45;
   }
-
   .settings-error-state {
     border-color: color-mix(in srgb, var(--destructive) 40%, transparent);
     background: color-mix(in srgb, var(--destructive) 10%, transparent);
     color: var(--destructive);
   }
-
   @media (max-width: 420px) {
     .settings-path-row,
     .settings-section-heading {
       grid-template-columns: 1fr;
     }
-
     .settings-section-heading {
       display: grid;
     }
-
     .settings-log-heading {
       align-items: stretch;
     }

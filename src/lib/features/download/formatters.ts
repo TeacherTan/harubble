@@ -1,4 +1,5 @@
 import type { DownloadTaskSnapshot } from '$lib/types';
+import * as m from '$lib/paraglide/messages.js';
 
 export function buildSelectionKey(songCids: string[]): string {
   return [...songCids].sort().join(',');
@@ -11,7 +12,7 @@ export function formatByteSize(bytes: number | null | undefined): string {
     !Number.isFinite(bytes) ||
     bytes < 0
   ) {
-    return '未知大小';
+    return m.download_fmt_unknown_size();
   }
 
   if (bytes < 1024) return `${bytes} B`;
@@ -30,7 +31,7 @@ export function formatByteSize(bytes: number | null | undefined): string {
 
 export function formatSpeed(bytesPerSec: number): string {
   if (!Number.isFinite(bytesPerSec) || bytesPerSec < 0) {
-    return '未知速度';
+    return m.download_fmt_unknown_speed();
   }
 
   if (bytesPerSec < 1024) return `${bytesPerSec.toFixed(0)} B/s`;
@@ -50,19 +51,19 @@ export function formatSpeed(bytesPerSec: number): string {
 export function getTaskStatusLabel(task: DownloadTaskSnapshot): string {
   switch (task.status) {
     case 'queued':
-      return '排队中';
+      return m.download_fmt_task_queued();
     case 'preparing':
-      return '准备中';
+      return m.download_fmt_task_preparing();
     case 'downloading':
-      return '下载中...';
+      return m.download_fmt_task_downloading();
     case 'writing':
-      return '写入中';
+      return m.download_fmt_task_writing();
     case 'completed':
-      return '已完成';
+      return m.download_fmt_task_completed();
     case 'failed':
-      return '失败';
+      return m.download_fmt_task_failed();
     case 'cancelled':
-      return '已取消';
+      return m.download_fmt_task_cancelled();
     default:
       return task.status;
   }

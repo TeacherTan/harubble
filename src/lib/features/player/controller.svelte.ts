@@ -5,6 +5,7 @@ import type {
 } from '$lib/types';
 import { parseLyricText } from './lyrics';
 import { buildPlaybackContext } from './queue';
+import * as m from '$lib/paraglide/messages.js';
 
 interface PlayerControllerDeps {
   playSong: (
@@ -325,7 +326,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
     } catch (error) {
       playingCid = null;
       deps.notifyError(
-        `播放失败：${error instanceof Error ? error.message : String(error)}`
+        m.player_error_play_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -404,7 +407,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
       await deps.pausePlayback();
     } catch (error) {
       deps.notifyError(
-        `暂停播放失败：${error instanceof Error ? error.message : String(error)}`
+        m.player_error_pause_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -414,7 +419,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
       await deps.resumePlayback();
     } catch (error) {
       deps.notifyError(
-        `恢复播放失败：${error instanceof Error ? error.message : String(error)}`
+        m.player_error_resume_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -425,7 +432,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
       await deps.seekCurrentPlayback(positionSecs);
     } catch (error) {
       deps.notifyError(
-        `跳转播放进度失败：${error instanceof Error ? error.message : String(error)}`
+        m.player_error_seek_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
