@@ -63,6 +63,9 @@ export function createHomeController(deps: HomeControllerDeps) {
 
     if (results[1].status === 'fulfilled') {
       homeStore.seriesGroups = results[1].value;
+      if (results[1].value.length > 0) {
+        homeStore.belongReady = true;
+      }
     }
 
     if (results[2].status === 'fulfilled') {

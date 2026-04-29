@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { OverlayScrollbarsComponent } from 'overlayscrollbars-svelte';
-  import type { PartialOptions } from 'overlayscrollbars';
   import AlbumSidebar from '$lib/components/app/AlbumSidebar.svelte';
   import type {
     Album,
@@ -22,7 +20,6 @@
     searchScope: LibrarySearchScope;
     searchLoading: boolean;
     searchResponse: SearchLibraryResponse | null;
-    overlayScrollbarOptions: PartialOptions;
     onNavigateHome: () => void;
     onSearchQueryChange: (query: string) => void;
     onSearchScopeChange: (scope: LibrarySearchScope) => void;
@@ -35,13 +32,7 @@
   let props: Props = $props();
 </script>
 
-<OverlayScrollbarsComponent
-  element="aside"
-  class="sidebar"
-  data-overlayscrollbars-initialize
-  options={props.overlayScrollbarOptions}
-  defer
->
+<aside class="sidebar">
   {#if props.isMacOS}
     <div
       class="sidebar-drag-region"
@@ -82,7 +73,7 @@
     onSelect={props.onSelect}
     onSelectSearchResult={props.onSelectSearchResult}
   />
-</OverlayScrollbarsComponent>
+</aside>
 
 <style>
   .home-nav-button {

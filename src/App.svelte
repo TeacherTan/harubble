@@ -35,7 +35,6 @@
     searchScope={runtime.librarySearchScope}
     searchLoading={runtime.librarySearchLoading}
     searchResponse={runtime.librarySearchResponse}
-    overlayScrollbarOptions={runtime.overlayScrollbarOptions}
     onNavigateHome={runtime.shellStore.navigateToHome}
     onSearchQueryChange={runtime.libraryController.setSearchQuery}
     onSearchScopeChange={runtime.libraryController.setSearchScope}

@@ -24,7 +24,9 @@ pub async fn get_latest_albums(
 /// 按系列分组获取专辑列表。
 ///
 /// 从 SQLite 读取 belong 映射，与全量专辑做内存 join 分组。
-/// 无 belong 记录的专辑不参与分组。
+/// 除 belong 分组外，还会从专辑名称中派生额外的系列标签（如 OST、EP），
+/// 同一专辑可同时出现在 belong 分组与名称派生分组中。
+/// 无 belong 记录且无名称派生标签的专辑不参与分组。
 /// 返回值为按系列分组的专辑集合列表，按每组专辑数量降序排列。
 /// 调用方应注意：belong 映射来自本地缓存，若缓存尚未写入则分组结果可能为空。
 #[tauri::command]
@@ -42,15 +44,25 @@ pub async fn get_albums_by_series(state: State<'_, AppState>) -> Result<Vec<Seri
         std::collections::HashMap::new();
 
     for album in enriched {
-        let series = belong_map
-            .get(album.cid.as_str())
-            .copied()
-            .unwrap_or("")
-            .to_string();
-        if series.is_empty() {
+        let belong = belong_map.get(album.cid.as_str()).copied().unwrap_or("");
+        let derived = derive_series_tags(&album.name);
+
+        if belong.is_empty() && derived.is_empty() {
             continue;
         }
-        groups.entry(series).or_default().push(album);
+
+        if !belong.is_empty() {
+            groups
+                .entry(belong.to_string())
+                .or_default()
+                .push(album.clone());
+        }
+        for tag in derived {
+            groups
+                .entry(tag.to_string())
+                .or_default()
+                .push(album.clone());
+        }
     }
 
     let mut result: Vec<SeriesGroup> = groups
@@ -59,6 +71,34 @@ pub async fn get_albums_by_series(state: State<'_, AppState>) -> Result<Vec<Seri
         .collect();
     result.sort_by(|a, b| b.albums.len().cmp(&a.albums.len()));
     Ok(result)
+}
+
+/// 从专辑名称中派生系列标签。
+///
+/// 对名称做大小写不敏感的单词边界匹配，识别 OST、EP 等关键词。
+/// 返回匹配到的标签列表；未匹配到任何关键词时返回空列表。
+fn derive_series_tags(name: &str) -> Vec<&'static str> {
+    let upper = name.to_uppercase();
+    let bytes = upper.as_bytes();
+    let mut tags = Vec::new();
+
+    if let Some(pos) = upper.find("OST") {
+        let before_ok = pos == 0 || !bytes[pos - 1].is_ascii_alphanumeric();
+        let after_ok = pos + 3 >= bytes.len() || !bytes[pos + 3].is_ascii_alphanumeric();
+        if before_ok && after_ok {
+            tags.push("OST");
+        }
+    }
+
+    if let Some(pos) = upper.find("EP") {
+        let before_ok = pos == 0 || !bytes[pos - 1].is_ascii_alphanumeric();
+        let after_ok = pos + 2 >= bytes.len() || !bytes[pos + 2].is_ascii_alphanumeric();
+        if before_ok && after_ok {
+            tags.push("EP");
+        }
+    }
+
+    tags
 }
 
 /// 获取最近收听历史。

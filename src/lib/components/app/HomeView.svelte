@@ -91,7 +91,7 @@
 
 <style>
   :global(.home-scroll-container) {
-    flex: 1;
+    height: 100%;
     overflow: hidden;
   }
 
