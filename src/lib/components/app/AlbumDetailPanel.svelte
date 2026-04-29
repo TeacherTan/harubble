@@ -249,10 +249,11 @@
   }
 
   .btn-primary.is-disabled {
-    background: var(--bg-tertiary);
-    color: var(--text-tertiary);
-    box-shadow: 0 0 0 rgba(var(--accent-rgb), 0);
-    opacity: 0.72;
+    border-color: rgba(15, 23, 42, 0.12);
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--text-secondary);
+    box-shadow: none;
+    opacity: 1;
   }
 
   .is-reduced-motion .btn {

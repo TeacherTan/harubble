@@ -411,33 +411,40 @@
     left: 50%;
     width: 800px;
     height: 800px;
-    background:
-      radial-gradient(
-          circle,
-          rgba(255, 255, 255, 0.32) 0.7px,
-          transparent 0.7px
-        )
-        0 0 / 3.5px 3.5px,
-      linear-gradient(
-        to right,
-        #ff2080,
-        #c830ff,
-        #5050ff,
-        #00a0ff,
-        #00d4a0,
-        #60e840,
-        #e8d020,
-        #ff8020,
-        #ff2080
-      );
-    background-size:
-      3.5px 3.5px,
-      25% 100%;
-    z-index: -1;
+    background: linear-gradient(
+      to right,
+      #ff2080,
+      #c830ff,
+      #5050ff,
+      #00a0ff,
+      #00d4a0,
+      #60e840,
+      #e8d020,
+      #ff8020,
+      #ff2080
+    );
+    background-size: 25% 100%;
+    z-index: -2;
     pointer-events: none;
     opacity: 0;
     transform: translate(-50%, -50%) rotate(135deg);
     animation: scope-rainbow-slide 2.4s linear infinite;
+    transition: opacity 0.3s ease;
+  }
+
+  :global(.library-search-scope-button[data-scope='all']::after) {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 0.32) 0.7px,
+        transparent 0.7px
+      )
+      0 0 / 3.5px 3.5px;
     transition: opacity 0.3s ease;
   }
 
@@ -452,6 +459,10 @@
   }
 
   :global(.library-search-scope-button[data-scope='all']:hover::before) {
+    opacity: 1;
+  }
+
+  :global(.library-search-scope-button[data-scope='all']:hover::after) {
     opacity: 1;
   }
 
