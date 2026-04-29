@@ -17,7 +17,11 @@ pub async fn get_latest_albums(
     limit: u32,
 ) -> Result<Vec<Album>, String> {
     let albums = state.api.get_albums().await.map_err(|e| e.to_string())?;
-    let enriched = state.local_inventory_service.enrich_albums(albums).await;
+    let mut enriched = state.local_inventory_service.enrich_albums(albums).await;
+    let locale = state.preferences().locale;
+    for album in &mut enriched {
+        album.tags = state.tag_registry.get_album_tags(&album.cid, locale);
+    }
     Ok(enriched.into_iter().take(limit as usize).collect())
 }
 
@@ -32,7 +36,11 @@ pub async fn get_latest_albums(
 #[tauri::command]
 pub async fn get_albums_by_series(state: State<'_, AppState>) -> Result<Vec<SeriesGroup>, String> {
     let albums = state.api.get_albums().await.map_err(|e| e.to_string())?;
-    let enriched = state.local_inventory_service.enrich_albums(albums).await;
+    let mut enriched = state.local_inventory_service.enrich_albums(albums).await;
+    let locale = state.preferences().locale;
+    for album in &mut enriched {
+        album.tags = state.tag_registry.get_album_tags(&album.cid, locale);
+    }
     let belongs = state.album_metadata_cache.get_all_belongs()?;
 
     let belong_map: std::collections::HashMap<&str, &str> = belongs

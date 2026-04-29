@@ -8,15 +8,20 @@ use crate::theme;
 use base64::Engine;
 use tauri::State;
 
-/// 获取专辑列表，并附带本地库存增强后的下载徽标。
+/// 获取专辑列表，并附带本地库存增强后的下载徽标与 tag 信息。
 ///
 /// 适用于首页或专辑浏览视图的初始加载与刷新场景。
-/// 入参 `state` 提供共享后端状态与 API 客户端；返回值为已经过本地库存增强的专辑列表。
+/// 入参 `state` 提供共享后端状态与 API 客户端；返回值为已经过本地库存增强与 tag 注入的专辑列表。
 /// 调用方应把该结果视为展示快照：远端数据或本地库存状态变化后，需要重新调用以获取最新结果。
 #[tauri::command]
 pub async fn get_albums(state: State<'_, AppState>) -> Result<Vec<siren_core::api::Album>, String> {
     let albums = state.api.get_albums().await.map_err(|e| e.to_string())?;
-    Ok(state.local_inventory_service.enrich_albums(albums).await)
+    let mut enriched = state.local_inventory_service.enrich_albums(albums).await;
+    let locale = state.preferences().locale;
+    for album in &mut enriched {
+        album.tags = state.tag_registry.get_album_tags(&album.cid, locale);
+    }
+    Ok(enriched)
 }
 
 /// 根据专辑 CID 获取专辑详情，并补充本地库存相关信息。
@@ -38,10 +43,16 @@ pub async fn get_album_detail(
     let _ = state
         .album_metadata_cache
         .upsert_belong(&album.cid, &album.belong);
-    Ok(state
+    let mut enriched = state
         .local_inventory_service
         .enrich_album_detail(album)
-        .await)
+        .await;
+    let locale = state.preferences().locale;
+    enriched.tags = state.tag_registry.get_album_tags(&enriched.cid, locale);
+    for song in &mut enriched.songs {
+        song.tags = state.tag_registry.get_song_tags(&song.cid, &enriched.cid, locale);
+    }
+    Ok(enriched)
 }
 
 /// 根据歌曲 CID 获取单曲详情，并联动所属专辑补齐库存徽标。
@@ -64,10 +75,13 @@ pub async fn get_song_detail(
         .get_album_detail(&song.album_cid)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(state
+    let mut enriched = state
         .local_inventory_service
         .enrich_song_detail(song, &album.name)
-        .await)
+        .await;
+    let locale = state.preferences().locale;
+    enriched.tags = state.tag_registry.get_song_tags(&enriched.cid, &enriched.album_cid, locale);
+    Ok(enriched)
 }
 
 /// 获取歌曲歌词文本；若上游未提供歌词地址则返回 `None`。
