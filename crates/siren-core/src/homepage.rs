@@ -47,3 +47,15 @@ pub struct HomepageStatus {
     pub active_download_count: u32,
     pub completed_download_count: u32,
 }
+
+/// 按单个 tag 值聚合的专辑分组，用于首页"按维度浏览"区块。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagGroup {
+    /// 维度 key（程序标识符，非展示名）。
+    pub dimension_key: String,
+    /// 当前分组的 tag 值（已本地化）。
+    pub value: String,
+    /// 命中该 tag 值的专辑列表。
+    pub albums: Vec<Album>,
+}

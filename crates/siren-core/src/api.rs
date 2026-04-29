@@ -34,6 +34,9 @@ pub struct Album {
     /// 本地库存补充后的下载徽标信息。
     #[serde(default)]
     pub download: AlbumDownloadBadge,
+    /// 自定义元数据 tag，由后端 enrichment 注入。
+    #[serde(default)]
+    pub tags: Vec<TagEntry>,
 }
 
 /// 单张专辑的完整详情快照。
@@ -62,6 +65,9 @@ pub struct AlbumDetail {
     /// 本地库存补充后的专辑下载徽标。
     #[serde(default)]
     pub download: AlbumDownloadBadge,
+    /// 自定义元数据 tag，由后端 enrichment 注入。
+    #[serde(default)]
+    pub tags: Vec<TagEntry>,
     /// 专辑内歌曲列表。
     pub songs: Vec<SongEntry>,
 }
@@ -82,6 +88,9 @@ pub struct SongEntry {
     /// 本地库存补充后的歌曲下载徽标。
     #[serde(default)]
     pub download: TrackDownloadBadge,
+    /// 自定义元数据 tag，由后端 enrichment 注入。
+    #[serde(default)]
+    pub tags: Vec<TagEntry>,
 }
 
 /// 单曲的完整详情快照。
@@ -113,6 +122,21 @@ pub struct SongDetail {
     /// 本地库存补充后的歌曲下载徽标。
     #[serde(default)]
     pub download: TrackDownloadBadge,
+    /// 自定义元数据 tag，由后端 enrichment 注入。
+    #[serde(default)]
+    pub tags: Vec<TagEntry>,
+}
+
+/// 已解析的单维度 tag 条目，用于前端展示和搜索。
+///
+/// `dimension` 为当前 locale 下的维度展示名，`values` 为同一维度下所有命中值的去重列表。
+/// enrichment 阶段负责将 i18n 原始数据解析为单语言文本，前端无需处理 locale 逻辑。
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TagEntry {
+    /// 维度展示名（已本地化）。
+    pub dimension: String,
+    /// 当前维度下的 tag 值列表（已本地化、已去重）。
+    pub values: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]

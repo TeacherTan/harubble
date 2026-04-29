@@ -51,7 +51,7 @@ pub mod search;
 
 // 重新导出公共 API，便于上层直接使用
 /// Monster Siren 上游数据访问相关的公共类型与客户端入口。
-pub use api::{Album, AlbumDetail, ApiClient, SongDetail, SongEntry};
+pub use api::{Album, AlbumDetail, ApiClient, SongDetail, SongEntry, TagEntry};
 /// 音频格式识别、落盘与 FLAC 标签写入相关的公共工具。
 pub use audio::{save_audio, tag_flac, AudioFormat, OutputFormat};
 /// 下载领域模型、快照与事件载荷。
@@ -69,7 +69,7 @@ pub use downloader::{
     MetaOverride, OwnedFlacMetadata, WritePayload,
 };
 /// 首页数据结构：系列分组、收听历史、收听事件与状态仪表盘。
-pub use homepage::{HistoryEntry, HomepageStatus, ListeningEvent, SeriesGroup};
+pub use homepage::{HistoryEntry, HomepageStatus, ListeningEvent, SeriesGroup, TagGroup};
 /// 本地库存扫描、徽标聚合与证据建模相关公共类型与工具。
 pub use local_inventory::{
     aggregate_album_download_badge, album_badge_for_status, album_badge_from_evidence,

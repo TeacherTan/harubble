@@ -40,6 +40,8 @@ pub enum LibrarySearchHitField {
     Intro,
     /// 命中归属字段。
     Belong,
+    /// 命中自定义 tag 值字段。
+    TagValues,
 }
 
 /// 本地搜索索引的状态。
