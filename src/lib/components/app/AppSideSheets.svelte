@@ -1,6 +1,7 @@
 <script lang="ts">
   import type SettingsSheet from '$lib/components/app/SettingsSheet.svelte';
   import type DownloadTasksSheet from '$lib/components/app/DownloadTasksSheet.svelte';
+  import type { Locale } from '$lib/i18n/types';
   import type {
     DownloadHistoryKindFilter,
     DownloadHistoryScopeFilter,
@@ -25,6 +26,7 @@
     notifyOnDownloadComplete?: boolean;
     notifyOnPlaybackChange?: boolean;
     logLevel?: LogLevel;
+    locale?: Locale;
     settingsLogRefreshToken: number;
     notifyInfo: (message: string) => void;
     notifyError: (message: string) => void;
@@ -41,6 +43,7 @@
     getJobStatusLabel: (job: DownloadJobSnapshot) => string;
     getJobKindLabel: (job: DownloadJobSnapshot) => string;
     getJobSummaryLabel: (job: DownloadJobSnapshot) => string;
+    getJobDisplayTitle: (job: DownloadJobSnapshot) => string;
     getJobErrorSummary: (job: DownloadJobSnapshot) => string | null;
     isJobActive: (jobId: string) => boolean;
     canCancelTask: (task: DownloadTaskSnapshot) => boolean;
@@ -71,6 +74,7 @@
     notifyOnDownloadComplete = $bindable(true),
     notifyOnPlaybackChange = $bindable(true),
     logLevel = $bindable<LogLevel>('error'),
+    locale = $bindable<Locale>('zh-CN'),
     settingsLogRefreshToken,
     notifyInfo,
     notifyError,
@@ -87,6 +91,7 @@
     getJobStatusLabel,
     getJobKindLabel,
     getJobSummaryLabel,
+    getJobDisplayTitle,
     getJobErrorSummary,
     isJobActive,
     canCancelTask,
@@ -110,6 +115,7 @@
     bind:notifyOnDownloadComplete
     bind:notifyOnPlaybackChange
     bind:logLevel
+    bind:locale
     logRefreshToken={settingsLogRefreshToken}
     {notifyInfo}
     {notifyError}
@@ -132,6 +138,7 @@
     {getJobStatusLabel}
     {getJobKindLabel}
     {getJobSummaryLabel}
+    {getJobDisplayTitle}
     {getJobErrorSummary}
     {isJobActive}
     {canCancelTask}

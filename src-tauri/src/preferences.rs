@@ -1,7 +1,23 @@
+use crate::i18n::tr;
 use crate::logging::{LogCenter, LogLevel, LogPayload};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+/// 应用支持的界面语言
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Locale {
+    #[serde(rename = "zh-CN")]
+    ZhCN,
+    #[serde(rename = "en-US")]
+    EnUS,
+}
+
+impl Default for Locale {
+    fn default() -> Self {
+        Self::ZhCN
+    }
+}
 
 /// 统一应用偏好模型（TOML 序列化格式：camelCase 字段名）
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,28 +33,42 @@ pub struct AppPreferences {
     pub(crate) notify_on_playback_change: bool,
     #[serde(default = "default_log_level")]
     pub(crate) log_level: String,
+    #[serde(default)]
+    pub(crate) locale: Locale,
 }
 
 impl AppPreferences {
     /// 验证偏好是否合法
-    pub(crate) fn validate(&self) -> Result<(), String> {
+    pub(crate) fn validate(&self, locale: Locale) -> Result<(), String> {
         match self.output_format.as_str() {
             "flac" | "wav" | "mp3" => {}
-            _ => return Err(format!("不支持的格式: {}", self.output_format)),
+            _ => {
+                let args = crate::i18n::fluent_args!("format" => self.output_format.clone());
+                return Err(crate::i18n::tr_args(
+                    locale,
+                    "preferences-unsupported-format",
+                    &args,
+                ));
+            }
         }
         if LogLevel::parse(&self.log_level).is_none() {
-            return Err(format!("不支持的日志等级: {}", self.log_level));
+            let args = crate::i18n::fluent_args!("level" => self.log_level.clone());
+            return Err(crate::i18n::tr_args(
+                locale,
+                "preferences-unsupported-log-level",
+                &args,
+            ));
         }
         let path = Path::new(&self.output_dir);
         if path.as_os_str().is_empty() || !path.is_absolute() {
-            return Err("保存路径必须是绝对目录路径".to_string());
+            return Err(tr(locale, "preferences-output-dir-must-be-absolute"));
         }
         if !path.exists() {
-            return Err("保存路径不存在".to_string());
+            return Err(tr(locale, "preferences-output-dir-not-exists"));
         }
-        ensure_not_symlink(path, "保存路径不能是符号链接")?;
+        ensure_not_symlink(path, &tr(locale, "preferences-output-dir-is-symlink"))?;
         if !path.is_dir() {
-            return Err("保存路径不是目录".to_string());
+            return Err(tr(locale, "preferences-output-dir-not-directory"));
         }
         Ok(())
     }
@@ -48,29 +78,29 @@ fn default_log_level() -> String {
     LogLevel::Error.as_str().to_string()
 }
 
-fn validate_explicit_export_path(path: &Path) -> Result<(), String> {
+fn validate_explicit_export_path(path: &Path, locale: Locale) -> Result<(), String> {
     if path.as_os_str().is_empty() || !path.is_absolute() {
-        return Err("导出路径必须是绝对文件路径".to_string());
+        return Err(tr(locale, "preferences-export-path-must-be-absolute"));
     }
     if path.exists() {
-        ensure_not_symlink(path, "导出路径不能是符号链接")?;
+        ensure_not_symlink(path, &tr(locale, "preferences-export-path-is-symlink"))?;
     }
     if path.exists() && path.is_dir() {
-        return Err("导出路径必须是文件路径".to_string());
+        return Err(tr(locale, "preferences-export-path-is-directory"));
     }
     Ok(())
 }
 
-fn validate_explicit_import_path(path: &Path) -> Result<(), String> {
+fn validate_explicit_import_path(path: &Path, locale: Locale) -> Result<(), String> {
     if path.as_os_str().is_empty() || !path.is_absolute() {
-        return Err("导入路径必须是绝对文件路径".to_string());
+        return Err(tr(locale, "preferences-import-path-must-be-absolute"));
     }
     if !path.exists() {
-        return Err("导入文件不存在".to_string());
+        return Err(tr(locale, "preferences-import-file-not-exists"));
     }
-    ensure_not_symlink(path, "导入路径不能是符号链接")?;
+    ensure_not_symlink(path, &tr(locale, "preferences-import-path-is-symlink"))?;
     if !path.is_file() {
-        return Err("导入路径必须是文件".to_string());
+        return Err(tr(locale, "preferences-import-path-not-file"));
     }
     Ok(())
 }
@@ -95,6 +125,7 @@ impl Default for AppPreferences {
             notify_on_download_complete: true,
             notify_on_playback_change: true,
             log_level: default_log_level(),
+            locale: Locale::default(),
         }
     }
 }
@@ -111,12 +142,18 @@ impl PreferencesStore {
         Self { path }
     }
 
-    /// 从 TOML 文件加载偏好，缺失或损坏时用默认值初始化并写入
+    /// 从 TOML 文件加载偏好，缺失或损坏时用默认值初始化并写入。
+    ///
+    /// `load_locale` 强制使用 `Locale::default()`（`zh-CN`），因为在偏好文件解析成功前
+    /// 无法得知用户实际选择的语言。这意味着文件损坏或缺失时的日志/错误消息始终使用中文。
+    /// 这是一个有意的设计取舍——偏好加载是 locale 来源的上游，不可能自引用。
     pub(crate) fn load(&self, log_center: Option<&LogCenter>) -> AppPreferences {
+        // 偏好文件尚未解析前不知道用户选择的语言，强制使用默认 locale
+        let load_locale = Locale::default();
         if self.path.exists() {
             match fs::read_to_string(&self.path) {
                 Ok(content) => match toml::from_str::<AppPreferences>(&content) {
-                    Ok(prefs) => match prefs.validate() {
+                    Ok(prefs) => match prefs.validate(prefs.locale) {
                         Ok(()) => return prefs,
                         Err(error) => {
                             if let Some(log_center) = log_center {
@@ -127,7 +164,7 @@ impl PreferencesStore {
                                         "preferences.invalid_persisted",
                                         "Persisted preferences are invalid",
                                     )
-                                    .user_message("偏好配置无效，已回退到默认设置")
+                                    .user_message(tr(load_locale, "preferences-load-invalid"))
                                     .details(error.clone()),
                                 );
                             }
@@ -143,7 +180,7 @@ impl PreferencesStore {
                                     "preferences.parse_failed",
                                     "Failed to parse persisted preferences",
                                 )
-                                .user_message("偏好配置损坏，已回退到默认设置")
+                                .user_message(tr(load_locale, "preferences-load-corrupted"))
                                 .details(e.to_string()),
                             );
                         }
@@ -159,7 +196,7 @@ impl PreferencesStore {
                                 "preferences.read_failed",
                                 "Failed to read persisted preferences",
                             )
-                            .user_message("读取偏好配置失败，已回退到默认设置")
+                            .user_message(tr(load_locale, "preferences-load-read-failed"))
                             .details(e.to_string()),
                         );
                     }
@@ -189,8 +226,9 @@ impl PreferencesStore {
             notify_on_download_complete: true,
             notify_on_playback_change: true,
             log_level: default_log_level(),
+            locale: Locale::default(),
         };
-        if let Err(e) = self.save(&default_prefs) {
+        if let Err(e) = self.save(&default_prefs, load_locale) {
             if let Some(log_center) = log_center {
                 log_center.record(
                     LogPayload::new(
@@ -208,36 +246,52 @@ impl PreferencesStore {
     }
 
     /// 原子写入偏好到 TOML 文件
-    pub(crate) fn save(&self, prefs: &AppPreferences) -> Result<(), String> {
-        let parent = self.path.parent().ok_or("偏好目录无效")?;
-        fs::create_dir_all(parent).map_err(|_| "创建偏好目录失败".to_string())?;
+    pub(crate) fn save(&self, prefs: &AppPreferences, locale: Locale) -> Result<(), String> {
+        let parent = self
+            .path
+            .parent()
+            .ok_or_else(|| tr(locale, "preferences-dir-invalid"))?;
+        fs::create_dir_all(parent).map_err(|_| tr(locale, "preferences-dir-create-failed"))?;
         let content = toml::to_string_pretty(prefs)
             .map_err(|e| format!("failed to serialize preferences: {e}"))?;
-        fs::write(&self.path, content.as_bytes()).map_err(|_| "写入偏好文件失败".to_string())?;
+        fs::write(&self.path, content.as_bytes())
+            .map_err(|_| tr(locale, "preferences-file-write-failed"))?;
         Ok(())
     }
 
     /// 导出偏好到指定路径
-    pub(crate) fn export_to(&self, prefs: &AppPreferences, path: &Path) -> Result<(), String> {
-        validate_explicit_export_path(path)?;
+    pub(crate) fn export_to(
+        &self,
+        prefs: &AppPreferences,
+        path: &Path,
+        locale: Locale,
+    ) -> Result<(), String> {
+        validate_explicit_export_path(path, locale)?;
         if let Some(parent) = path.parent() {
             if !parent.as_os_str().is_empty() {
-                fs::create_dir_all(parent).map_err(|_| "创建导出目录失败".to_string())?;
+                fs::create_dir_all(parent)
+                    .map_err(|_| tr(locale, "preferences-export-dir-create-failed"))?;
             }
         }
         let content = toml::to_string_pretty(prefs)
             .map_err(|e| format!("failed to serialize preferences: {e}"))?;
-        fs::write(path, content.as_bytes()).map_err(|_| "写入导出文件失败".to_string())?;
+        fs::write(path, content.as_bytes())
+            .map_err(|_| tr(locale, "preferences-export-file-write-failed"))?;
         Ok(())
     }
 
     /// 从指定路径导入偏好（读取后验证）
-    pub(crate) fn import_from(&self, path: &Path) -> Result<AppPreferences, String> {
-        validate_explicit_import_path(path)?;
-        let content = fs::read_to_string(path).map_err(|_| "读取导入文件失败".to_string())?;
+    pub(crate) fn import_from(
+        &self,
+        path: &Path,
+        locale: Locale,
+    ) -> Result<AppPreferences, String> {
+        validate_explicit_import_path(path, locale)?;
+        let content = fs::read_to_string(path)
+            .map_err(|_| tr(locale, "preferences-import-file-read-failed"))?;
         let prefs: AppPreferences =
             toml::from_str(&content).map_err(|e| format!("failed to parse TOML: {e}"))?;
-        prefs.validate()?;
+        prefs.validate(locale)?;
         Ok(prefs)
     }
 }

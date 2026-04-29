@@ -61,6 +61,8 @@
     buildAlbumPlaybackEntries,
     getSelectedAlbumCoverUrl,
   } from '$lib/features/library/selectors';
+  import { localeState, type Locale } from '$lib/i18n';
+  import * as m from '$lib/paraglide/messages.js';
   import { toast } from 'svelte-sonner';
   import TopToolbar from '$lib/components/app/TopToolbar.svelte';
   import StatusToastHost from '$lib/components/app/StatusToastHost.svelte';
@@ -134,6 +136,7 @@
     getPreferences,
     setPreferences,
     notifyError,
+    onLocaleChanged: (locale) => localeState.applyBackendLocale(locale),
   });
 
   const albumStageMotionController = createAlbumStageMotionController({
@@ -216,6 +219,7 @@
     notifyOnDownloadComplete: true,
     notifyOnPlaybackChange: true,
     logLevel: 'error' as LogLevel,
+    locale: 'zh-CN' as Locale,
     settingsLogRefreshToken: 0,
     prefsReady: false,
     isSaving: false,
@@ -228,11 +232,14 @@
       notifyOnDownloadComplete: false,
       notifyOnPlaybackChange: false,
       logLevel: false,
+      locale: false,
     },
     suspendDirtyTracking: 0,
   });
   let selectedAlbumArtworkUrl = $state<string | null>(null);
   let albumStageElement = $state<HTMLElement | null>(null);
+  let activeThemeArtworkUrl: string | null = null;
+  let activeAlbumStageArtworkUrl: string | null = null;
   const lastObservedSettings = {
     format: settingsState.format,
     outputDir: settingsState.outputDir,
@@ -240,12 +247,15 @@
     notifyOnDownloadComplete: settingsState.notifyOnDownloadComplete,
     notifyOnPlaybackChange: settingsState.notifyOnPlaybackChange,
     logLevel: settingsState.logLevel,
+    locale: settingsState.locale,
   };
 
   const playerHasPrevious = $derived(playerController.playerHasPrevious);
   const playerHasNext = $derived(playerController.playerHasNext);
 
   const activeLyricIndex = $derived.by(() => {
+    if (!lyricsOpen) return -1;
+
     let activeIndex = -1;
 
     for (let index = 0; index < lyricsLines.length; index += 1) {
@@ -333,9 +343,14 @@
   }
 
   $effect(() => {
-    const paletteRequestSeq = ++themeRequestSeq;
     const artworkUrl =
       selectedAlbum?.coverUrl ?? selectedAlbum?.coverDeUrl ?? null;
+    if (artworkUrl === activeThemeArtworkUrl) {
+      return;
+    }
+
+    activeThemeArtworkUrl = artworkUrl;
+    const paletteRequestSeq = ++themeRequestSeq;
 
     if (!artworkUrl) {
       applyThemePalette(DEFAULT_THEME_PALETTE);
@@ -357,6 +372,11 @@
   $effect(() => {
     const sourceUrl =
       selectedAlbum?.coverDeUrl ?? selectedAlbum?.coverUrl ?? null;
+    if (sourceUrl === activeAlbumStageArtworkUrl) {
+      return;
+    }
+
+    activeAlbumStageArtworkUrl = sourceUrl;
     const requestSeq = ++artworkRequestSeq;
 
     if (!sourceUrl) {
@@ -384,6 +404,7 @@
       notifyOnDownloadComplete: settingsState.notifyOnDownloadComplete,
       notifyOnPlaybackChange: settingsState.notifyOnPlaybackChange,
       logLevel: settingsState.logLevel,
+      locale: settingsState.locale,
     });
   }
 
@@ -456,6 +477,18 @@
     if (value !== lastObservedSettings.logLevel) {
       settingsState.dirty.logLevel = true;
       lastObservedSettings.logLevel = value;
+    }
+  });
+
+  $effect(() => {
+    const value = settingsState.locale;
+    if (settingsState.suspendDirtyTracking > 0) {
+      lastObservedSettings.locale = value;
+      return;
+    }
+    if (value !== lastObservedSettings.locale) {
+      settingsState.dirty.locale = true;
+      lastObservedSettings.locale = value;
     }
   });
 
@@ -688,7 +721,7 @@
     } catch (error) {
       cleanup();
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`failed to subscribe tauri events: ${message}`, {
+      throw new Error(m.app_error_event_subscribe_failed({ error: message }), {
         cause: error,
       });
     }
@@ -733,7 +766,9 @@
           return;
         }
         notifyError(
-          `初始化应用失败：${error instanceof Error ? error.message : String(error)}`
+          m.app_error_init_failed({
+            error: error instanceof Error ? error.message : String(error),
+          })
         );
       }
     })();
@@ -777,13 +812,24 @@
   async function handleSelectSearchResult(item: SearchLibraryResultItem) {
     const album = albums.find((candidate) => candidate.cid === item.albumCid);
     if (!album) {
-      notifyError('未找到对应专辑，可能需要先刷新列表。');
+      notifyError(m.app_error_album_not_found());
       return;
     }
 
     libraryController.setPendingScrollToSong(
       item.kind === 'song' ? item.songCid : null
     );
+    clearSongSelection();
+    selectionModeEnabled = false;
+    await libraryController.selectAlbum(album, {
+      afterSelect: async () => {
+        await tick();
+        resetContentScroll();
+      },
+    });
+  }
+
+  async function handleSelectAlbum(album: Album) {
     clearSongSelection();
     selectionModeEnabled = false;
     await libraryController.selectAlbum(album, {
@@ -861,7 +907,9 @@
       });
     } catch (e) {
       notifyError(
-        `刷新专辑列表失败：${e instanceof Error ? e.message : String(e)}`
+        m.app_error_refresh_failed({
+          error: e instanceof Error ? e.message : String(e),
+        })
       );
     } finally {
       await delay(400);
@@ -881,7 +929,6 @@
 <StatusToastHost />
 
 <div class="container" class:macos-overlay={isMacOS}>
-  <!-- 专辑列表侧边栏 -->
   <AlbumSidebarContainer
     {isMacOS}
     {albums}
@@ -896,16 +943,7 @@
     {overlayScrollbarOptions}
     onSearchQueryChange={libraryController.setSearchQuery}
     onSearchScopeChange={libraryController.setSearchScope}
-    onSelect={(album: Album) => {
-      clearSongSelection();
-      selectionModeEnabled = false;
-      return libraryController.selectAlbum(album, {
-        afterSelect: async () => {
-          await tick();
-          resetContentScroll();
-        },
-      });
-    }}
+    onSelect={handleSelectAlbum}
     onSelectSearchResult={handleSelectSearchResult}
   />
 
@@ -932,7 +970,6 @@
       }}
     />
 
-    <!-- 歌曲列表内容区 -->
     <AlbumWorkspace {currentSong} {loadingDetail} {selectedAlbum}>
       <AlbumWorkspaceContent
         {loadingDetail}
@@ -1037,6 +1074,7 @@
       bind:notifyOnDownloadComplete={settingsState.notifyOnDownloadComplete}
       bind:notifyOnPlaybackChange={settingsState.notifyOnPlaybackChange}
       bind:logLevel={settingsState.logLevel}
+      bind:locale={settingsState.locale}
       settingsLogRefreshToken={settingsState.settingsLogRefreshToken}
       {notifyInfo}
       {notifyError}
@@ -1054,6 +1092,7 @@
       getJobStatusLabel={downloadController.getJobStatusLabel}
       getJobKindLabel={downloadController.getJobKindLabel}
       getJobSummaryLabel={downloadController.getJobSummaryLabel}
+      getJobDisplayTitle={downloadController.getJobDisplayTitle}
       getJobErrorSummary={downloadController.getJobErrorSummary}
       isJobActive={downloadController.isJobActive}
       canCancelTask={downloadController.canCancelTask}

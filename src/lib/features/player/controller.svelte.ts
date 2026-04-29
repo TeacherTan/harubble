@@ -5,6 +5,7 @@ import type {
 } from '$lib/types';
 import { parseLyricText } from './lyrics';
 import { buildPlaybackContext } from './queue';
+import * as m from '$lib/paraglide/messages.js';
 
 interface PlayerControllerDeps {
   playSong: (
@@ -80,6 +81,36 @@ export function createPlayerController(deps: PlayerControllerDeps) {
     };
   }
 
+  function areStringArraysEqual(left: string[], right: string[]): boolean {
+    if (left.length !== right.length) return false;
+    return left.every((value, index) => value === right[index]);
+  }
+
+  function arePlayerSongsEqual(
+    left: PlayerSong | null,
+    right: PlayerSong | null
+  ): boolean {
+    if (left === right) return true;
+    if (!left || !right) return false;
+
+    return (
+      left.cid === right.cid &&
+      left.name === right.name &&
+      left.coverUrl === right.coverUrl &&
+      areStringArraysEqual(left.artists, right.artists)
+    );
+  }
+
+  function assignPlayerStateFields(state: PlayerState) {
+    if (isPlaying !== state.isPlaying) isPlaying = state.isPlaying;
+    if (isPaused !== state.isPaused) isPaused = state.isPaused;
+    if (isLoading !== state.isLoading) isLoading = state.isLoading;
+    if (hasPrevious !== state.hasPrevious) hasPrevious = state.hasPrevious;
+    if (hasNext !== state.hasNext) hasNext = state.hasNext;
+    if (progress !== state.progress) progress = state.progress;
+    if (duration !== state.duration) duration = state.duration;
+  }
+
   function buildSinglePlaybackEntry(song: PlayerSong): PlaybackQueueEntry {
     return {
       cid: song.cid,
@@ -139,7 +170,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
 
   function syncPlaybackQueueWithSong(song: PlayerSong | null) {
     if (!song) {
-      playbackIndex = -1;
+      if (playbackIndex !== -1) {
+        playbackIndex = -1;
+      }
       return;
     }
 
@@ -147,7 +180,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
       (entry) => entry.cid === song.cid
     );
     if (currentOrderIndex >= 0) {
-      playbackIndex = currentOrderIndex;
+      if (playbackIndex !== currentOrderIndex) {
+        playbackIndex = currentOrderIndex;
+      }
       return;
     }
 
@@ -190,16 +225,13 @@ export function createPlayerController(deps: PlayerControllerDeps) {
   }
 
   function syncPlayerState(state: PlayerState) {
-    currentSong = normalizePlayerSong(state);
-    isPlaying = state.isPlaying;
-    isPaused = state.isPaused;
-    isLoading = state.isLoading;
-    hasPrevious = state.hasPrevious;
-    hasNext = state.hasNext;
-    progress = state.progress;
-    duration = state.duration;
+    const nextSong = normalizePlayerSong(state);
+    if (!arePlayerSongsEqual(currentSong, nextSong)) {
+      currentSong = nextSong;
+    }
+    assignPlayerStateFields(state);
 
-    if (!state.isLoading) {
+    if (!state.isLoading && playingCid !== null) {
       playingCid = null;
     }
 
@@ -207,10 +239,10 @@ export function createPlayerController(deps: PlayerControllerDeps) {
   }
 
   function syncPlayerProgress(state: PlayerState) {
-    progress = state.progress;
-    isPlaying = state.isPlaying;
-    isPaused = state.isPaused;
-    duration = state.duration;
+    if (progress !== state.progress) progress = state.progress;
+    if (isPlaying !== state.isPlaying) isPlaying = state.isPlaying;
+    if (isPaused !== state.isPaused) isPaused = state.isPaused;
+    if (duration !== state.duration) duration = state.duration;
   }
 
   function syncPlaybackLifecycle() {
@@ -294,7 +326,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
     } catch (error) {
       playingCid = null;
       deps.notifyError(
-        `播放失败：${error instanceof Error ? error.message : String(error)}`
+        m.player_error_play_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -373,7 +407,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
       await deps.pausePlayback();
     } catch (error) {
       deps.notifyError(
-        `暂停播放失败：${error instanceof Error ? error.message : String(error)}`
+        m.player_error_pause_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -383,7 +419,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
       await deps.resumePlayback();
     } catch (error) {
       deps.notifyError(
-        `恢复播放失败：${error instanceof Error ? error.message : String(error)}`
+        m.player_error_resume_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }
@@ -394,7 +432,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
       await deps.seekCurrentPlayback(positionSecs);
     } catch (error) {
       deps.notifyError(
-        `跳转播放进度失败：${error instanceof Error ? error.message : String(error)}`
+        m.player_error_seek_failed({
+          error: error instanceof Error ? error.message : String(error),
+        })
       );
     }
   }

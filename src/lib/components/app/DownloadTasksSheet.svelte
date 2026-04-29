@@ -5,6 +5,12 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Progress } from '$lib/components/ui/progress/index.js';
+  import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
+  import SearchIcon from '@lucide/svelte/icons/search';
+  import Trash2Icon from '@lucide/svelte/icons/trash-2';
+  import XIcon from '@lucide/svelte/icons/x';
+  import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import type {
     DownloadHistoryKindFilter,
     DownloadHistoryScopeFilter,
@@ -12,7 +18,6 @@
     DownloadJobSnapshot,
     DownloadTaskSnapshot,
   } from '$lib/types';
-
   interface Props {
     open?: boolean;
     jobs: DownloadJobSnapshot[];
@@ -27,6 +32,7 @@
     getJobStatusLabel: (job: DownloadJobSnapshot) => string;
     getJobKindLabel: (job: DownloadJobSnapshot) => string;
     getJobSummaryLabel: (job: DownloadJobSnapshot) => string;
+    getJobDisplayTitle: (job: DownloadJobSnapshot) => string;
     getJobErrorSummary: (job: DownloadJobSnapshot) => string | null;
     isJobActive: (jobId: string) => boolean;
     canCancelTask: (task: DownloadTaskSnapshot) => boolean;
@@ -45,39 +51,6 @@
       taskId: string
     ) => void | Promise<void>;
   }
-
-  const scopeOptions: {
-    value: DownloadHistoryScopeFilter;
-    label: string;
-  }[] = [
-    { value: 'all', label: '全部范围' },
-    { value: 'active', label: '仅进行中' },
-    { value: 'history', label: '仅历史' },
-  ];
-
-  const statusOptions: {
-    value: DownloadHistoryStatusFilter;
-    label: string;
-  }[] = [
-    { value: 'all', label: '全部状态' },
-    { value: 'queued', label: '排队中' },
-    { value: 'running', label: '下载中' },
-    { value: 'completed', label: '已完成' },
-    { value: 'partiallyFailed', label: '部分失败' },
-    { value: 'failed', label: '失败' },
-    { value: 'cancelled', label: '已取消' },
-  ];
-
-  const kindOptions: {
-    value: DownloadHistoryKindFilter;
-    label: string;
-  }[] = [
-    { value: 'all', label: '全部类型' },
-    { value: 'song', label: '单曲下载' },
-    { value: 'album', label: '整专下载' },
-    { value: 'selection', label: '多选下载' },
-  ];
-
   let {
     open = $bindable(false),
     jobs,
@@ -92,6 +65,7 @@
     getJobStatusLabel,
     getJobKindLabel,
     getJobSummaryLabel,
+    getJobDisplayTitle,
     getJobErrorSummary,
     isJobActive,
     canCancelTask,
@@ -104,197 +78,525 @@
     onCancelDownloadTask,
     onRetryDownloadTask,
   }: Props = $props();
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      title: m.download_sheet_title(),
+      description: m.download_sheet_description(),
+      searchLabel: m.download_search_label(),
+      clearHistory: m.download_clear_history(),
+      cancel: m.download_action_cancel(),
+      retry: m.download_action_retry(),
+      filterScopeAria: m.download_filter_scope_aria(),
+      filterStatusAria: m.download_filter_status_aria(),
+      filterKindAria: m.download_filter_kind_aria(),
+      emptyFilteredTitle: m.download_empty_filtered_title(),
+      emptyFilteredHint: m.download_empty_filtered_hint(),
+      emptyTitle: m.download_empty_title(),
+      emptyHint: m.download_empty_hint(),
+    };
+  });
+  const scopeOptions = $derived.by(() => {
+    void localeState.current;
+    return [
+      {
+        value: 'all' as DownloadHistoryScopeFilter,
+        label: m.download_scope_all(),
+      },
+      {
+        value: 'active' as DownloadHistoryScopeFilter,
+        label: m.download_scope_active(),
+      },
+      {
+        value: 'history' as DownloadHistoryScopeFilter,
+        label: m.download_scope_history(),
+      },
+    ];
+  });
+  const statusOptions = $derived.by(() => {
+    void localeState.current;
+    return [
+      {
+        value: 'all' as DownloadHistoryStatusFilter,
+        label: m.download_status_all(),
+      },
+      {
+        value: 'queued' as DownloadHistoryStatusFilter,
+        label: m.download_status_queued(),
+      },
+      {
+        value: 'running' as DownloadHistoryStatusFilter,
+        label: m.download_status_running(),
+      },
+      {
+        value: 'completed' as DownloadHistoryStatusFilter,
+        label: m.download_status_completed(),
+      },
+      {
+        value: 'partiallyFailed' as DownloadHistoryStatusFilter,
+        label: m.download_status_partially_failed(),
+      },
+      {
+        value: 'failed' as DownloadHistoryStatusFilter,
+        label: m.download_status_failed(),
+      },
+      {
+        value: 'cancelled' as DownloadHistoryStatusFilter,
+        label: m.download_status_cancelled(),
+      },
+    ];
+  });
+  const kindOptions = $derived.by(() => {
+    void localeState.current;
+    return [
+      {
+        value: 'all' as DownloadHistoryKindFilter,
+        label: m.download_kind_all(),
+      },
+      {
+        value: 'song' as DownloadHistoryKindFilter,
+        label: m.download_kind_song(),
+      },
+      {
+        value: 'album' as DownloadHistoryKindFilter,
+        label: m.download_kind_album(),
+      },
+      {
+        value: 'selection' as DownloadHistoryKindFilter,
+        label: m.download_kind_selection(),
+      },
+    ];
+  });
+  const currentScopeLabel = $derived(
+    scopeOptions.find((o) => o.value === scopeFilter)?.label ?? ''
+  );
+  const currentStatusLabel = $derived(
+    statusOptions.find((o) => o.value === statusFilter)?.label ?? ''
+  );
+  const currentKindLabel = $derived(
+    kindOptions.find((o) => o.value === kindFilter)?.label ?? ''
+  );
 </script>
 
 <Sheet.Root bind:open>
   <Sheet.Content
-    class="w-[420px] border-white/50 bg-[var(--surface-sheet)] text-[var(--text-primary)] backdrop-blur-xl"
+    class="app-side-sheet download-sheet gap-0 overflow-hidden border-[var(--sheet-border)] bg-[var(--surface-sheet)] p-0 text-[var(--text-primary)] shadow-[0_24px_64px_rgba(15,23,42,0.18)] backdrop-blur-xl"
   >
-    <Sheet.Header>
-      <Sheet.Title>下载任务</Sheet.Title>
-      <Sheet.Description>查看进度、错误和历史记录</Sheet.Description>
+    <Sheet.Header class="sheet-header">
+      <Sheet.Title>{labels.title}</Sheet.Title>
+      <Sheet.Description>{labels.description}</Sheet.Description>
     </Sheet.Header>
-
-    <div class="space-y-3 py-2">
-      <div class="grid gap-2">
-        <Input
-          bind:value={searchQuery}
-          placeholder="按任务标题搜索"
-          aria-label="按任务标题搜索"
-          class="border-white/35 bg-white/20"
-        />
-
-        <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Select.Root type="single" bind:value={scopeFilter}>
-            <Select.Trigger class="w-full border-white/35 bg-white/20">
-              {scopeOptions.find((option) => option.value === scopeFilter)
-                ?.label ?? '全部范围'}
-            </Select.Trigger>
-            <Select.Content>
-              {#each scopeOptions as option (option.value)}
-                <Select.Item value={option.value} label={option.label} />
-              {/each}
-            </Select.Content>
-          </Select.Root>
-
-          <Select.Root type="single" bind:value={statusFilter}>
-            <Select.Trigger class="w-full border-white/35 bg-white/20">
-              {statusOptions.find((option) => option.value === statusFilter)
-                ?.label ?? '全部状态'}
-            </Select.Trigger>
-            <Select.Content>
-              {#each statusOptions as option (option.value)}
-                <Select.Item value={option.value} label={option.label} />
-              {/each}
-            </Select.Content>
-          </Select.Root>
-
-          <Select.Root type="single" bind:value={kindFilter}>
-            <Select.Trigger class="w-full border-white/35 bg-white/20">
-              {kindOptions.find((option) => option.value === kindFilter)
-                ?.label ?? '全部类型'}
-            </Select.Trigger>
-            <Select.Content>
-              {#each kindOptions as option (option.value)}
-                <Select.Item value={option.value} label={option.label} />
-              {/each}
-            </Select.Content>
-          </Select.Root>
+    <div class="sheet-body">
+      <section class="sheet-section download-filter-section">
+        <div class="download-search-field">
+          <SearchIcon aria-hidden="true" />
+          <Input
+            bind:value={searchQuery}
+            placeholder={labels.searchLabel}
+            aria-label={labels.searchLabel}
+            class="download-search-input h-9 border-[var(--sheet-border)] bg-[var(--sheet-control-bg)]"
+            style="padding-left: 38px;"
+          />
         </div>
-      </div>
-
-      <div class="flex items-center justify-end">
+        <div class="download-filter-grid">
+          <Select.Root type="single" bind:value={scopeFilter}
+            ><Select.Trigger
+              aria-label={labels.filterScopeAria}
+              class="sheet-select-trigger h-9 w-full border-[var(--sheet-border)]"
+              >{currentScopeLabel}</Select.Trigger
+            ><Select.Content class="sheet-select-content"
+              >{#each scopeOptions as option (option.value)}<Select.Item
+                  value={option.value}
+                  label={option.label}
+                />{/each}</Select.Content
+            ></Select.Root
+          >
+          <Select.Root type="single" bind:value={statusFilter}
+            ><Select.Trigger
+              aria-label={labels.filterStatusAria}
+              class="sheet-select-trigger h-9 w-full border-[var(--sheet-border)]"
+              >{currentStatusLabel}</Select.Trigger
+            ><Select.Content class="sheet-select-content"
+              >{#each statusOptions as option (option.value)}<Select.Item
+                  value={option.value}
+                  label={option.label}
+                />{/each}</Select.Content
+            ></Select.Root
+          >
+          <Select.Root type="single" bind:value={kindFilter}
+            ><Select.Trigger
+              aria-label={labels.filterKindAria}
+              class="sheet-select-trigger h-9 w-full border-[var(--sheet-border)]"
+              >{currentKindLabel}</Select.Trigger
+            ><Select.Content class="sheet-select-content"
+              >{#each kindOptions as option (option.value)}<Select.Item
+                  value={option.value}
+                  label={option.label}
+                />{/each}</Select.Content
+            ></Select.Root
+          >
+        </div>
         <Button
+          class="download-clear-history"
           variant="secondary"
           disabled={!canClearDownloadHistory()}
           onclick={() => void onClearDownloadHistory()}
+          ><Trash2Icon data-icon="inline-start" />{labels.clearHistory}</Button
         >
-          清理历史
-        </Button>
-      </div>
-    </div>
-
-    {#if jobs.length > 0}
-      <div class="space-y-3 py-2">
-        {#each jobs as job (job.id)}
-          {@const progress = getJobProgress(job)}
-          {@const progressText = getJobProgressText(job)}
-          {@const statusLabel = getJobStatusLabel(job)}
-          {@const kindLabel = getJobKindLabel(job)}
-          {@const summaryLabel = getJobSummaryLabel(job)}
-          {@const errorSummary = getJobErrorSummary(job)}
-          <section
-            class="rounded-[22px] border border-white/[0.40] bg-white/[0.28] p-4"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 space-y-1">
-                <div class="flex items-center gap-2">
-                  <Badge>{kindLabel}</Badge>
-                  <span class="text-xs text-[var(--text-secondary)]"
-                    >{statusLabel}</span
-                  >
-                </div>
-                <p class="truncate text-sm font-medium">{job.title}</p>
-                <p class="text-xs text-[var(--text-secondary)]">
-                  {summaryLabel}
-                </p>
-              </div>
-
-              <div class="flex items-center gap-2">
-                {#if job.status === 'running' || job.status === 'queued'}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onclick={() => void onCancelDownloadJob(job.id)}
-                  >
-                    取消
-                  </Button>
-                {:else if (job.status === 'failed' || job.status === 'partiallyFailed' || job.status === 'cancelled') && !isJobActive(job.id)}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onclick={() => void onRetryDownloadJob(job.id)}
-                  >
-                    重试
-                  </Button>
-                {/if}
-              </div>
-            </div>
-
-            <div class="mt-3 space-y-2">
-              <Progress value={progress * 100} />
-              <p class="text-xs text-[var(--text-secondary)]">{progressText}</p>
-            </div>
-
-            {#if errorSummary}
-              <p class="mt-2 text-xs text-red-500/90">{errorSummary}</p>
-            {/if}
-
-            <div class="mt-3 space-y-2">
-              {#each job.tasks as task (task.id)}
-                {@const taskError = getTaskErrorLabel(task)}
-                <div
-                  class="flex items-start justify-between gap-3 rounded-2xl border border-white/[0.30] bg-white/[0.22] px-3 py-2"
-                >
-                  <div class="min-w-0">
-                    <p class="truncate text-xs font-medium">{task.songName}</p>
-                    {#if taskError}
-                      <p class="mt-1 text-[11px] text-red-500/90">
-                        {taskError}
-                      </p>
-                    {/if}
+      </section>
+      {#if jobs.length > 0}
+        <div class="download-job-list">
+          {#each jobs as job (job.id)}
+            {@const progress = getJobProgress(job)}
+            {@const progressText = getJobProgressText(job)}
+            {@const statusLabel = getJobStatusLabel(job)}
+            {@const kindLabel = getJobKindLabel(job)}
+            {@const summaryLabel = getJobSummaryLabel(job)}
+            {@const errorSummary = getJobErrorSummary(job)}
+            <section
+              class="sheet-section download-job-card"
+              data-status={job.status}
+            >
+              <div class="download-job-header">
+                <div class="download-job-copy">
+                  <div class="download-job-meta">
+                    <Badge variant="secondary" class="download-kind-badge"
+                      >{kindLabel}</Badge
+                    ><span class="download-status-pill">{statusLabel}</span>
                   </div>
-
-                  <div class="flex shrink-0 items-center gap-2">
-                    <span
-                      class="max-w-[140px] text-right text-[11px] text-[var(--text-secondary)]"
+                  <h3>{getJobDisplayTitle(job)}</h3>
+                  <p>{summaryLabel}</p>
+                </div>
+                <div class="download-job-actions">
+                  {#if job.status === 'running' || job.status === 'queued'}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={m.download_job_cancel_aria({
+                        name: getJobDisplayTitle(job),
+                      })}
+                      onclick={() => void onCancelDownloadJob(job.id)}
+                      ><XIcon data-icon="inline-start" />{labels.cancel}</Button
                     >
-                      {getTaskStatusLabel(task)}
-                    </span>
-                    {#if canCancelTask(task)}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onclick={() =>
-                          void onCancelDownloadTask(job.id, task.id)}
-                      >
-                        取消
-                      </Button>
-                    {:else if canRetryTask(task) && !isJobActive(job.id)}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onclick={() =>
-                          void onRetryDownloadTask(job.id, task.id)}
-                      >
-                        重试
-                      </Button>
-                    {/if}
-                  </div>
+                  {:else if (job.status === 'failed' || job.status === 'partiallyFailed' || job.status === 'cancelled') && !isJobActive(job.id)}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={m.download_job_retry_aria({
+                        name: getJobDisplayTitle(job),
+                      })}
+                      onclick={() => void onRetryDownloadJob(job.id)}
+                      ><RotateCcwIcon
+                        data-icon="inline-start"
+                      />{labels.retry}</Button
+                    >
+                  {/if}
                 </div>
-              {/each}
-            </div>
-          </section>
-        {/each}
-      </div>
-    {:else if hasDownloadHistory}
-      <div
-        class="flex min-h-[240px] flex-col items-center justify-center gap-2 py-8 text-center"
-      >
-        <p class="text-sm font-medium">没有匹配的下载任务</p>
-        <p class="max-w-[24rem] text-xs text-[var(--text-secondary)]">
-          请调整搜索关键字或筛选条件后重试。
-        </p>
-      </div>
-    {:else}
-      <div
-        class="flex min-h-[240px] flex-col items-center justify-center gap-2 py-8 text-center"
-      >
-        <p class="text-sm font-medium">暂无下载任务</p>
-        <p class="max-w-[24rem] text-xs text-[var(--text-secondary)]">
-          点击专辑页的“下载整张专辑”或曲目右侧下载按钮开始下载。
-        </p>
-      </div>
-    {/if}
+              </div>
+              <div class="download-progress-block">
+                <Progress
+                  class="download-progress"
+                  value={progress * 100}
+                  aria-label={m.download_job_progress_aria({
+                    name: getJobDisplayTitle(job),
+                  })}
+                />
+                <p>{progressText}</p>
+              </div>
+              {#if errorSummary}<p class="download-error-summary">
+                  {errorSummary}
+                </p>{/if}
+              <div class="download-task-list">
+                {#each job.tasks as task (task.id)}
+                  {@const taskError = getTaskErrorLabel(task)}
+                  <div class="download-task-row" data-status={task.status}>
+                    <div class="download-task-copy">
+                      <p>{task.songName}</p>
+                      {#if taskError}<small>{taskError}</small>{/if}
+                    </div>
+                    <div class="download-task-side">
+                      <span>{getTaskStatusLabel(task)}</span>
+                      {#if canCancelTask(task)}
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          title={labels.cancel}
+                          aria-label={m.download_task_cancel_aria({
+                            name: task.songName,
+                          })}
+                          onclick={() =>
+                            void onCancelDownloadTask(job.id, task.id)}
+                          ><XIcon /></Button
+                        >
+                      {:else if canRetryTask(task) && !isJobActive(job.id)}
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          title={labels.retry}
+                          aria-label={m.download_task_retry_aria({
+                            name: task.songName,
+                          })}
+                          onclick={() =>
+                            void onRetryDownloadTask(job.id, task.id)}
+                          ><RotateCcwIcon /></Button
+                        >
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </section>
+          {/each}
+        </div>
+      {:else if hasDownloadHistory}
+        <div class="download-empty-state">
+          <h3>{labels.emptyFilteredTitle}</h3>
+          <p>{labels.emptyFilteredHint}</p>
+        </div>
+      {:else}
+        <div class="download-empty-state">
+          <h3>{labels.emptyTitle}</h3>
+          <p>{labels.emptyHint}</p>
+        </div>
+      {/if}
+    </div>
   </Sheet.Content>
 </Sheet.Root>
+
+<style>
+  .download-filter-section {
+    gap: 10px;
+  }
+  .download-search-field {
+    position: relative;
+  }
+  :global(.download-search-field svg) {
+    position: absolute;
+    top: 50%;
+    left: 11px;
+    z-index: 1;
+    width: 15px;
+    height: 15px;
+    color: var(--text-secondary);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  :global(.download-search-input) {
+    padding-left: 38px !important;
+  }
+  .download-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  :global(.download-clear-history) {
+    justify-self: end;
+  }
+  .download-job-list {
+    display: grid;
+    gap: 12px;
+  }
+  .download-job-card {
+    gap: 12px;
+  }
+  .download-job-card[data-status='running'],
+  .download-job-card[data-status='queued'] {
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--sheet-border));
+  }
+  .download-job-card[data-status='failed'],
+  .download-job-card[data-status='partiallyFailed'] {
+    border-color: color-mix(
+      in srgb,
+      var(--destructive) 42%,
+      var(--sheet-border)
+    );
+  }
+  .download-job-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .download-job-copy {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+  .download-job-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  :global(.download-kind-badge) {
+    background: var(--sheet-row-bg);
+    color: var(--text-primary);
+  }
+  .download-status-pill {
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .download-job-copy h3 {
+    margin: 0;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .download-job-copy p,
+  .download-progress-block p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .download-job-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+  }
+  .download-progress-block {
+    display: grid;
+    gap: 7px;
+  }
+  :global(.download-progress) {
+    height: 5px;
+    background: color-mix(in srgb, var(--bg-tertiary) 74%, transparent);
+  }
+  :global(.download-progress [data-slot='progress-indicator']) {
+    background: linear-gradient(
+      90deg,
+      var(--accent),
+      color-mix(in srgb, var(--accent) 72%, white 28%)
+    );
+  }
+  .download-error-summary {
+    margin: 0;
+    border: 1px solid color-mix(in srgb, var(--destructive) 36%, transparent);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--destructive) 10%, transparent);
+    color: var(--destructive);
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .download-task-list {
+    overflow: hidden;
+    border: 1px solid var(--sheet-border);
+    border-radius: 8px;
+    background: var(--sheet-row-bg);
+  }
+  .download-task-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 9px 10px;
+    transition: background var(--motion-fast) var(--ease-standard);
+  }
+  .download-task-row + .download-task-row {
+    border-top: 1px solid var(--sheet-border);
+  }
+  .download-task-row:hover {
+    background: var(--sheet-row-hover-bg);
+  }
+  .download-task-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+  .download-task-copy p {
+    margin: 0;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .download-task-copy small {
+    overflow: hidden;
+    color: var(--destructive);
+    font-size: 11px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .download-task-side {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+  }
+  .download-task-side span {
+    max-width: 40vw;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.35;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .download-task-row[data-status='failed'] .download-task-side span,
+  .download-task-row[data-status='cancelled'] .download-task-side span {
+    color: var(--destructive);
+  }
+  .download-task-row[data-status='completed'] .download-task-side span {
+    color: var(--text-tertiary);
+  }
+  .download-empty-state {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    min-height: 260px;
+    border: 1px solid var(--sheet-border);
+    border-radius: 8px;
+    background: var(--sheet-section-bg);
+    padding: 28px 18px;
+    text-align: center;
+  }
+  .download-empty-state h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .download-empty-state p {
+    max-width: 72%;
+    margin: 7px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  @media (max-width: 440px) {
+    .download-filter-grid,
+    .download-job-header,
+    .download-task-row {
+      grid-template-columns: 1fr;
+    }
+    .download-job-header,
+    .download-task-row {
+      display: grid;
+    }
+    .download-job-actions,
+    .download-task-side {
+      justify-content: flex-start;
+    }
+    .download-task-side span {
+      max-width: none;
+      text-align: left;
+    }
+  }
+</style>

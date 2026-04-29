@@ -1,4 +1,6 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import { Button } from '$lib/components/ui/button/index.js';
   import { toolbarIconButton } from '$lib/design/variants';
 
@@ -21,6 +23,15 @@
     onOpenDownloads,
     onOpenSettings,
   }: Props = $props();
+
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      refresh: m.shell_toolbar_refresh(),
+      downloads: m.shell_toolbar_downloads(),
+      settings: m.shell_toolbar_settings(),
+    };
+  });
 </script>
 
 <div class="top-actions">
@@ -28,25 +39,25 @@
     class="flex items-center gap-2 rounded-full border border-white/50 bg-white/[0.62] p-2 shadow-[0_16px_36px_rgba(15,23,42,0.12)] backdrop-blur-xl"
   >
     <Button
-      size="icon-sm"
+      size="icon"
       variant="ghost"
-      class={toolbarIconButton({ active: false })}
+      class={`text-base ${toolbarIconButton({ active: false })}`}
       onclick={onRefresh}
       disabled={isRefreshing}
-      aria-label="刷新缓存"
-      title="刷新缓存"
+      aria-label={labels.refresh}
+      title={labels.refresh}
     >
       ↻
     </Button>
 
     <Button
-      size="icon-sm"
+      size="icon"
       variant="ghost"
-      class={`relative ${toolbarIconButton({ active: downloadPanelOpen })}`}
+      class={`relative text-base ${toolbarIconButton({ active: downloadPanelOpen })}`}
       onclick={onOpenDownloads}
-      aria-label="下载任务"
+      aria-label={labels.downloads}
       aria-pressed={downloadPanelOpen}
-      title="下载任务"
+      title={labels.downloads}
     >
       ↓
       {#if activeDownloadCount > 0}
@@ -55,13 +66,13 @@
     </Button>
 
     <Button
-      size="icon-sm"
+      size="icon"
       variant="ghost"
-      class={toolbarIconButton({ active: settingsOpen })}
+      class={`text-base ${toolbarIconButton({ active: settingsOpen })}`}
       onclick={onOpenSettings}
-      aria-label="下载设置"
+      aria-label={labels.settings}
       aria-pressed={settingsOpen}
-      title="下载设置"
+      title={labels.settings}
     >
       ⚙
     </Button>

@@ -1,4 +1,5 @@
 import type { LocalTrackDownloadStatus } from './types';
+import * as m from '$lib/paraglide/messages.js';
 
 export function shouldShowDownloadBadge(
   status: LocalTrackDownloadStatus
@@ -17,16 +18,16 @@ export function getDownloadBadgeLabel(
 ): string {
   switch (status) {
     case 'verified':
-      return '已校验';
+      return m.badge_verified();
     case 'mismatch':
-      return '校验异常';
+      return m.badge_mismatch();
     case 'partial':
-      return '部分下载';
+      return m.badge_partial();
     case 'unverifiable':
-      return '不可校验';
+      return m.badge_unverifiable();
     case 'detected':
-      return '已检测到';
+      return m.badge_detected();
     default:
-      return '未下载';
+      return m.badge_missing();
   }
 }
