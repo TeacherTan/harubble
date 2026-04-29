@@ -54,6 +54,10 @@ mod theme;
 /// 适用于应用启动阶段在后台异步预热 belong 缓存，以便首页"按系列浏览"功能在用户打开时
 /// 能够立即展示分组数据。
 pub use app_state::spawn_belong_warmup;
+/// 启动 tag registry 远程同步后台任务。
+///
+/// 在应用启动后异步从远程拉取最新 tag JSON，与本地版本比对后按需替换。
+pub use app_state::spawn_tag_registry_sync;
 /// 应用级共享状态入口。
 ///
 /// 适用于 `main.rs` 启动 wiring、Tauri command 注入，以及需要访问聚合后端能力的集成测试入口。

@@ -1,4 +1,5 @@
 use crate::album_metadata_cache::AlbumMetadataCacheService;
+use crate::tag_registry::TagRegistryService;
 use crate::audio_cache;
 use crate::download_session::DownloadSessionStore;
 use crate::i18n;
@@ -38,6 +39,7 @@ pub struct AppState {
     pub(crate) library_search_service: LibrarySearchService,
     pub(crate) listening_history: Arc<ListeningHistoryService>,
     pub(crate) album_metadata_cache: AlbumMetadataCacheService,
+    pub(crate) tag_registry: TagRegistryService,
 }
 
 struct PreparedPlaybackInput {
@@ -81,6 +83,7 @@ impl AppState {
         );
         let album_metadata_cache = AlbumMetadataCacheService::new(&db_path)
             .map_err(|e| format!("初始化元数据缓存服务失败: {e}"))?;
+        let tag_registry = TagRegistryService::new(&app_data_dir);
         let state = Self {
             player: Arc::new(player),
             api: Arc::new(api),
@@ -94,6 +97,7 @@ impl AppState {
             library_search_service,
             listening_history,
             album_metadata_cache,
+            tag_registry,
         };
         if loaded_download_session.should_persist {
             state.persist_download_snapshot(&loaded_download_session.snapshot);
@@ -785,6 +789,56 @@ pub fn spawn_belong_warmup(app_handle: tauri::AppHandle, state: &AppState) {
         }
 
         let _ = app_handle.emit("homepage-belong-ready", ());
+    });
+}
+
+/// 启动 tag registry 远程同步后台任务。
+///
+/// 在应用启动后异步从远程拉取最新 tag JSON，与本地版本比对后按需替换。
+/// 网络失败时静默使用本地缓存，不阻塞应用启动。
+pub fn spawn_tag_registry_sync(state: &AppState) {
+    let tag_registry = state.tag_registry.clone();
+    let api = state.api.clone();
+    let log_center = state.log_center.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let result: Result<(), anyhow::Error> = async {
+            let response_bytes = api
+                .download_bytes(crate::tag_registry::REMOTE_URL, |_, _| {})
+                .await?;
+            let new_registry: crate::tag_registry::TagRegistry =
+                serde_json::from_slice(&response_bytes)
+                    .map_err(|e| anyhow::anyhow!("failed to parse remote tag registry: {e}"))?;
+
+            if new_registry.schema_version != crate::tag_registry::CURRENT_SCHEMA_VERSION {
+                anyhow::bail!(
+                    "remote tag registry schema version {} does not match expected {}",
+                    new_registry.schema_version,
+                    crate::tag_registry::CURRENT_SCHEMA_VERSION
+                );
+            }
+
+            let current_updated_at = tag_registry.current_updated_at();
+            if new_registry.updated_at == current_updated_at && !current_updated_at.is_empty() {
+                return Ok(());
+            }
+
+            tag_registry.update(new_registry)?;
+            Ok(())
+        }
+        .await;
+
+        if let Err(error) = result {
+            log_center.record(
+                LogPayload::new(
+                    LogLevel::Warn,
+                    "tag-registry",
+                    "tag_registry.sync_failed",
+                    "Failed to sync tag registry from remote",
+                )
+                .details(error.to_string()),
+            );
+        }
     });
 }
 
