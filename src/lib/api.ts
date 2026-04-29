@@ -28,6 +28,8 @@ import type {
   SeriesGroup,
   HistoryEntry,
   HomepageStatus,
+  TagDimension,
+  TagGroup,
 } from './types';
 
 const CACHE_KEY_ALBUM_DETAIL = 'album_detail:';
@@ -314,4 +316,14 @@ export async function clearListeningHistory(): Promise<number> {
 
 export async function getHomepageStatus(): Promise<HomepageStatus> {
   return invoke<HomepageStatus>('get_homepage_status');
+}
+
+export async function getTagDimensions(): Promise<TagDimension[]> {
+  return invoke<TagDimension[]>('get_tag_dimensions');
+}
+
+export async function getAlbumsByTagDimension(
+  dimensionKey: string
+): Promise<TagGroup[]> {
+  return invoke<TagGroup[]>('get_albums_by_tag_dimension', { dimensionKey });
 }

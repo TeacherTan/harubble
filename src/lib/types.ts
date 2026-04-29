@@ -46,12 +46,23 @@ export interface AlbumDownloadBadge {
   inventoryVersion: string;
 }
 
+export interface TagEntry {
+  dimension: string;
+  values: string[];
+}
+
+export interface TagDimension {
+  key: string;
+  label: string;
+}
+
 export interface Album {
   cid: string;
   name: string;
   coverUrl: string;
   artists: string[];
   download: AlbumDownloadBadge;
+  tags: TagEntry[];
 }
 
 export interface SongEntry {
@@ -59,6 +70,7 @@ export interface SongEntry {
   name: string;
   artists: string[];
   download: TrackDownloadBadge;
+  tags: TagEntry[];
 }
 
 export interface PlaybackQueueEntry {
@@ -83,6 +95,7 @@ export interface SongDetail {
   mvCoverUrl: string | null;
   artists: string[];
   download: TrackDownloadBadge;
+  tags: TagEntry[];
 }
 
 export interface AlbumDetail {
@@ -94,12 +107,18 @@ export interface AlbumDetail {
   coverDeUrl: string | null;
   artists: string[] | null;
   download: AlbumDownloadBadge;
+  tags: TagEntry[];
   songs: SongEntry[];
 }
 
 export type LibrarySearchScope = 'all' | 'albums' | 'songs';
 
-export type LibrarySearchHitField = 'title' | 'artist' | 'intro' | 'belong';
+export type LibrarySearchHitField =
+  | 'title'
+  | 'artist'
+  | 'intro'
+  | 'belong'
+  | 'tagValues';
 
 export type LibraryIndexState = 'notReady' | 'building' | 'stale' | 'ready';
 
@@ -329,6 +348,12 @@ export type NotificationPermissionState =
 
 export interface SeriesGroup {
   series: string;
+  albums: Album[];
+}
+
+export interface TagGroup {
+  dimensionKey: string;
+  value: string;
   albums: Album[];
 }
 

@@ -75,6 +75,7 @@
             downloadStatus: 'unknown',
             inventoryVersion: '',
           },
+          tags: [],
         });
       }}
       onClear={runtime.homeController.handleClearHistory}
