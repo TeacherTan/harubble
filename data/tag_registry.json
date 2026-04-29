@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-04-29T12:00:00Z",
+  "tagDimensions": [
+    { "key": "faction", "label": { "zh-CN": "阵营", "en-US": "Faction" } },
+    { "key": "genre", "label": { "zh-CN": "曲风", "en-US": "Genre" } },
+    { "key": "era", "label": { "zh-CN": "时代", "en-US": "Era" } }
+  ],
+  "albums": {},
+  "songs": {}
+}
