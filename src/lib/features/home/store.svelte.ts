@@ -3,6 +3,8 @@ import type {
   SeriesGroup,
   HistoryEntry,
   HomepageStatus,
+  TagDimension,
+  TagGroup,
 } from '$lib/types';
 
 export interface HomeState {
@@ -12,6 +14,9 @@ export interface HomeState {
   status: HomepageStatus | null;
   loading: boolean;
   belongReady: boolean;
+  tagDimensions: TagDimension[];
+  tagGroups: TagGroup[];
+  selectedDimensionKey: string | null;
   lastLoadedAt: number | null;
 }
 
@@ -21,6 +26,9 @@ let recentHistory = $state<HistoryEntry[]>([]);
 let status = $state<HomepageStatus | null>(null);
 let loading = $state(false);
 let belongReady = $state(false);
+let tagDimensions = $state<TagDimension[]>([]);
+let tagGroups = $state<TagGroup[]>([]);
+let selectedDimensionKey = $state<string | null>(null);
 let lastLoadedAt = $state<number | null>(null);
 
 function reset() {
@@ -30,6 +38,9 @@ function reset() {
   status = null;
   loading = false;
   belongReady = false;
+  tagDimensions = [];
+  tagGroups = [];
+  selectedDimensionKey = null;
   lastLoadedAt = null;
 }
 
@@ -69,6 +80,24 @@ export const homeStore = {
   },
   set belongReady(value: boolean) {
     belongReady = value;
+  },
+  get tagDimensions() {
+    return tagDimensions;
+  },
+  set tagDimensions(value: TagDimension[]) {
+    tagDimensions = value;
+  },
+  get tagGroups() {
+    return tagGroups;
+  },
+  set tagGroups(value: TagGroup[]) {
+    tagGroups = value;
+  },
+  get selectedDimensionKey() {
+    return selectedDimensionKey;
+  },
+  set selectedDimensionKey(value: string | null) {
+    selectedDimensionKey = value;
   },
   get lastLoadedAt() {
     return lastLoadedAt;
