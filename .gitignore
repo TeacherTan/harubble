@@ -131,3 +131,8 @@ src/lib/paraglide/
 
 # Superpowers brainstorm artifacts
 .superpowers/
+
+# =============================================
+# Local plans (not committed)
+# =============================================
+doc/plans/

@@ -6,6 +6,7 @@
   import AlbumWorkspace from '$lib/components/app/AlbumWorkspace.svelte';
   import AlbumWorkspaceContent from '$lib/components/app/AlbumWorkspaceContent.svelte';
   import PlayerFlyoutStack from '$lib/components/app/PlayerFlyoutStack.svelte';
+  import FullscreenPlayer from '$lib/components/app/FullscreenPlayer.svelte';
   import AppSideSheets from '$lib/components/app/AppSideSheets.svelte';
   import HomeView from '$lib/components/app/HomeView.svelte';
 
@@ -131,6 +132,7 @@
       lyricsLoading={runtime.lyricsLoading}
       lyricsError={runtime.lyricsError}
       lyricsLines={runtime.lyricsLines}
+      lyricsUnavailable={runtime.lyricsUnavailable}
       activeLyricIndex={runtime.activeLyricIndex}
       playbackOrder={runtime.playbackOrder}
       downloadState={runtime.currentSongDownloadState}
@@ -145,9 +147,39 @@
       onRepeatModeChange={runtime.playerController.toggleRepeat}
       onToggleLyrics={runtime.playerController.toggleLyrics}
       onTogglePlaylist={runtime.playerController.togglePlaylist}
+      onToggleFullscreen={runtime.playerController.toggleFullscreen}
       onDownload={runtime.handleCurrentSongDownload}
       onPlayQueueEntry={runtime.playerController.playQueueEntry}
     />
+
+    {#if runtime.fullscreenOpen && runtime.currentSong}
+      <FullscreenPlayer
+        song={runtime.currentSong}
+        isPlaying={runtime.isPlaying}
+        isPaused={runtime.isPaused}
+        isLoading={runtime.isLoading}
+        hasPrevious={runtime.playerHasPrevious}
+        hasNext={runtime.playerHasNext}
+        progress={runtime.progress}
+        duration={runtime.duration}
+        isShuffled={runtime.shuffleEnabled}
+        repeatMode={runtime.repeatMode}
+        lyricsLoading={runtime.lyricsLoading}
+        lyricsError={runtime.lyricsError}
+        lyricsLines={runtime.lyricsLines}
+        activeLyricIndex={runtime.activeLyricIndex}
+        reducedMotion={runtime.prefersReducedMotion}
+        onPrevious={runtime.playerController.playPrevious}
+        onTogglePlay={runtime.isPlaying
+          ? runtime.playerController.pause
+          : runtime.playerController.resume}
+        onSeek={runtime.playerController.seek}
+        onNext={runtime.playerController.playNext}
+        onShuffleChange={runtime.playerController.toggleShuffle}
+        onRepeatModeChange={runtime.playerController.toggleRepeat}
+        onClose={runtime.playerController.toggleFullscreen}
+      />
+    {/if}
 
     <AppSideSheets
       SettingsSheetView={runtime.SettingsSheetView}

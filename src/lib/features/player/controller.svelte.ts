@@ -53,6 +53,7 @@ export function createPlayerController(deps: PlayerControllerDeps) {
   let playbackIndex = $state(-1);
   let lyricsOpen = $state(false);
   let playlistOpen = $state(false);
+  let fullscreenOpen = $state(false);
   let lyricsLoading = $state(false);
   let lyricsError = $state('');
   let lyricsLines = $state<LyricLine[]>([]);
@@ -360,6 +361,13 @@ export function createPlayerController(deps: PlayerControllerDeps) {
 
   function toggleLyrics() {
     if (!currentSong) return;
+    if (
+      !lyricsOpen &&
+      !lyricsLoading &&
+      lyricsLines.length === 0 &&
+      !lyricsError
+    )
+      return;
     lyricsOpen = !lyricsOpen;
     if (lyricsOpen) {
       playlistOpen = false;
@@ -370,6 +378,14 @@ export function createPlayerController(deps: PlayerControllerDeps) {
     if (!currentSong) return;
     playlistOpen = !playlistOpen;
     if (playlistOpen) {
+      lyricsOpen = false;
+    }
+  }
+
+  function toggleFullscreen() {
+    if (!currentSong) return;
+    fullscreenOpen = !fullscreenOpen;
+    if (fullscreenOpen) {
       lyricsOpen = false;
     }
   }
@@ -479,6 +495,7 @@ export function createPlayerController(deps: PlayerControllerDeps) {
     playbackIndex = -1;
     lyricsOpen = false;
     playlistOpen = false;
+    fullscreenOpen = false;
     lyricsLoading = false;
     lyricsError = '';
     lyricsLines = [];
@@ -535,6 +552,9 @@ export function createPlayerController(deps: PlayerControllerDeps) {
     get playlistOpen() {
       return playlistOpen;
     },
+    get fullscreenOpen() {
+      return fullscreenOpen;
+    },
     get lyricsLoading() {
       return lyricsLoading;
     },
@@ -549,6 +569,12 @@ export function createPlayerController(deps: PlayerControllerDeps) {
     },
     get playingCid() {
       return playingCid;
+    },
+    get hasLyrics() {
+      return !lyricsLoading && lyricsLines.length > 0;
+    },
+    get lyricsUnavailable() {
+      return !lyricsLoading && lyricsLines.length === 0 && !lyricsError;
     },
     get lastPlaybackSnapshot() {
       return lastPlaybackSnapshot;
@@ -569,6 +595,7 @@ export function createPlayerController(deps: PlayerControllerDeps) {
     toggleRepeat,
     toggleLyrics,
     togglePlaylist,
+    toggleFullscreen,
     handlePlaybackEnded,
     pause,
     resume,

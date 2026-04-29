@@ -30,6 +30,7 @@
     lyricsLoading: boolean;
     lyricsError: string;
     lyricsLines: LyricLine[];
+    lyricsUnavailable: boolean;
     activeLyricIndex: number;
     playbackOrder: PlaybackQueueEntry[];
     downloadState: SongDownloadState;
@@ -42,6 +43,7 @@
     onRepeatModeChange: (next: RepeatMode) => void | Promise<void>;
     onToggleLyrics: () => void | Promise<void>;
     onTogglePlaylist: () => void | Promise<void>;
+    onToggleFullscreen: () => void | Promise<void>;
     onDownload: () => void | Promise<void>;
     onPlayQueueEntry: (
       entry: PlaybackQueueEntry,
@@ -56,19 +58,10 @@
   const labels = $derived.by(() => {
     void localeState.current;
     return {
-      lyricsEyebrow: m.player_lyrics_eyebrow(),
-      lyricsLoading: m.player_lyrics_loading(),
-      lyricsEmpty: m.player_lyrics_empty(),
       queueEyebrow: m.player_queue_eyebrow(),
       queueTitle: m.player_queue_title(),
       queueEmpty: m.player_queue_empty(),
     };
-  });
-  const lyricsCountLabel = $derived.by(() => {
-    void localeState.current;
-    return props.lyricsLines.length > 0
-      ? m.player_lyrics_line_count({ count: props.lyricsLines.length })
-      : labels.lyricsEyebrow;
   });
   const queueCountLabel = $derived.by(() => {
     void localeState.current;
@@ -84,45 +77,9 @@
   >
     <div
       class="player-dock-stack"
-      data-panel={props.lyricsOpen
-        ? 'lyrics'
-        : props.playlistOpen
-          ? 'playlist'
-          : 'none'}
+      data-panel={props.playlistOpen ? 'playlist' : 'none'}
     >
-      {#if props.lyricsOpen}
-        <section
-          class="player-flyout"
-          data-panel="lyrics"
-          in:fly={{ y: 12, duration: dur(180) }}
-          out:fly={{ y: 8, duration: dur(180) }}
-        >
-          <div class="player-flyout-header">
-            <div>
-              <p class="player-flyout-eyebrow">{labels.lyricsEyebrow}</p>
-              <h3 class="player-flyout-title">{props.song.name}</h3>
-            </div>
-            <span class="player-flyout-count">{lyricsCountLabel}</span>
-          </div>
-          {#if props.lyricsLoading}
-            <div class="player-flyout-empty">{labels.lyricsLoading}</div>
-          {:else if props.lyricsError}
-            <div class="player-flyout-empty">{props.lyricsError}</div>
-          {:else if props.lyricsLines.length > 0}
-            <div class="player-lyrics-list">
-              {#each props.lyricsLines as line, index (line.id)}
-                <p
-                  class={`player-lyric-line${index === props.activeLyricIndex ? ' active' : ''}`}
-                >
-                  {line.text}
-                </p>
-              {/each}
-            </div>
-          {:else}
-            <div class="player-flyout-empty">{labels.lyricsEmpty}</div>
-          {/if}
-        </section>
-      {:else if props.playlistOpen}
+      {#if props.playlistOpen}
         <section
           class="player-flyout"
           data-panel="playlist"
@@ -186,6 +143,11 @@
         isShuffled={props.isShuffled}
         repeatMode={props.repeatMode}
         lyricsActive={props.lyricsOpen}
+        lyricsUnavailable={props.lyricsUnavailable}
+        lyricsLoading={props.lyricsLoading}
+        lyricsError={props.lyricsError}
+        lyricsLines={props.lyricsLines}
+        activeLyricIndex={props.activeLyricIndex}
         playlistActive={props.playlistOpen}
         downloadState={props.downloadState}
         downloadDisabled={props.downloadDisabled}
@@ -198,6 +160,7 @@
         onRepeatModeChange={props.onRepeatModeChange}
         onToggleLyrics={props.onToggleLyrics}
         onTogglePlaylist={props.onTogglePlaylist}
+        onToggleFullscreen={props.onToggleFullscreen}
         onDownload={props.onDownload}
       />
     </div>

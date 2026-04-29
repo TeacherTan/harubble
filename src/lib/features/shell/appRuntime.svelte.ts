@@ -239,6 +239,8 @@ export function createAppRuntime() {
   const lyricsLoading = $derived(playerController.lyricsLoading);
   const lyricsError = $derived(playerController.lyricsError);
   const lyricsLines = $derived(playerController.lyricsLines);
+  const lyricsUnavailable = $derived(playerController.lyricsUnavailable);
+  const fullscreenOpen = $derived(playerController.fullscreenOpen);
   const downloadingAlbumCid = $derived(downloadController.downloadingAlbumCid);
   const activeDownloadCount = $derived(downloadController.activeDownloadCount);
   const filteredDownloadJobs = $derived(downloadController.filteredJobs);
@@ -289,7 +291,7 @@ export function createAppRuntime() {
   const playerHasNext = $derived(playerController.playerHasNext);
 
   const activeLyricIndex = $derived.by(() => {
-    if (!lyricsOpen) return -1;
+    if (!lyricsOpen && !fullscreenOpen) return -1;
     let activeIndex = -1;
     for (let index = 0; index < lyricsLines.length; index += 1) {
       const lineTime = lyricsLines[index].time;
@@ -1060,8 +1062,14 @@ export function createAppRuntime() {
     get lyricsLines() {
       return lyricsLines;
     },
+    get lyricsUnavailable() {
+      return lyricsUnavailable;
+    },
     get activeLyricIndex() {
       return activeLyricIndex;
+    },
+    get fullscreenOpen() {
+      return fullscreenOpen;
     },
     get playerHasPrevious() {
       return playerHasPrevious;
