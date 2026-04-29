@@ -7,6 +7,7 @@
   import AlbumWorkspaceContent from '$lib/components/app/AlbumWorkspaceContent.svelte';
   import PlayerFlyoutStack from '$lib/components/app/PlayerFlyoutStack.svelte';
   import AppSideSheets from '$lib/components/app/AppSideSheets.svelte';
+  import HomeView from '$lib/components/app/HomeView.svelte';
 
   const runtime = createAppRuntime();
 </script>
@@ -24,6 +25,7 @@
 <div class="container" class:macos-overlay={runtime.isMacOS}>
   <AlbumSidebarContainer
     isMacOS={runtime.isMacOS}
+    currentView={runtime.currentView}
     albums={runtime.albums}
     selectedAlbumCid={runtime.selectedAlbumCid}
     reducedMotion={runtime.prefersReducedMotion}
@@ -34,6 +36,7 @@
     searchLoading={runtime.librarySearchLoading}
     searchResponse={runtime.librarySearchResponse}
     overlayScrollbarOptions={runtime.overlayScrollbarOptions}
+    onNavigateHome={runtime.shellStore.navigateToHome}
     onSearchQueryChange={runtime.libraryController.setSearchQuery}
     onSearchScopeChange={runtime.libraryController.setSearchScope}
     onSelect={runtime.handleSelectAlbum}
@@ -59,54 +62,58 @@
       onOpenSettings={runtime.handleToggleSettings}
     />
 
-    <AlbumWorkspace
-      currentSong={runtime.currentSong}
-      loadingDetail={runtime.loadingDetail}
-      selectedAlbum={runtime.selectedAlbum}
-    >
-      <AlbumWorkspaceContent
+    {#if runtime.currentView === 'home'}
+      <HomeView {runtime} />
+    {:else}
+      <AlbumWorkspace
+        currentSong={runtime.currentSong}
         loadingDetail={runtime.loadingDetail}
-        showDetailSkeleton={runtime.showDetailSkeleton}
-        albumRequestSeq={runtime.albumRequestSeq}
         selectedAlbum={runtime.selectedAlbum}
-        selectedAlbumArtworkUrl={runtime.selectedAlbumArtworkUrl}
-        currentSongCid={runtime.currentSong?.cid ?? null}
-        isPlaybackActive={runtime.isPlaying || runtime.isPaused}
-        downloadingAlbumCid={runtime.downloadingAlbumCid}
-        selectionModeEnabled={runtime.selectionModeEnabled}
-        selectedSongCids={runtime.selectedSongCids}
-        reducedMotion={runtime.prefersReducedMotion}
-        overlayScrollbarOptions={runtime.overlayScrollbarOptions}
-        contentScrollbarEvents={runtime.contentScrollbarEvents}
-        onContentWheel={runtime.handleContentWheel}
-        albumStageStyle={runtime.albumStageStyle}
-        albumStageMediaHeight={runtime.albumStageMediaHeight}
-        albumStageScrimOpacity={runtime.albumStageScrimOpacity}
-        albumStageImageOpacity={runtime.albumStageImageOpacity}
-        albumStageImageTransform={runtime.albumStageImageTransform}
-        albumStageSolidifyOpacity={runtime.albumStageSolidifyOpacity}
-        bind:albumStageElement={runtime.albumStageElement}
-        onToggleSelectionMode={runtime.toggleSelectionMode}
-        onSelectAllSongs={runtime.selectAllSongs}
-        onDeselectAllSongs={runtime.deselectAllSongs}
-        onInvertSongSelection={runtime.invertSongSelection}
-        onDownloadAlbum={runtime.downloadController.handleAlbumDownload}
-        onDownloadSelection={runtime.handleDownloadSelection}
-        onPlaySong={runtime.handlePlay}
-        onDownloadSong={runtime.downloadController.handleSongDownload}
-        onToggleSongSelection={runtime.toggleSongSelection}
-        isSongSelected={runtime.isSongSelected}
-        getSongDownloadState={runtime.downloadController.getSongDownloadState}
-        isSongDownloadInteractionBlocked={runtime.downloadController
-          .isSongDownloadInteractionBlocked}
-        hasAlbumDownloadJob={runtime.hasAlbumDownloadJob}
-        isSelectionDownloadDisabled={runtime.downloadController
-          .isSelectionDownloadActionDisabled}
-        isCurrentSelectionCreating={runtime.downloadController
-          .isCurrentSelectionCreating}
-        hasCurrentSelectionJob={runtime.hasCurrentSelectionJob}
-      />
-    </AlbumWorkspace>
+      >
+        <AlbumWorkspaceContent
+          loadingDetail={runtime.loadingDetail}
+          showDetailSkeleton={runtime.showDetailSkeleton}
+          albumRequestSeq={runtime.albumRequestSeq}
+          selectedAlbum={runtime.selectedAlbum}
+          selectedAlbumArtworkUrl={runtime.selectedAlbumArtworkUrl}
+          currentSongCid={runtime.currentSong?.cid ?? null}
+          isPlaybackActive={runtime.isPlaying || runtime.isPaused}
+          downloadingAlbumCid={runtime.downloadingAlbumCid}
+          selectionModeEnabled={runtime.selectionModeEnabled}
+          selectedSongCids={runtime.selectedSongCids}
+          reducedMotion={runtime.prefersReducedMotion}
+          overlayScrollbarOptions={runtime.overlayScrollbarOptions}
+          contentScrollbarEvents={runtime.contentScrollbarEvents}
+          onContentWheel={runtime.handleContentWheel}
+          albumStageStyle={runtime.albumStageStyle}
+          albumStageMediaHeight={runtime.albumStageMediaHeight}
+          albumStageScrimOpacity={runtime.albumStageScrimOpacity}
+          albumStageImageOpacity={runtime.albumStageImageOpacity}
+          albumStageImageTransform={runtime.albumStageImageTransform}
+          albumStageSolidifyOpacity={runtime.albumStageSolidifyOpacity}
+          bind:albumStageElement={runtime.albumStageElement}
+          onToggleSelectionMode={runtime.toggleSelectionMode}
+          onSelectAllSongs={runtime.selectAllSongs}
+          onDeselectAllSongs={runtime.deselectAllSongs}
+          onInvertSongSelection={runtime.invertSongSelection}
+          onDownloadAlbum={runtime.downloadController.handleAlbumDownload}
+          onDownloadSelection={runtime.handleDownloadSelection}
+          onPlaySong={runtime.handlePlay}
+          onDownloadSong={runtime.downloadController.handleSongDownload}
+          onToggleSongSelection={runtime.toggleSongSelection}
+          isSongSelected={runtime.isSongSelected}
+          getSongDownloadState={runtime.downloadController.getSongDownloadState}
+          isSongDownloadInteractionBlocked={runtime.downloadController
+            .isSongDownloadInteractionBlocked}
+          hasAlbumDownloadJob={runtime.hasAlbumDownloadJob}
+          isSelectionDownloadDisabled={runtime.downloadController
+            .isSelectionDownloadActionDisabled}
+          isCurrentSelectionCreating={runtime.downloadController
+            .isCurrentSelectionCreating}
+          hasCurrentSelectionJob={runtime.hasCurrentSelectionJob}
+        />
+      </AlbumWorkspace>
+    {/if}
 
     <PlayerFlyoutStack
       song={runtime.currentSong}
