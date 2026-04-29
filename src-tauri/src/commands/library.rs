@@ -50,7 +50,9 @@ pub async fn get_album_detail(
     let locale = state.preferences().locale;
     enriched.tags = state.tag_registry.get_album_tags(&enriched.cid, locale);
     for song in &mut enriched.songs {
-        song.tags = state.tag_registry.get_song_tags(&song.cid, &enriched.cid, locale);
+        song.tags = state
+            .tag_registry
+            .get_song_tags(&song.cid, &enriched.cid, locale);
     }
     Ok(enriched)
 }
@@ -80,7 +82,9 @@ pub async fn get_song_detail(
         .enrich_song_detail(song, &album.name)
         .await;
     let locale = state.preferences().locale;
-    enriched.tags = state.tag_registry.get_song_tags(&enriched.cid, &enriched.album_cid, locale);
+    enriched.tags = state
+        .tag_registry
+        .get_song_tags(&enriched.cid, &enriched.album_cid, locale);
     Ok(enriched)
 }
 

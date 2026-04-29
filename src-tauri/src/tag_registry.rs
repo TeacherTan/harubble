@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use siren_core::api::TagEntry;
 use std::collections::HashMap;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use tempfile::NamedTempFile;
 
@@ -28,7 +28,8 @@ use tempfile::NamedTempFile;
 pub(crate) const CURRENT_SCHEMA_VERSION: u32 = 1;
 
 /// 远端 tag 注册表 JSON 文件地址，用于后台增量拉取与版本比对。
-pub(crate) const REMOTE_URL: &str = "https://raw.githubusercontent.com/anselyuki/siren-music-download/main/data/tag_registry.json";
+pub(crate) const REMOTE_URL: &str =
+    "https://raw.githubusercontent.com/anselyuki/siren-music-download/main/data/tag_registry.json";
 
 // ─── 缓存文件名 ───────────────────────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ impl TagRegistryService {
     /// # 参数
     ///
     /// - `app_data_dir`：应用数据目录路径，注册表缓存文件将存储在该目录下。
-    pub(crate) fn new(app_data_dir: &PathBuf) -> Self {
+    pub(crate) fn new(app_data_dir: &Path) -> Self {
         let cache_path = app_data_dir.join(CACHE_FILE_NAME);
         let registry = load_from_cache(&cache_path).unwrap_or_default();
         Self {
@@ -231,10 +232,7 @@ impl TagRegistryService {
         album_cid: &str,
     ) -> String {
         let registry = self.registry.read().expect("tag registry RwLock poisoned");
-        collect_all_locale_values(
-            registry.albums.get(album_cid),
-            registry.songs.get(song_cid),
-        )
+        collect_all_locale_values(registry.albums.get(album_cid), registry.songs.get(song_cid))
     }
 
     /// 按维度 key 聚合专辑 CID，返回 tag 值 → 专辑 CID 列表的映射。
@@ -257,10 +255,7 @@ impl TagRegistryService {
             if let Some(values) = tag_set.tags.get(dimension_key) {
                 for localized in values {
                     let label = resolve_localized_value(&localized.0, locale);
-                    result
-                        .entry(label)
-                        .or_default()
-                        .push(album_cid.clone());
+                    result.entry(label).or_default().push(album_cid.clone());
                 }
             }
         }
@@ -365,9 +360,7 @@ fn resolve_merged_tag_set(
             let entry = merged.entry(dim_key.clone()).or_default();
             for v in values {
                 // 去重：若内部 map 完全相同则跳过
-                let duplicate = entry
-                    .iter()
-                    .any(|existing| existing.0 == v.0);
+                let duplicate = entry.iter().any(|existing| existing.0 == v.0);
                 if !duplicate {
                     entry.push(v.clone());
                 }
@@ -429,7 +422,7 @@ fn collect_all_locale_values(album: Option<&TagSet>, song: Option<&TagSet>) -> S
 /// 从缓存文件加载 tag 注册表。
 ///
 /// 若文件不存在、读取失败、JSON 解析失败或 schema 版本不匹配，返回 `None`。
-fn load_from_cache(path: &PathBuf) -> Option<TagRegistry> {
+fn load_from_cache(path: &Path) -> Option<TagRegistry> {
     if !path.exists() {
         return None;
     }
@@ -453,21 +446,22 @@ fn load_from_cache(path: &PathBuf) -> Option<TagRegistry> {
 /// # 错误
 ///
 /// 创建临时文件、序列化、写盘、sync 或 persist 失败时均返回 `Err`。
-fn persist_to_cache(path: &PathBuf, registry: &TagRegistry) -> Result<()> {
+fn persist_to_cache(path: &Path, registry: &TagRegistry) -> Result<()> {
     let parent = path
         .parent()
         .context("缓存文件路径无父目录，无法创建临时文件")?;
     std::fs::create_dir_all(parent).context("创建缓存目录失败")?;
     let content = serde_json::to_vec_pretty(registry).context("序列化 tag 注册表失败")?;
     let mut temp_file = NamedTempFile::new_in(parent).context("创建临时文件失败")?;
-    temp_file
-        .write_all(&content)
-        .context("写入临时文件失败")?;
+    temp_file.write_all(&content).context("写入临时文件失败")?;
     temp_file
         .as_file()
         .sync_all()
         .context("sync 临时文件失败")?;
-    temp_file.persist(path).map_err(|e| e.error).context("原子重命名缓存文件失败")?;
+    temp_file
+        .persist(path)
+        .map_err(|e| e.error)
+        .context("原子重命名缓存文件失败")?;
     Ok(())
 }
 
@@ -489,10 +483,7 @@ mod tests {
                 m
             })],
         );
-        albums.insert(
-            "ALBUM_CID".to_string(),
-            TagSet { tags: album_tags },
-        );
+        albums.insert("ALBUM_CID".to_string(), TagSet { tags: album_tags });
 
         let mut songs = HashMap::new();
         let mut song_tags = HashMap::new();
@@ -505,10 +496,7 @@ mod tests {
                 m
             })],
         );
-        songs.insert(
-            "SONG_CID".to_string(),
-            TagSet { tags: song_tags },
-        );
+        songs.insert("SONG_CID".to_string(), TagSet { tags: song_tags });
 
         TagRegistry {
             schema_version: CURRENT_SCHEMA_VERSION,
@@ -691,12 +679,7 @@ mod tests {
             },
         }];
 
-        let entries = resolve_merged_tag_set(
-            albums.get("A"),
-            songs.get("S"),
-            &dims,
-            Locale::ZhCN,
-        );
+        let entries = resolve_merged_tag_set(albums.get("A"), songs.get("S"), &dims, Locale::ZhCN);
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].values.len(), 1, "重复值应被去重");
     }

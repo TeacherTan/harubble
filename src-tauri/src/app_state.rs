@@ -1,5 +1,4 @@
 use crate::album_metadata_cache::AlbumMetadataCacheService;
-use crate::tag_registry::TagRegistryService;
 use crate::audio_cache;
 use crate::download_session::DownloadSessionStore;
 use crate::i18n;
@@ -11,6 +10,7 @@ use crate::player::stream::{GrowingFileHandle, PlaybackInput, SampleBuffer};
 use crate::player::{AudioPlayer, PlaybackContext, PlaybackQueueEntry};
 use crate::preferences::{AppPreferences, PreferencesStore};
 use crate::search::LibrarySearchService;
+use crate::tag_registry::TagRegistryService;
 use anyhow::{Context, Result};
 use siren_core::{DownloadManagerSnapshot, DownloadService};
 use souvlaki::{MediaControlEvent, SeekDirection};
