@@ -74,7 +74,12 @@ src/
     │       ├── TopToolbar.svelte
     │       ├── SettingsSheet.svelte
     │       ├── DownloadTasksSheet.svelte
-    │       └── StatusToastHost.svelte
+    │       ├── StatusToastHost.svelte
+    │       ├── HomeView.svelte
+    │       ├── HomeLatestAlbums.svelte
+    │       ├── HomeSeriesGroups.svelte
+    │       ├── HomeRecentHistory.svelte
+    │       └── HomeStatusDashboard.svelte
     ├── design/
     │   ├── tokens.ts                  # 设计 token
     │   ├── variants.ts                # 视觉变体
@@ -86,7 +91,8 @@ src/
     │   ├── library/                   # 专辑与搜索 controller / selector / helper
     │   ├── player/                    # 播放、歌词与队列 controller / helper
     │   ├── download/                  # 下载任务与筛选 controller / formatter / guard
-    │   └── shell/                     # 全局壳层状态、设置与舞台动效 controller
+    │   ├── home/                      # 首页数据 controller / store
+    │   └── shell/                     # 全局壳层状态、设置、视图切换与舞台动效 controller
     ├── i18n/
     │   ├── index.ts                   # 项目侧 i18n 统一导出
     │   ├── locale.svelte.ts           # 当前语言状态、初始化、切换与 runtime 同步
@@ -102,20 +108,21 @@ src/
 
 ### 五域边界
 
-| 域         | 职责                                                               | 当前实现形态       |
-| ---------- | ------------------------------------------------------------------ | ------------------ |
-| `env`      | 只读环境状态：`isMacOS`、`prefersReducedMotion`、视口信号          | store 已接管       |
-| `library`  | 专辑列表 / 详情加载、库内搜索、切换竞态控制、封面预加载、舞台联动  | controller 为主    |
-| `player`   | 当前歌曲、播放队列、歌词加载与高亮、上一首/下一首/乱序/循环        | controller 为主    |
-| `download` | 任务列表与操作、下载设置与偏好、单曲/整专/多选入口、历史筛选       | controller 为主    |
-| `shell`    | 设置面板与下载面板开关、toast 宿主、设置域调用、全局页面级交互协调 | store + controller |
+| 域         | 职责                                                              | 当前实现形态       |
+| ---------- | ----------------------------------------------------------------- | ------------------ |
+| `env`      | 只读环境状态：`isMacOS`、`prefersReducedMotion`、视口信号         | store 已接管       |
+| `library`  | 专辑列表 / 详情加载、库内搜索、切换竞态控制、封面预加载、舞台联动 | controller 为主    |
+| `player`   | 当前歌曲、播放队列、歌词加载与高亮、上一首/下一首/乱序/循环       | controller 为主    |
+| `download` | 任务列表与操作、下载设置与偏好、单曲/整专/多选入口、历史筛选      | controller 为主    |
+| `home`     | 首页数据获取与缓存：最新专辑、系列分组、收听历史、状态仪表盘      | controller + store |
+| `shell`    | 设置面板与下载面板开关、视图切换、toast 宿主、全局页面级交互协调  | store + controller |
 
 ### 依赖方向
 
 推荐保持单向读依赖：
 
 ```text
-env → library → player → download → shell
+env → library → player → download → home → shell
 ```
 
 - `env` 是只读环境域，可被其他域读取
@@ -239,19 +246,22 @@ env → library → player → download → shell
 
 ### 4.1 当前运行时形态
 
-当前运行时以 `App.svelte` 为根装配层，职责包括：
+当前运行时以 `createAppRuntime()` 工厂函数（`src/lib/features/shell/appRuntime.svelte.ts`）为核心，`App.svelte` 仅作为薄模板层消费 runtime 返回的响应式属性。职责包括：
 
-1. 创建并持有 `library / player / download / settings / albumStageMotion` controllers
+1. 创建并持有 `library / player / download / home / settings / albumStageMotion` controllers
 2. 订阅 Tauri 事件并把事件分发给对应 controller 或壳层逻辑
-3. 组合 `AlbumSidebarContainer`、`AlbumWorkspaceContent`、`PlayerFlyoutStack`、`AppSideSheets` 等壳层组件
-4. 协调搜索定位、播放器队列、下载面板与设置面板之间的跨域交互
+3. 通过 `shellStore.currentView`（`'home' | 'library'`）切换首页与专辑库视图
+4. 组合 `HomeView`、`AlbumSidebarContainer`、`AlbumWorkspaceContent`、`PlayerFlyoutStack`、`AppSideSheets` 等壳层组件
+5. 协调搜索定位、播放器队列、下载面板与设置面板之间的跨域交互
 
 当前主真相来源：
 
+- `src/lib/features/shell/appRuntime.svelte.ts`
 - `src/App.svelte`
 - `src/lib/features/library/controller.svelte.ts`
 - `src/lib/features/player/controller.svelte.ts`
 - `src/lib/features/download/controller.svelte.ts`
+- `src/lib/features/home/controller.svelte.ts`
 - `src/lib/features/shell/settings.svelte.ts`
 - `src/lib/features/shell/albumStageMotion.svelte.ts`
 
@@ -259,7 +269,7 @@ env → library → player → download → shell
 
 当前代码中并不是所有领域都由 `store.svelte.ts` 直接承载主运行时：
 
-- `envStore`、`shellStore` 已承担稳定的全局环境 / 壳层状态职责
+- `envStore`、`shellStore`、`homeStore` 已承担稳定的全局环境 / 壳层 / 首页状态职责
 - `library`、`player`、`download` 当前以 controller 工厂为主，`store.svelte.ts` 更多承担过渡性或骨架性角色
 - 因此前端指南中的部分 store 约定应理解为**目标方向或局部适用规则**，不能默认视为当前所有域的真实实现
 

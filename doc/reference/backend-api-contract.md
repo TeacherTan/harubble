@@ -49,6 +49,9 @@
 - `LogViewerPage`
 - `LogFileStatus`
 - `AppErrorEvent`
+- `SeriesGroup`
+- `HistoryEntry`
+- `HomepageStatus`
 
 ## 类型字段定义
 
@@ -711,6 +714,42 @@
 - 两者属于高风险文件命令：语义上视为“用户显式授权的一次性读/写”，不是普通业务命令可复用的通用文件系统接口
 - 若前端不需要绝对路径回显，则返回值和错误信息不应额外暴露本地绝对路径
 
+### 首页
+
+#### `SeriesGroup`
+
+- `series: string` — 系列名称
+- `albums: Album[]` — 该系列下的专辑列表
+
+#### `HistoryEntry`
+
+- `id: number` — 记录 ID
+- `songCid: string` — 歌曲 CID
+- `songName: string` — 歌曲名称
+- `artists: string[]` — 艺术家列表
+- `albumCid: string` — 所属专辑 CID
+- `albumName: string` — 所属专辑名称
+- `coverUrl: string | null` — 封面 URL
+- `playedAt: string` — ISO 8601 播放时间
+
+#### `HomepageStatus`
+
+- `platformAlbumCount: number` — 平台专辑总数
+- `platformSongCount: number` — 平台曲目总数
+- `localDownloadedCount: number` — 本地已下载数
+- `localStorageBytes: number` — 本地占用字节数
+- `completedDownloadCount: number` — 已完成下载任务数
+
+#### 首页命令
+
+| Command                      | 参数         | 返回值              | 说明                           |
+| ---------------------------- | ------------ | ------------------- | ------------------------------ |
+| `get_latest_albums`          | `limit: u32` | `Vec<Album>`        | 获取最新专辑列表（前 N 条）    |
+| `get_albums_by_series_group` | 无           | `Vec<SeriesGroup>`  | 按系列分组的专辑列表           |
+| `get_recent_history`         | `limit: u32` | `Vec<HistoryEntry>` | 获取最近收听历史               |
+| `clear_listening_history`    | 无           | `u32`               | 清除所有收听历史，返回删除条数 |
+| `get_homepage_status`        | 无           | `HomepageStatus`    | 获取首页状态仪表盘数据         |
+
 ## Events
 
 事件如下：
@@ -721,6 +760,7 @@
 4. `local-inventory-state-changed`，载荷为 `LocalInventorySnapshot`
 5. `local-inventory-scan-progress`，载荷为 `LocalInventoryScanProgressEvent`
 6. `app-error-recorded`，载荷为 `AppErrorEvent`
+7. `homepage-belong-ready`，无载荷 — belong 预热完成后触发，通知前端刷新系列分组
 
 事件职责：
 
