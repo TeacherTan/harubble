@@ -128,3 +128,6 @@ coverage/
 # Paraglide (generated)
 # =============================================
 src/lib/paraglide/
+
+# Superpowers brainstorm artifacts
+.superpowers/
