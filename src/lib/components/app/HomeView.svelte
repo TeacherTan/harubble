@@ -2,6 +2,7 @@
   import { OverlayScrollbarsComponent } from 'overlayscrollbars-svelte';
   import HomeLatestAlbums from './HomeLatestAlbums.svelte';
   import HomeSeriesGroups from './HomeSeriesGroups.svelte';
+  import HomeTagGroups from './HomeTagGroups.svelte';
   import HomeRecentHistory from './HomeRecentHistory.svelte';
   import HomeStatusDashboard from './HomeStatusDashboard.svelte';
   import type { PartialOptions } from 'overlayscrollbars';
@@ -11,6 +12,8 @@
     HistoryEntry,
     HomepageStatus,
     SongEntry,
+    TagDimension,
+    TagGroup,
   } from '$lib/types';
 
   interface Props {
@@ -22,6 +25,10 @@
         status: HomepageStatus | null;
         loading: boolean;
         belongReady: boolean;
+        tagDimensions: TagDimension[];
+        tagGroups: TagGroup[];
+        selectedDimensionKey: string | null;
+        selectDimension: (key: string) => void;
         handleClearHistory: () => Promise<void>;
       };
       playerController: {
@@ -61,6 +68,14 @@
       groups={runtime.homeController.seriesGroups}
       belongReady={runtime.homeController.belongReady}
       onSelectSeries={() => {}}
+    />
+
+    <HomeTagGroups
+      dimensions={runtime.homeController.tagDimensions}
+      groups={runtime.homeController.tagGroups}
+      selectedDimensionKey={runtime.homeController.selectedDimensionKey}
+      onSelectDimension={runtime.homeController.selectDimension}
+      onSelectAlbum={runtime.handleSelectAlbum}
     />
 
     <HomeRecentHistory

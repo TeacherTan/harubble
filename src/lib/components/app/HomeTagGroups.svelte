@@ -1,44 +1,44 @@
 <script lang="ts">
-  import type { TagDimension, TagGroup } from '$lib/types';
+  import type { Album, TagDimension, TagGroup } from '$lib/types';
 
   interface Props {
     dimensions: TagDimension[];
     groups: TagGroup[];
     selectedDimensionKey: string | null;
     onSelectDimension: (key: string) => void;
+    onSelectAlbum: (album: Album) => void | Promise<void>;
   }
 
-  let { dimensions, groups, selectedDimensionKey, onSelectDimension }: Props =
-    $props();
+  let {
+    dimensions,
+    groups,
+    selectedDimensionKey,
+    onSelectDimension,
+    onSelectAlbum,
+  }: Props = $props();
 </script>
 
-<section class="tag-groups" aria-label="标签分组">
-  <h2 class="section-title">标签</h2>
+{#if dimensions.length > 0}
+  <section class="tag-groups" aria-label="标签分组">
+    <h2 class="section-title">标签</h2>
 
-  {#if dimensions.length === 0}
-    <p class="empty-hint">暂无标签数据</p>
-  {:else}
     <div class="dimension-chips" role="tablist">
       {#each dimensions as dim (dim.key)}
         <button
           class="dimension-chip"
           class:active={selectedDimensionKey === dim.key}
-          type="button"
           role="tab"
           aria-selected={selectedDimensionKey === dim.key}
           onclick={() => onSelectDimension(dim.key)}
+          type="button"
         >
           {dim.label}
         </button>
       {/each}
     </div>
 
-    {#if groups.length === 0 && selectedDimensionKey !== null}
-      <div class="skeleton-list">
-        {#each Array(3) as _, i (i)}
-          <div class="skeleton-row"></div>
-        {/each}
-      </div>
+    {#if groups.length === 0}
+      <p class="empty-hint">当前维度暂无标签数据</p>
     {:else}
       <ul class="group-list" role="list">
         {#each groups as group (group.value)}
@@ -50,14 +50,19 @@
 
             <div class="group-albums">
               {#each group.albums.slice(0, 8) as album (album.cid)}
-                <div class="mini-cover-wrapper" title={album.name}>
+                <button
+                  class="mini-cover-wrapper"
+                  title={album.name}
+                  onclick={() => onSelectAlbum(album)}
+                  type="button"
+                >
                   <img
                     src={album.coverUrl}
                     alt={album.name}
                     class="mini-cover"
                     loading="lazy"
                   />
-                </div>
+                </button>
               {/each}
               {#if group.albums.length > 8}
                 <span class="overflow-badge">+{group.albums.length - 8}</span>
@@ -67,8 +72,8 @@
         {/each}
       </ul>
     {/if}
-  {/if}
-</section>
+  </section>
+{/if}
 
 <style>
   .tag-groups {
@@ -94,25 +99,28 @@
   .dimension-chip {
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
-    border: none;
+    border: 1px solid var(--text-tertiary, rgba(255, 255, 255, 0.2));
+    background: none;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
     font-family: var(--font-body);
     font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
-    background: var(--surface-secondary, rgba(255, 255, 255, 0.04));
-    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
     transition:
       background 0.15s ease,
-      color 0.15s ease;
+      color 0.15s ease,
+      border-color 0.15s ease;
   }
 
   .dimension-chip:hover {
-    background: var(--surface-secondary, rgba(255, 255, 255, 0.08));
+    background: var(--surface-secondary, rgba(255, 255, 255, 0.06));
+    color: var(--text-primary, #fff);
   }
 
   .dimension-chip.active {
-    background: rgba(var(--accent-rgb), 0.15);
-    color: var(--accent);
+    background: var(--accent, rgb(250, 45, 72));
+    border-color: var(--accent, rgb(250, 45, 72));
+    color: #fff;
   }
 
   .group-list {
@@ -165,6 +173,15 @@
     border-radius: 5px;
     overflow: hidden;
     flex-shrink: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  .mini-cover-wrapper:hover {
+    opacity: 0.8;
   }
 
   .mini-cover {
@@ -180,33 +197,10 @@
     padding: 0 0.25rem;
   }
 
-  .skeleton-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .skeleton-row {
-    height: 80px;
-    border-radius: 10px;
-    background: var(--surface-secondary, rgba(255, 255, 255, 0.04));
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-
   .empty-hint {
     font-family: var(--font-body);
     font-size: 0.8125rem;
     color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
     margin: 0;
-  }
-
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
   }
 </style>
