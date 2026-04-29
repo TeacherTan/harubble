@@ -19,10 +19,10 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 const LATEST_ALBUMS_LIMIT = 12;
 const RECENT_HISTORY_LIMIT = 20;
 
-let initialized = false;
-let loadRequestSeq = 0;
-
 export function createHomeController(deps: HomeControllerDeps) {
+  let initialized = false;
+  let loadRequestSeq = 0;
+
   function init() {
     if (initialized) return;
     initialized = true;
@@ -55,7 +55,10 @@ export function createHomeController(deps: HomeControllerDeps) {
     if (results[0].status === 'fulfilled') {
       homeStore.latestAlbums = results[0].value;
     } else {
-      deps.notifyError(`加载最新专辑失败: ${results[0].reason}`);
+      const reason = results[0].reason;
+      deps.notifyError(
+        `加载最新专辑失败: ${reason instanceof Error ? reason.message : String(reason)}`
+      );
     }
 
     if (results[1].status === 'fulfilled') {
@@ -94,8 +97,10 @@ export function createHomeController(deps: HomeControllerDeps) {
     try {
       await deps.clearListeningHistory();
       homeStore.recentHistory = [];
-    } catch (e) {
-      deps.notifyError(`清除收听历史失败: ${e}`);
+    } catch (e: unknown) {
+      deps.notifyError(
+        `清除收听历史失败: ${e instanceof Error ? e.message : String(e)}`
+      );
     }
   }
 
@@ -141,8 +146,6 @@ export function createHomeController(deps: HomeControllerDeps) {
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    loadRequestSeq += 1;
-    initialized = false;
     homeStore.reset();
   });
 }

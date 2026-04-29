@@ -6,12 +6,12 @@
 
 ## 设计决策
 
-| 维度 | 选择 | 理由 |
-|------|------|------|
+| 维度       | 选择                                | 理由                                                                             |
+| ---------- | ----------------------------------- | -------------------------------------------------------------------------------- |
 | 后端数据层 | SQLite + 细粒度 Commands + 后台预热 | 收听历史需要分页/排序能力；belong 持久化后冷启动零成本；为未来本地数据层扩展奠基 |
-| 前端架构 | App.svelte 分层重构 + AppRuntime | 根治 App.svelte 919 行膨胀问题；appRuntime 可单元测试；首页只是重构的受益者 |
-| 导航方式 | 侧栏内切换 | 保持现有布局一致性，侧栏始终可见，主内容区域根据 `currentView` 切换 |
-| 数据来源 | 后端新接口 | 提供最新专辑、系列分组、收听历史三个维度的专用数据 |
+| 前端架构   | App.svelte 分层重构 + AppRuntime    | 根治 App.svelte 919 行膨胀问题；appRuntime 可单元测试；首页只是重构的受益者      |
+| 导航方式   | 侧栏内切换                          | 保持现有布局一致性，侧栏始终可见，主内容区域根据 `currentView` 切换              |
+| 数据来源   | 后端新接口                          | 提供最新专辑、系列分组、收听历史三个维度的专用数据                               |
 
 ## 架构设计
 
@@ -39,6 +39,7 @@ src/lib/features/shell/
 ```
 
 `createAppRuntime()` 工厂函数封装：
+
 - 所有 controller 的创建和依赖注入（library、player、download、settings、albumStageMotion、home）
 - `bootstrapApp()` 启动流程
 - `subscribeToTauriEvents()` 事件订阅
@@ -99,14 +100,14 @@ CREATE TABLE album_metadata_cache (
 
 ### 新增 Tauri Commands
 
-| Command | 签名 | 说明 |
-|---------|------|------|
-| `get_latest_albums` | `(limit: u32) -> Vec<Album>` | 从 `get_albums()` 取前 N 条，附带库存增强 |
-| `get_albums_by_series` | `() -> Vec<SeriesGroup>` | 从 SQLite 读 belong 映射，与 albums 做内存 join 分组 |
-| `get_recent_history` | `(limit: u32) -> Vec<HistoryEntry>` | SQLite 查询，按 played_at DESC |
-| `record_listening_event` | `(event: ListeningEvent) -> ()` | 在 `play_song` 内部自动调用 |
-| `clear_listening_history` | `() -> u32` | 返回删除条数 |
-| `get_homepage_status` | `() -> HomepageStatus` | 聚合下载进度、库存统计、平台概览 |
+| Command                   | 签名                                | 说明                                                 |
+| ------------------------- | ----------------------------------- | ---------------------------------------------------- |
+| `get_latest_albums`       | `(limit: u32) -> Vec<Album>`        | 从 `get_albums()` 取前 N 条，附带库存增强            |
+| `get_albums_by_series`    | `() -> Vec<SeriesGroup>`            | 从 SQLite 读 belong 映射，与 albums 做内存 join 分组 |
+| `get_recent_history`      | `(limit: u32) -> Vec<HistoryEntry>` | SQLite 查询，按 played_at DESC                       |
+| `record_listening_event`  | `(event: ListeningEvent) -> ()`     | 在 `play_song` 内部自动调用                          |
+| `clear_listening_history` | `() -> u32`                         | 返回删除条数                                         |
+| `get_homepage_status`     | `() -> HomepageStatus`              | 聚合下载进度、库存统计、平台概览                     |
 
 ### 数据结构
 
@@ -208,13 +209,13 @@ src/lib/components/app/
 
 ### 组件交互
 
-| 用户操作 | 行为 |
-|----------|------|
+| 用户操作         | 行为                                                             |
+| ---------------- | ---------------------------------------------------------------- |
 | 点击最新专辑卡片 | 调用 `runtime.handleSelectAlbum(album)`，自动切换到 library 视图 |
-| 点击系列标签 | 在侧栏中过滤该系列的专辑（复用 libraryController 搜索能力） |
-| 点击最近收听条目 | 调用 `runtime.handlePlay(song)` 直接播放 |
-| 点击正在播放卡片 | 只读展示，点击可展开 player flyout |
-| 点击"清除历史" | 调用 `clear_listening_history`，刷新列表 |
+| 点击系列标签     | 在侧栏中过滤该系列的专辑（复用 libraryController 搜索能力）      |
+| 点击最近收听条目 | 调用 `runtime.handlePlay(song)` 直接播放                         |
+| 点击正在播放卡片 | 只读展示，点击可展开 player flyout                               |
+| 点击"清除历史"   | 调用 `clear_listening_history`，刷新列表                         |
 
 ### 与现有 controller 的集成
 
@@ -240,12 +241,12 @@ export function getHomepageStatus(): Promise<HomepageStatus>;
 
 首页采用"区块独立降级"策略，每个区块的数据加载失败不影响其他区块：
 
-| 区块 | 失败场景 | 降级行为 |
-|------|----------|----------|
-| 最新专辑 | `get_latest_albums` 网络失败 | 显示重试按钮，不阻塞其他区块 |
-| 系列分组 | belong 预热未完成 | 显示"索引构建中"骨架屏，监听 `homepage-belong-ready` 后自动刷新 |
-| 最近收听 | SQLite 读取失败 | 显示空状态"暂无收听记录" |
-| 状态仪表盘 | 部分子系统不可用 | 该字段显示 "--"，其他字段正常展示 |
+| 区块       | 失败场景                     | 降级行为                                                        |
+| ---------- | ---------------------------- | --------------------------------------------------------------- |
+| 最新专辑   | `get_latest_albums` 网络失败 | 显示重试按钮，不阻塞其他区块                                    |
+| 系列分组   | belong 预热未完成            | 显示"索引构建中"骨架屏，监听 `homepage-belong-ready` 后自动刷新 |
+| 最近收听   | SQLite 读取失败              | 显示空状态"暂无收听记录"                                        |
+| 状态仪表盘 | 部分子系统不可用             | 该字段显示 "--"，其他字段正常展示                               |
 
 ## 测试策略
 
