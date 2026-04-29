@@ -580,11 +580,13 @@ mod tests {
                 cover_de_url: None,
                 artists: Some(vec!["Artist".to_string()]),
                 download: Default::default(),
+                tags: Vec::new(),
                 songs: vec![SongEntry {
                     cid: "song-1".to_string(),
                     name: "Track".to_string(),
                     artists: vec!["Artist".to_string()],
                     download: Default::default(),
+                    tags: Vec::new(),
                 }],
             };
 
@@ -642,18 +644,21 @@ mod tests {
                 cover_de_url: None,
                 artists: Some(vec!["Artist".to_string()]),
                 download: Default::default(),
+                tags: Vec::new(),
                 songs: vec![
                     SongEntry {
                         cid: "song-1".to_string(),
                         name: "Track A".to_string(),
                         artists: vec!["Artist".to_string()],
                         download: Default::default(),
+                        tags: Vec::new(),
                     },
                     SongEntry {
                         cid: "song-2".to_string(),
                         name: "Track B".to_string(),
                         artists: vec!["Artist".to_string()],
                         download: Default::default(),
+                        tags: Vec::new(),
                     },
                 ],
             };
@@ -712,6 +717,7 @@ mod tests {
                     cover_url: "cover".to_string(),
                     artists: vec!["Artist".to_string()],
                     download: Default::default(),
+                    tags: Vec::new(),
                 }])
                 .await;
 
