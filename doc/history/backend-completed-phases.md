@@ -13,9 +13,12 @@
 - **Phase 1–10 已完成**
 - **Phase 12A 已完成**
 - **Phase 12B 已落地首批搜索增强能力**
+- **首页模块已完成（后端数据层 + 前端视图）**
+- **Tag Registry 自定义元数据系统已完成（后端 + 前端）**
 - Phase 8 当前已包含：结构化本地证据、`verified` / `mismatch` / `partial` / `unverifiable` 的实际产出、下载链路 provenance 记录、下载后自动重扫、`inventoryVersion` 驱动的前端缓存失效与状态展示
 - Phase 12 当前已包含：`search_library` command、基于本地 snapshot + Tantivy 的索引、`all / albums / songs` scope、`notReady / building / stale / ready` 生命周期、`intro` / `belong` 命中表达、标题 / 艺术家 /归属字段的拼音召回，以及稳定排序与 last-ready 回退
 - 当前待办已切换为 **Phase 11（条件触发）** 与 **Phase 12B / 12C 的剩余增强**
+- Tag Registry 当前已包含：`TagRegistryService` 远程 JSON 同步与本地缓存、`Album`/`Song` 的 `tags` enrichment 注入、`get_tag_dimensions` / `get_albums_by_tag_dimension` Tauri commands、Tantivy `tag_values` 搜索索引集成、前端 `homeStore` / `homeController` tag 维度与分组状态管理、`HomeTagGroups` 首页标签分组浏览组件
 
 > 说明：Phase 11 属于条件触发型增强，因此在 Phase 10 之后，搜索能力先行进入了 Phase 12，不代表后续阶段必须按编号严格顺序落地。
 
@@ -120,6 +123,43 @@
 - 专辑 `intro` / `belong` 已进入索引与命中表达
 - 标题、艺术家与 `belong` 已支持拼音全拼 / 首字母召回
 - 排序已按标题、艺术家、归属、简介等字段权重做增强，不再仅是基础子串匹配
+
+### 首页模块
+
+**后端**
+
+- 新增 `AlbumMetadataCacheService`（rusqlite）：收听历史持久化、belong 缓存、首页状态聚合
+- 新增 Tauri commands：`get_latest_albums`、`get_albums_by_series_group`、`get_recent_history`、`get_homepage_status`、`clear_listening_history`、`record_listening_event`
+- `AppState` 新增 `album_metadata_cache` 成员与 `spawn_belong_warmup` 启动预热
+
+**前端**
+
+- `App.svelte` 脚本逻辑提取到 `createAppRuntime()` 工厂函数
+- `shellStore` 新增 `currentView: 'home' | 'library'` 视图切换
+- `homeStore` / `homeController`：首页数据状态管理（最新专辑、系列分组、收听历史、状态仪表盘）
+- 首页 UI 组件：`HomeView`、`HomeLatestAlbums`、`HomeSeriesGroups`、`HomeRecentHistory`、`HomeStatusDashboard`
+- 侧栏新增首页导航按钮
+
+### Tag Registry：自定义元数据系统
+
+**后端**
+
+- `TagRegistryService`：远程 JSON 拉取（GitHub raw）、版本比对、原子文件缓存、内存 `Arc<RwLock<TagRegistry>>` 查询
+- `Album` / `AlbumDetail` / `SongEntry` / `SongDetail` 新增 `tags: Vec<TagEntry>` 字段
+- enrichment 注入：library commands（`get_albums` / `get_album_detail` / `get_song_detail`）和 homepage commands（`get_latest_albums` / `get_albums_by_series`）末尾叠加 tag 注入
+- 新增 Tauri commands：`get_tag_dimensions`（返回维度列表）、`get_albums_by_tag_dimension`（按维度分组返回专辑）
+- Tantivy 搜索索引新增 `tag_values` 字段，支持 tag 值搜索命中
+- 远程同步成功后自动触发搜索索引重建
+- 种子数据文件 `data/tag_registry.json`（3 个维度：阵营/曲风/时代）
+
+**前端**
+
+- TypeScript 类型：`TagEntry`、`TagDimension`、`TagGroup` 接口
+- Bridge 函数：`getTagDimensions()`、`getAlbumsByTagDimension()`
+- `homeStore` 扩展：`tagDimensions`、`tagGroups`、`selectedDimensionKey` 状态
+- `homeController` 扩展：tag 维度并行加载、`loadTagGroups` 分组获取、`selectDimension` 维度切换
+- `HomeTagGroups.svelte`：维度 chip 切换栏、分组卡片 + 可点击小封面、空状态提示
+- `HomeView.svelte` 集成：标签分组区块位于系列分组与收听历史之间
 
 ## 已落地基础能力补充
 
