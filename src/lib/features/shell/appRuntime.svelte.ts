@@ -30,6 +30,8 @@ import {
   getRecentHistory,
   getHomepageStatus,
   clearListeningHistory,
+  getTagDimensions,
+  getAlbumsByTagDimension,
 } from '$lib/api';
 import {
   clearCache,
@@ -170,6 +172,8 @@ export function createAppRuntime() {
     getRecentHistory,
     getHomepageStatus,
     clearListeningHistory,
+    getTagDimensions,
+    getAlbumsByTagDimension,
     notifyError,
   });
 
