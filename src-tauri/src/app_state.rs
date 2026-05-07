@@ -10,6 +10,7 @@ use crate::player::stream::{GrowingFileHandle, PlaybackInput, SampleBuffer};
 use crate::player::{AudioPlayer, PlaybackContext, PlaybackQueueEntry};
 use crate::preferences::{AppPreferences, PreferencesStore};
 use crate::search::LibrarySearchService;
+use crate::tag_editor::TagEditorService;
 use crate::tag_registry::TagRegistryService;
 use anyhow::{Context, Result};
 use siren_core::{DownloadManagerSnapshot, DownloadService};
@@ -40,6 +41,7 @@ pub struct AppState {
     pub(crate) listening_history: Arc<ListeningHistoryService>,
     pub(crate) album_metadata_cache: AlbumMetadataCacheService,
     pub(crate) tag_registry: TagRegistryService,
+    pub(crate) tag_editor: TagEditorService,
 }
 
 struct PreparedPlaybackInput {
@@ -84,6 +86,7 @@ impl AppState {
         let album_metadata_cache = AlbumMetadataCacheService::new(&db_path)
             .map_err(|e| format!("初始化元数据缓存服务失败: {e}"))?;
         let tag_registry = TagRegistryService::new(&app_data_dir);
+        let tag_editor = TagEditorService::new(&app_data_dir);
         let state = Self {
             player: Arc::new(player),
             api: Arc::new(api),
@@ -98,6 +101,7 @@ impl AppState {
             listening_history,
             album_metadata_cache,
             tag_registry,
+            tag_editor,
         };
         if loaded_download_session.should_persist {
             state.persist_download_snapshot(&loaded_download_session.snapshot);

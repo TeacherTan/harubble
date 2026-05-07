@@ -32,6 +32,14 @@ import {
   clearListeningHistory,
   getTagDimensions,
   getAlbumsByTagDimension,
+  getTagEditorMerged,
+  getTagEditorLocalOverlay,
+  setTagEditorEntityTag,
+  removeTagEditorEntityTag,
+  addTagEditorDimension,
+  removeTagEditorDimension,
+  applyTagEditorRemoteUpdate,
+  resolveTagEditorConflict,
 } from '$lib/api';
 import {
   clearCache,
@@ -63,6 +71,7 @@ import { createLibraryController } from '$lib/features/library/controller.svelte
 import { createPlayerController } from '$lib/features/player/controller.svelte';
 import { createDownloadController } from '$lib/features/download/controller.svelte';
 import { createHomeController } from '$lib/features/home/controller.svelte';
+import { createTagEditorController } from '$lib/features/tagEditor/controller.svelte';
 import { preloadImage } from '$lib/features/library/helpers';
 import {
   buildAlbumPlaybackEntries,
@@ -174,6 +183,18 @@ export function createAppRuntime() {
     clearListeningHistory,
     getTagDimensions,
     getAlbumsByTagDimension,
+    notifyError,
+  });
+
+  const tagEditorController = createTagEditorController({
+    getTagEditorMerged,
+    getTagEditorLocalOverlay,
+    setTagEditorEntityTag,
+    removeTagEditorEntityTag,
+    addTagEditorDimension,
+    removeTagEditorDimension,
+    applyTagEditorRemoteUpdate,
+    resolveTagEditorConflict,
     notifyError,
   });
 
@@ -898,6 +919,7 @@ export function createAppRuntime() {
     downloadController.dispose();
     albumStageMotionController.dispose();
     homeController.dispose();
+    tagEditorController.dispose();
     playerStateInitSeq += 1;
     playerStateHydratedFromEvent = false;
     unsubscribe?.();
@@ -1159,6 +1181,7 @@ export function createAppRuntime() {
     playerController,
     downloadController,
     homeController,
+    tagEditorController,
     notifyInfo,
     notifyError,
     handleSelectAlbum,

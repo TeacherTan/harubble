@@ -376,3 +376,44 @@ export interface HomepageStatus {
   activeDownloadCount: number;
   completedDownloadCount: number;
 }
+
+// ─── Tag Editor ──────────────────────────────────────────────────────────────
+
+export type TagEditorEntityType = 'album' | 'song';
+
+export interface TagEditorLocalizedValue {
+  [locale: string]: string;
+}
+
+export interface TagEditorTagSet {
+  tags: Record<string, TagEditorLocalizedValue[]>;
+}
+
+export interface TagEditorDimension {
+  key: string;
+  label: Record<string, string>;
+}
+
+export interface TagEditorRegistry {
+  schemaVersion: number;
+  updatedAt: string;
+  tagDimensions: TagEditorDimension[];
+  albums: Record<string, TagEditorTagSet>;
+  songs: Record<string, TagEditorTagSet>;
+}
+
+export interface TagEditorMergeConflict {
+  entityType: TagEditorEntityType;
+  cid: string;
+  dimensionKey: string;
+  baseValues: TagEditorLocalizedValue[] | null;
+  remoteValues: TagEditorLocalizedValue[] | null;
+  localValues: TagEditorLocalizedValue[] | null;
+}
+
+export interface TagEditorMergeResult {
+  conflicts: TagEditorMergeConflict[];
+  autoMergedCount: number;
+}
+
+export type ConflictResolution = 'keepLocal' | 'keepRemote';

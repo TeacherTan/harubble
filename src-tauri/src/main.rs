@@ -186,6 +186,14 @@ fn main() {
             commands::homepage::get_homepage_status,
             commands::tag_registry::get_tag_dimensions,
             commands::tag_registry::get_albums_by_tag_dimension,
+            commands::tag_editor::get_tag_editor_merged,
+            commands::tag_editor::get_tag_editor_local_overlay,
+            commands::tag_editor::set_tag_editor_entity_tag,
+            commands::tag_editor::remove_tag_editor_entity_tag,
+            commands::tag_editor::add_tag_editor_dimension,
+            commands::tag_editor::remove_tag_editor_dimension,
+            commands::tag_editor::apply_tag_editor_remote_update,
+            commands::tag_editor::resolve_tag_editor_conflict,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

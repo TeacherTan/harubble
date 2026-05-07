@@ -30,6 +30,11 @@ import type {
   HomepageStatus,
   TagDimension,
   TagGroup,
+  TagEditorEntityType,
+  TagEditorLocalizedValue,
+  TagEditorRegistry,
+  TagEditorMergeResult,
+  ConflictResolution,
 } from './types';
 
 const CACHE_KEY_ALBUM_DETAIL = 'album_detail:';
@@ -326,4 +331,74 @@ export async function getAlbumsByTagDimension(
   dimensionKey: string
 ): Promise<TagGroup[]> {
   return invoke<TagGroup[]>('get_albums_by_tag_dimension', { dimensionKey });
+}
+
+// ─── Tag Editor ──────────────────────────────────────────────────────────────
+
+export async function getTagEditorMerged(): Promise<TagEditorRegistry> {
+  return invoke<TagEditorRegistry>('get_tag_editor_merged');
+}
+
+export async function getTagEditorLocalOverlay(): Promise<TagEditorRegistry> {
+  return invoke<TagEditorRegistry>('get_tag_editor_local_overlay');
+}
+
+export async function setTagEditorEntityTag(
+  entityType: TagEditorEntityType,
+  cid: string,
+  dimensionKey: string,
+  values: TagEditorLocalizedValue[]
+): Promise<void> {
+  return invoke('set_tag_editor_entity_tag', {
+    entityType,
+    cid,
+    dimensionKey,
+    values,
+  });
+}
+
+export async function removeTagEditorEntityTag(
+  entityType: TagEditorEntityType,
+  cid: string,
+  dimensionKey: string
+): Promise<void> {
+  return invoke('remove_tag_editor_entity_tag', {
+    entityType,
+    cid,
+    dimensionKey,
+  });
+}
+
+export async function addTagEditorDimension(
+  key: string,
+  labelZh: string,
+  labelEn: string
+): Promise<void> {
+  return invoke('add_tag_editor_dimension', { key, labelZh, labelEn });
+}
+
+export async function removeTagEditorDimension(key: string): Promise<void> {
+  return invoke('remove_tag_editor_dimension', { key });
+}
+
+export async function applyTagEditorRemoteUpdate(
+  newRemote: TagEditorRegistry
+): Promise<TagEditorMergeResult> {
+  return invoke<TagEditorMergeResult>('apply_tag_editor_remote_update', {
+    newRemote,
+  });
+}
+
+export async function resolveTagEditorConflict(
+  entityType: TagEditorEntityType,
+  cid: string,
+  dimensionKey: string,
+  keep: ConflictResolution
+): Promise<void> {
+  return invoke('resolve_tag_editor_conflict', {
+    entityType,
+    cid,
+    dimensionKey,
+    keep,
+  });
 }

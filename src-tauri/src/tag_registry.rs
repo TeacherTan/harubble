@@ -43,7 +43,7 @@ const CACHE_FILE_NAME: &str = "tag_registry.json";
 /// `tag_dimensions` 定义所有可用的 tag 维度，`albums`/`songs` 存储各自的标签集合。
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct TagRegistry {
+pub struct TagRegistry {
     /// 注册表 schema 版本，当前为 1。
     #[serde(default)]
     pub(crate) schema_version: u32,
@@ -65,7 +65,7 @@ pub(crate) struct TagRegistry {
 ///
 /// `key` 是维度的唯一标识符（如 `"faction"`），`label` 是各语种的展示名称映射。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct TagDimension {
+pub struct TagDimension {
     /// 维度唯一键，与 [`TagSet`] 中的字段 key 对应。
     pub(crate) key: String,
     /// 各语种的维度展示名称，key 为 BCP 47 语言标签（如 `"zh-CN"`、`"en-US"`）。
@@ -76,7 +76,7 @@ pub(crate) struct TagDimension {
 ///
 /// 结构为 `维度 key → LocalizedValue 列表`，每个 `LocalizedValue` 代表一个已本地化的 tag 值。
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub(crate) struct TagSet {
+pub struct TagSet {
     /// 维度 key → 本地化值列表的映射。
     #[serde(default)]
     pub(crate) tags: HashMap<String, Vec<LocalizedValue>>,
@@ -86,7 +86,7 @@ pub(crate) struct TagSet {
 ///
 /// key 为 BCP 47 语言标签（如 `"zh-CN"`、`"en-US"`），value 为对应语种下的文本。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub(crate) struct LocalizedValue(pub HashMap<String, String>);
+pub struct LocalizedValue(pub HashMap<String, String>);
 
 // ─── 前端展示类型 ─────────────────────────────────────────────────────────────
 

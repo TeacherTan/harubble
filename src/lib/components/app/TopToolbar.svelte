@@ -12,6 +12,7 @@
     onRefresh: () => void;
     onOpenDownloads: () => void;
     onOpenSettings: () => void;
+    onOpenTagEditor: () => void;
   }
 
   let {
@@ -22,6 +23,7 @@
     onRefresh,
     onOpenDownloads,
     onOpenSettings,
+    onOpenTagEditor,
   }: Props = $props();
 
   const labels = $derived.by(() => {
@@ -63,6 +65,17 @@
       {#if activeDownloadCount > 0}
         <span class="toolbar-badge">{activeDownloadCount}</span>
       {/if}
+    </Button>
+
+    <Button
+      size="icon"
+      variant="ghost"
+      class={`text-base ${toolbarIconButton({ active: false })}`}
+      onclick={onOpenTagEditor}
+      aria-label="Tag Editor"
+      title="Tag Editor"
+    >
+      🏷
     </Button>
 
     <Button

@@ -9,6 +9,7 @@
   import FullscreenPlayer from '$lib/components/app/FullscreenPlayer.svelte';
   import AppSideSheets from '$lib/components/app/AppSideSheets.svelte';
   import HomeView from '$lib/components/app/HomeView.svelte';
+  import TagEditorView from '$lib/components/app/TagEditorView.svelte';
 
   const runtime = createAppRuntime();
 </script>
@@ -60,10 +61,13 @@
       onRefresh={runtime.handleRefresh}
       onOpenDownloads={runtime.handleToggleDownloads}
       onOpenSettings={runtime.handleToggleSettings}
+      onOpenTagEditor={runtime.shellStore.navigateToTagEditor}
     />
 
     {#if runtime.currentView === 'home'}
       <HomeView {runtime} />
+    {:else if runtime.currentView === 'tagEditor'}
+      <TagEditorView {runtime} />
     {:else}
       <AlbumWorkspace
         currentSong={runtime.currentSong}

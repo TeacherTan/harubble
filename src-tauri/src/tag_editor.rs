@@ -14,9 +14,42 @@ const LOCAL_FILE_NAME: &str = "tag_registry_local.json";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) enum EntityType {
+pub enum EntityType {
     Album,
     Song,
+}
+
+/// 三路合并中检测到的单个冲突条目。
+///
+/// 当 base、remote、local 三方对同一实体的同一维度均有不同修改时产生冲突，
+/// 需要用户手动选择保留哪一方。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MergeConflict {
+    pub entity_type: EntityType,
+    pub cid: String,
+    pub dimension_key: String,
+    pub base_values: Option<Vec<LocalizedValue>>,
+    pub remote_values: Option<Vec<LocalizedValue>>,
+    pub local_values: Option<Vec<LocalizedValue>>,
+}
+
+/// 三路合并的执行结果。
+///
+/// 包含自动合并的条目数量与需要用户手动解决的冲突列表。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MergeResult {
+    pub conflicts: Vec<MergeConflict>,
+    pub auto_merged_count: u32,
+}
+
+/// 冲突解决策略。
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ConflictResolution {
+    KeepLocal,
+    KeepRemote,
 }
 
 #[derive(Clone)]
@@ -155,12 +188,148 @@ impl TagEditorService {
         }
     }
 
+    /// 接收新的远端快照，执行三路合并。
+    ///
+    /// base = 当前 self.remote（上次同步时的远端状态）
+    /// theirs = new_remote（本次拉取的新远端状态）
+    /// ours = self.local（用户本地编辑）
+    ///
+    /// 合并完成后更新 self.remote 为 new_remote，自动合并的部分从 local 中移除。
+    pub(crate) fn apply_remote_update(&self, new_remote: TagRegistry) -> Result<MergeResult> {
+        let base = self.remote.read().expect("poisoned").clone();
+        let local = self.local.read().expect("poisoned").clone();
+
+        let mut conflicts = Vec::new();
+        let mut auto_merged_count: u32 = 0;
+        let mut new_local = local.clone();
+
+        for entity_type in [EntityType::Album, EntityType::Song] {
+            let (base_map, remote_map, local_map, new_local_map) = match entity_type {
+                EntityType::Album => (
+                    &base.albums,
+                    &new_remote.albums,
+                    &local.albums,
+                    &mut new_local.albums,
+                ),
+                EntityType::Song => (
+                    &base.songs,
+                    &new_remote.songs,
+                    &local.songs,
+                    &mut new_local.songs,
+                ),
+            };
+
+            let all_cids: HashSet<&str> = local_map.keys().map(|s| s.as_str()).collect();
+
+            for cid in all_cids {
+                let local_set = match local_map.get(cid) {
+                    Some(s) => s,
+                    None => continue,
+                };
+
+                let all_dim_keys: HashSet<&str> =
+                    local_set.tags.keys().map(|s| s.as_str()).collect();
+
+                for dim_key in all_dim_keys {
+                    let base_vals = base_map.get(cid).and_then(|ts| ts.tags.get(dim_key));
+                    let remote_vals = remote_map.get(cid).and_then(|ts| ts.tags.get(dim_key));
+                    let local_vals = local_set.tags.get(dim_key);
+
+                    let base_eq_remote = base_vals == remote_vals;
+                    let base_eq_local = base_vals == local_vals;
+
+                    if base_eq_remote && base_eq_local {
+                        // 三方一致，本地 overlay 可清除
+                        if let Some(ts) = new_local_map.get_mut(cid) {
+                            ts.tags.remove(dim_key);
+                        }
+                        auto_merged_count += 1;
+                    } else if base_eq_remote {
+                        // 远端未变，本地有修改 → 保留本地
+                    } else if base_eq_local {
+                        // 本地未动，远端有修改 → 接受远端，清除本地 overlay
+                        if let Some(ts) = new_local_map.get_mut(cid) {
+                            ts.tags.remove(dim_key);
+                        }
+                        auto_merged_count += 1;
+                    } else {
+                        // 三方各不同 → 冲突
+                        conflicts.push(MergeConflict {
+                            entity_type,
+                            cid: cid.to_string(),
+                            dimension_key: dim_key.to_string(),
+                            base_values: base_vals.cloned(),
+                            remote_values: remote_vals.cloned(),
+                            local_values: local_vals.cloned(),
+                        });
+                    }
+                }
+
+                if let Some(ts) = new_local_map.get(cid) {
+                    if ts.tags.is_empty() {
+                        new_local_map.remove(cid);
+                    }
+                }
+            }
+        }
+
+        // 更新 remote 为新快照
+        {
+            let mut remote_guard = self.remote.write().expect("poisoned");
+            *remote_guard = new_remote;
+        }
+        persist_registry(&self.remote_path, &self.remote.read().expect("poisoned"))?;
+
+        // 更新 local overlay
+        {
+            let mut local_guard = self.local.write().expect("poisoned");
+            *local_guard = new_local;
+        }
+        self.persist_local()?;
+
+        Ok(MergeResult {
+            conflicts,
+            auto_merged_count,
+        })
+    }
+
+    /// 解决单个冲突：用户选择保留 local 或 remote。
+    ///
+    /// - KeepLocal：保留本地 overlay 中的值不变（冲突已由用户确认）。
+    /// - KeepRemote：从本地 overlay 中移除该条目，使 compute_merged 回退到远端值。
+    pub(crate) fn resolve_conflict(
+        &self,
+        entity_type: EntityType,
+        cid: &str,
+        dimension_key: &str,
+        keep: ConflictResolution,
+    ) -> Result<()> {
+        match keep {
+            ConflictResolution::KeepLocal => {
+                // 本地值已在 overlay 中，无需修改
+            }
+            ConflictResolution::KeepRemote => {
+                let mut local = self.local.write().expect("poisoned");
+                let map = match entity_type {
+                    EntityType::Album => &mut local.albums,
+                    EntityType::Song => &mut local.songs,
+                };
+                if let Some(tag_set) = map.get_mut(cid) {
+                    tag_set.tags.remove(dimension_key);
+                    if tag_set.tags.is_empty() {
+                        map.remove(cid);
+                    }
+                }
+            }
+        }
+        self.persist_local()
+    }
+
     fn persist_local(&self) -> Result<()> {
         let local = self.local.read().expect("tag_editor local RwLock poisoned");
         persist_registry(&self.local_path, &local)
     }
 
-    #[allow(dead_code)]
     fn persist_remote(&self) -> Result<()> {
         let remote = self
             .remote
@@ -494,5 +663,227 @@ mod tests {
         let merged = svc.compute_merged();
         let a1 = merged.albums.get("A1").unwrap();
         assert_eq!(a1.tags.get("faction").unwrap().len(), 1, "重复值应去重");
+    }
+
+    #[test]
+    fn apply_remote_update_no_conflict_when_only_remote_changed() {
+        let dir = tempfile::tempdir().unwrap();
+        let base_remote = TagRegistry {
+            schema_version: 1,
+            updated_at: "v1".to_string(),
+            tag_dimensions: vec![],
+            albums: HashMap::from([(
+                "A1".into(),
+                TagSet {
+                    tags: HashMap::from([(
+                        "faction".into(),
+                        vec![LocalizedValue(HashMap::from([(
+                            "zh-CN".into(),
+                            "旧值".into(),
+                        )]))],
+                    )]),
+                },
+            )]),
+            songs: HashMap::new(),
+        };
+        std::fs::write(
+            dir.path().join(REMOTE_FILE_NAME),
+            serde_json::to_vec_pretty(&base_remote).unwrap(),
+        )
+        .unwrap();
+
+        let svc = TagEditorService::new(dir.path());
+
+        let new_remote = TagRegistry {
+            schema_version: 1,
+            updated_at: "v2".to_string(),
+            tag_dimensions: vec![],
+            albums: HashMap::from([(
+                "A1".into(),
+                TagSet {
+                    tags: HashMap::from([(
+                        "faction".into(),
+                        vec![LocalizedValue(HashMap::from([(
+                            "zh-CN".into(),
+                            "新值".into(),
+                        )]))],
+                    )]),
+                },
+            )]),
+            songs: HashMap::new(),
+        };
+
+        let result = svc.apply_remote_update(new_remote).unwrap();
+        assert!(result.conflicts.is_empty());
+        assert_eq!(svc.remote_registry().updated_at, "v2");
+    }
+
+    #[test]
+    fn apply_remote_update_no_conflict_when_only_local_changed() {
+        let dir = tempfile::tempdir().unwrap();
+        let base_remote = TagRegistry {
+            schema_version: 1,
+            updated_at: "v1".to_string(),
+            tag_dimensions: vec![],
+            albums: HashMap::from([(
+                "A1".into(),
+                TagSet {
+                    tags: HashMap::from([(
+                        "faction".into(),
+                        vec![LocalizedValue(HashMap::from([(
+                            "zh-CN".into(),
+                            "原值".into(),
+                        )]))],
+                    )]),
+                },
+            )]),
+            songs: HashMap::new(),
+        };
+        std::fs::write(
+            dir.path().join(REMOTE_FILE_NAME),
+            serde_json::to_vec_pretty(&base_remote).unwrap(),
+        )
+        .unwrap();
+
+        let svc = TagEditorService::new(dir.path());
+        svc.set_entity_tag(
+            EntityType::Album,
+            "A1",
+            "faction",
+            vec![LocalizedValue(HashMap::from([(
+                "zh-CN".into(),
+                "本地值".into(),
+            )]))],
+        )
+        .unwrap();
+
+        // 远端未变（与 base 相同）
+        let new_remote = base_remote.clone();
+        let result = svc.apply_remote_update(new_remote).unwrap();
+        assert!(result.conflicts.is_empty());
+        // 本地 overlay 应保留
+        let local = svc.local_registry();
+        let vals = local.albums.get("A1").unwrap().tags.get("faction").unwrap();
+        assert_eq!(vals[0].0.get("zh-CN").unwrap(), "本地值");
+    }
+
+    #[test]
+    fn apply_remote_update_detects_conflict() {
+        let dir = tempfile::tempdir().unwrap();
+        let base_remote = TagRegistry {
+            schema_version: 1,
+            updated_at: "v1".to_string(),
+            tag_dimensions: vec![],
+            albums: HashMap::from([(
+                "A1".into(),
+                TagSet {
+                    tags: HashMap::from([(
+                        "faction".into(),
+                        vec![LocalizedValue(HashMap::from([(
+                            "zh-CN".into(),
+                            "基线".into(),
+                        )]))],
+                    )]),
+                },
+            )]),
+            songs: HashMap::new(),
+        };
+        std::fs::write(
+            dir.path().join(REMOTE_FILE_NAME),
+            serde_json::to_vec_pretty(&base_remote).unwrap(),
+        )
+        .unwrap();
+
+        let svc = TagEditorService::new(dir.path());
+        svc.set_entity_tag(
+            EntityType::Album,
+            "A1",
+            "faction",
+            vec![LocalizedValue(HashMap::from([(
+                "zh-CN".into(),
+                "本地改".into(),
+            )]))],
+        )
+        .unwrap();
+
+        let new_remote = TagRegistry {
+            schema_version: 1,
+            updated_at: "v2".to_string(),
+            tag_dimensions: vec![],
+            albums: HashMap::from([(
+                "A1".into(),
+                TagSet {
+                    tags: HashMap::from([(
+                        "faction".into(),
+                        vec![LocalizedValue(HashMap::from([(
+                            "zh-CN".into(),
+                            "远端改".into(),
+                        )]))],
+                    )]),
+                },
+            )]),
+            songs: HashMap::new(),
+        };
+
+        let result = svc.apply_remote_update(new_remote).unwrap();
+        assert_eq!(result.conflicts.len(), 1);
+        let c = &result.conflicts[0];
+        assert_eq!(c.cid, "A1");
+        assert_eq!(c.dimension_key, "faction");
+    }
+
+    #[test]
+    fn resolve_conflict_keep_local_preserves_local_value() {
+        let dir = tempfile::tempdir().unwrap();
+        let svc = TagEditorService::new(dir.path());
+        svc.set_entity_tag(
+            EntityType::Album,
+            "A1",
+            "faction",
+            vec![LocalizedValue(HashMap::from([(
+                "zh-CN".into(),
+                "本地".into(),
+            )]))],
+        )
+        .unwrap();
+
+        svc.resolve_conflict(
+            EntityType::Album,
+            "A1",
+            "faction",
+            ConflictResolution::KeepLocal,
+        )
+        .unwrap();
+
+        let local = svc.local_registry();
+        let vals = local.albums.get("A1").unwrap().tags.get("faction").unwrap();
+        assert_eq!(vals[0].0.get("zh-CN").unwrap(), "本地");
+    }
+
+    #[test]
+    fn resolve_conflict_keep_remote_removes_local_override() {
+        let dir = tempfile::tempdir().unwrap();
+        let svc = TagEditorService::new(dir.path());
+        svc.set_entity_tag(
+            EntityType::Album,
+            "A1",
+            "faction",
+            vec![LocalizedValue(HashMap::from([(
+                "zh-CN".into(),
+                "本地".into(),
+            )]))],
+        )
+        .unwrap();
+
+        svc.resolve_conflict(
+            EntityType::Album,
+            "A1",
+            "faction",
+            ConflictResolution::KeepRemote,
+        )
+        .unwrap();
+
+        let local = svc.local_registry();
+        assert!(local.albums.get("A1").is_none());
     }
 }
