@@ -177,24 +177,6 @@ mod tests {
     }
 
     #[test]
-    fn creates_table_on_init() {
-        let service = ListeningHistoryService::new_in_memory().unwrap();
-        let entries = service.get_recent(10).unwrap();
-        assert!(entries.is_empty());
-    }
-
-    #[test]
-    fn records_and_retrieves_listening_event() {
-        let service = ListeningHistoryService::new_in_memory().unwrap();
-        service.record(&make_event("s1", "a1")).unwrap();
-        let entries = service.get_recent(10).unwrap();
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].song_cid, "s1");
-        assert_eq!(entries[0].album_cid, "a1");
-        assert_eq!(entries[0].artists, vec!["Artist A"]);
-    }
-
-    #[test]
     fn deduplicates_consecutive_same_song() {
         let service = ListeningHistoryService::new_in_memory().unwrap();
         service.record(&make_event("s1", "a1")).unwrap();

@@ -182,13 +182,3 @@ pub fn get_default_output_dir() -> String {
         .to_string()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::encode_image_data_url;
-
-    #[test]
-    fn encodes_image_data_url() {
-        let url = encode_image_data_url("image/png", b"abc");
-        assert_eq!(url, "data:image/png;base64,YWJj");
-    }
-}

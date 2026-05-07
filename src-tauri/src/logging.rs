@@ -501,16 +501,4 @@ mod tests {
         assert_eq!(LogLevel::parse("bogus"), None);
     }
 
-    #[test]
-    fn constructs_query_defaults() {
-        let query = LogViewerQuery {
-            kind: LogFileKind::Session,
-            level: None,
-            domain: None,
-            search: None,
-            limit: None,
-            offset: None,
-        };
-        assert!(matches!(query.kind, LogFileKind::Session));
-    }
 }

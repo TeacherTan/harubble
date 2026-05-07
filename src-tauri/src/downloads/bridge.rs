@@ -507,15 +507,46 @@ mod tests {
     }
 
     #[test]
+    fn album_jobs_use_album_subdirectory() {
+        let task = make_task("My Album");
+
+        let out_dir =
+            resolve_task_output_dir(DownloadJobKind::Album, Path::new("/tmp/downloads"), &task);
+
+        assert_eq!(out_dir, Path::new("/tmp/downloads").join("My Album"));
+    }
+
+    #[test]
     fn selection_jobs_use_album_subdirectory() {
-        let task = make_task("Album Name");
+        let task = make_task("My Album");
 
-        let out_dir = resolve_task_output_dir(
-            DownloadJobKind::Selection,
-            Path::new("/tmp/downloads"),
-            &task,
+        let out_dir =
+            resolve_task_output_dir(DownloadJobKind::Selection, Path::new("/tmp/downloads"), &task);
+
+        assert_eq!(out_dir, Path::new("/tmp/downloads").join("My Album"));
+    }
+
+    #[test]
+    fn sanitizes_all_illegal_path_characters() {
+        let task = make_task("A\\B*C\"D<E>F|G\0H");
+
+        let out_dir =
+            resolve_task_output_dir(DownloadJobKind::Album, Path::new("/out"), &task);
+
+        let dir_name = out_dir.file_name().unwrap().to_str().unwrap();
+        assert!(
+            !dir_name.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|', '\0']),
+            "output dir should not contain illegal characters: {dir_name}"
         );
+    }
 
-        assert_eq!(out_dir, Path::new("/tmp/downloads").join("Album Name"));
+    #[test]
+    fn empty_album_name_produces_valid_path() {
+        let task = make_task("");
+
+        let out_dir =
+            resolve_task_output_dir(DownloadJobKind::Song, Path::new("/tmp/downloads"), &task);
+
+        assert!(out_dir.starts_with("/tmp/downloads"));
     }
 }

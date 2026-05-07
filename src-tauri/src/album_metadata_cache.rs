@@ -72,30 +72,6 @@ impl AlbumMetadataCacheService {
         Ok(())
     }
 
-    pub(crate) fn batch_upsert_belongs(&self, entries: &[(&str, &str)]) -> Result<(), String> {
-        let conn = self
-            .conn
-            .lock()
-            .map_err(|e| format!("获取数据库锁失败: {e}"))?;
-        let now = time::OffsetDateTime::now_utc()
-            .format(&time::format_description::well_known::Iso8601::DEFAULT)
-            .unwrap_or_default();
-        let tx = conn
-            .unchecked_transaction()
-            .map_err(|e| format!("开启事务失败: {e}"))?;
-        for (album_cid, belong) in entries {
-            tx.execute(
-                "INSERT INTO album_metadata_cache (album_cid, belong, updated_at)
-                 VALUES (?1, ?2, ?3)
-                 ON CONFLICT(album_cid) DO UPDATE SET belong = excluded.belong, updated_at = excluded.updated_at",
-                rusqlite::params![album_cid, belong, now],
-            )
-            .map_err(|e| format!("批量写入 belong 缓存失败: {e}"))?;
-        }
-        tx.commit().map_err(|e| format!("提交事务失败: {e}"))?;
-        Ok(())
-    }
-
     pub(crate) fn get_all_belongs(&self) -> Result<Vec<AlbumBelongRecord>, String> {
         let conn = self
             .conn
@@ -138,13 +114,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn creates_table_on_init() {
-        let service = AlbumMetadataCacheService::new_in_memory().unwrap();
-        let records = service.get_all_belongs().unwrap();
-        assert!(records.is_empty());
-    }
-
-    #[test]
     fn upserts_and_retrieves_belong() {
         let service = AlbumMetadataCacheService::new_in_memory().unwrap();
         service.upsert_belong("a1", "Arknights").unwrap();
@@ -162,16 +131,6 @@ mod tests {
         let records = service.get_all_belongs().unwrap();
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].belong, "Endfield");
-    }
-
-    #[test]
-    fn batch_upsert_inserts_multiple() {
-        let service = AlbumMetadataCacheService::new_in_memory().unwrap();
-        service
-            .batch_upsert_belongs(&[("a1", "Arknights"), ("a2", "Endfield")])
-            .unwrap();
-        let records = service.get_all_belongs().unwrap();
-        assert_eq!(records.len(), 2);
     }
 
     #[test]

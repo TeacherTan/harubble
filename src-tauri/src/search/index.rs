@@ -1182,4 +1182,70 @@ mod tests {
         assert_eq!(items[1].kind, siren_core::SearchLibraryResultKind::Album);
         assert_eq!(items[1].album_cid, "album-c");
     }
+
+    #[test]
+    fn returns_no_results_for_unmatched_query() {
+        let temp_dir = tempdir().expect("temp dir");
+        let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
+        let request = sanitize_search_request(
+            siren_core::SearchLibraryRequest {
+                query: "zzzznothing".to_string(),
+                scope: siren_core::LibrarySearchScope::All,
+                limit: None,
+                offset: None,
+            },
+            50,
+            500,
+            Locale::default(),
+        )
+        .expect("request");
+
+        let (items, total) = index.search(&request).expect("search");
+        assert_eq!(total, 0);
+        assert!(items.is_empty());
+    }
+
+    #[test]
+    fn album_only_query_does_not_leak_into_song_scope() {
+        let temp_dir = tempdir().expect("temp dir");
+        let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
+        let request = sanitize_search_request(
+            siren_core::SearchLibraryRequest {
+                query: "official".to_string(),
+                scope: siren_core::LibrarySearchScope::Songs,
+                limit: None,
+                offset: None,
+            },
+            50,
+            500,
+            Locale::default(),
+        )
+        .expect("request");
+
+        let (items, total) = index.search(&request).expect("search");
+        assert_eq!(total, 0);
+        assert!(items.is_empty());
+    }
+
+    #[test]
+    fn song_only_query_does_not_leak_into_album_scope() {
+        let temp_dir = tempdir().expect("temp dir");
+        let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
+        let request = sanitize_search_request(
+            siren_core::SearchLibraryRequest {
+                query: "beyond".to_string(),
+                scope: siren_core::LibrarySearchScope::Albums,
+                limit: None,
+                offset: None,
+            },
+            50,
+            500,
+            Locale::default(),
+        )
+        .expect("request");
+
+        let (items, total) = index.search(&request).expect("search");
+        assert_eq!(total, 0);
+        assert!(items.is_empty());
+    }
 }

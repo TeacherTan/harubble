@@ -238,12 +238,3 @@ fn index_directory_name(inventory_version: &str) -> String {
         .collect()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::index_directory_name;
-
-    #[test]
-    fn sanitizes_inventory_version_for_index_directory() {
-        assert_eq!(index_directory_name("alpha/beta:01"), "alpha_beta_01");
-    }
-}

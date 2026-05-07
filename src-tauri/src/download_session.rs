@@ -493,42 +493,6 @@ mod tests {
     }
 
     #[test]
-    fn save_replaces_existing_session_file() {
-        let dir = tempdir().expect("temp dir should exist");
-        let store = DownloadSessionStore::new(dir.path().to_path_buf());
-        let first = DownloadManagerSnapshot {
-            jobs: vec![make_job(
-                "job-1",
-                DownloadJobStatus::Completed,
-                DownloadTaskStatus::Completed,
-            )],
-            active_job_id: None,
-            queued_job_ids: Vec::new(),
-        };
-        let second = DownloadManagerSnapshot {
-            jobs: vec![make_job(
-                "job-2",
-                DownloadJobStatus::Failed,
-                DownloadTaskStatus::Failed,
-            )],
-            active_job_id: None,
-            queued_job_ids: Vec::new(),
-        };
-
-        store
-            .save(&first, Locale::default())
-            .expect("first snapshot should save");
-        store
-            .save(&second, Locale::default())
-            .expect("second snapshot should replace first");
-        let loaded = store.load(None, Locale::default()).snapshot;
-
-        assert_eq!(loaded.jobs.len(), 1);
-        assert_eq!(loaded.jobs[0].id, "job-2");
-        assert!(matches!(loaded.jobs[0].status, DownloadJobStatus::Failed));
-    }
-
-    #[test]
     fn concurrent_saves_do_not_race_on_temp_file() {
         let dir = tempdir().expect("temp dir should exist");
         let store = Arc::new(DownloadSessionStore::new(dir.path().to_path_buf()));

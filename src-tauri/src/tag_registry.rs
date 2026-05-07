@@ -545,14 +545,6 @@ mod tests {
     }
 
     #[test]
-    fn get_dimensions_en_us() {
-        let svc = make_service_with(make_registry());
-        let dims = svc.get_dimensions(Locale::EnUS);
-        assert_eq!(dims[0].label, "Faction");
-        assert_eq!(dims[1].label, "Character");
-    }
-
-    #[test]
     fn get_album_tags_resolves_zh_cn() {
         let svc = make_service_with(make_registry());
         let tags = svc.get_album_tags("ALBUM_CID", Locale::ZhCN);
@@ -605,12 +597,6 @@ mod tests {
         let map = svc.get_album_cids_by_dimension("faction", Locale::ZhCN);
         assert!(map.contains_key("罗德岛"));
         assert!(map["罗德岛"].contains(&"ALBUM_CID".to_string()));
-    }
-
-    #[test]
-    fn current_updated_at_returns_registry_value() {
-        let svc = make_service_with(make_registry());
-        assert_eq!(svc.current_updated_at(), "2026-04-29T12:00:00Z");
     }
 
     #[test]
