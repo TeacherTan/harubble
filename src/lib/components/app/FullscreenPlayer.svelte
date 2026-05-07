@@ -314,8 +314,20 @@
 
     <div class="fullscreen-meta">
       <div class="fullscreen-meta-text">
-        <h2 class="fullscreen-title" class:overflowing={titleOverflows} bind:this={titleRef}><span class="fullscreen-title-inner">{song.name}</span></h2>
-        <p class="fullscreen-artist" class:overflowing={artistOverflows} bind:this={artistRef}><span class="fullscreen-artist-inner">{artistText}</span></p>
+        <h2
+          class="fullscreen-title"
+          class:overflowing={titleOverflows}
+          bind:this={titleRef}
+        >
+          <span class="fullscreen-title-inner">{song.name}</span>
+        </h2>
+        <p
+          class="fullscreen-artist"
+          class:overflowing={artistOverflows}
+          bind:this={artistRef}
+        >
+          <span class="fullscreen-artist-inner">{artistText}</span>
+        </p>
       </div>
       <button
         type="button"
@@ -324,7 +336,7 @@
         aria-label={downloadButtonLabel}
         title={downloadButtonLabel}
         disabled={!canDownload}
-        onclick={() => onDownload?.()}
+        onclick={() => onDownload()}
       >
         {#if downloadState === 'creating'}
           <svg class="fs-spin" viewBox="0 0 24 24" aria-hidden="true">

@@ -1,8 +1,11 @@
 import type {
+  Album,
+  SongEntry,
   TagEditorEntityType,
   TagEditorLocalizedValue,
   TagEditorMergeConflict,
   TagEditorRegistry,
+  TagEditorTagSet,
 } from '$lib/types';
 
 let merged = $state<TagEditorRegistry | null>(null);
@@ -11,6 +14,10 @@ let selectedEntityType = $state<TagEditorEntityType>('album');
 let selectedCid = $state<string | null>(null);
 let conflicts = $state<TagEditorMergeConflict[]>([]);
 let loading = $state(false);
+let editingAlbum = $state<Album | null>(null);
+let editingAlbumSongs = $state<SongEntry[]>([]);
+let editingSong = $state<SongEntry | null>(null);
+let loadingSongs = $state(false);
 
 function reset() {
   merged = null;
@@ -19,6 +26,10 @@ function reset() {
   selectedCid = null;
   conflicts = [];
   loading = false;
+  editingAlbum = null;
+  editingAlbumSongs = [];
+  editingSong = null;
+  loadingSongs = false;
 }
 
 export const tagEditorStore = {
@@ -60,9 +71,48 @@ export const tagEditorStore = {
   },
   get selectedEntityTags(): Record<string, TagEditorLocalizedValue[]> {
     if (!merged || !selectedCid) return {};
-    const map =
-      selectedEntityType === 'album' ? merged.albums : merged.songs;
-    return map[selectedCid]?.tags ?? {};
+    if (selectedEntityType === 'song') {
+      const songEntry: TagEditorTagSet | undefined = (
+        merged.songs as Partial<Record<string, TagEditorTagSet>>
+      )[selectedCid];
+      return songEntry ? songEntry.tags : {};
+    }
+    const entry = merged.albums.find((a) => a.cid === selectedCid);
+    if (!entry) return {};
+    const tags: Record<string, TagEditorLocalizedValue[]> = {};
+    if (entry.type)
+      tags['type'] = [{ 'zh-CN': entry.type, 'en-US': entry.type }];
+    if (entry.faction)
+      tags['faction'] = [{ 'zh-CN': entry.faction, 'en-US': entry.faction }];
+    if (entry.character)
+      tags['character'] = [
+        { 'zh-CN': entry.character, 'en-US': entry.character },
+      ];
+    return tags;
+  },
+  get editingAlbum() {
+    return editingAlbum;
+  },
+  set editingAlbum(value: Album | null) {
+    editingAlbum = value;
+  },
+  get editingAlbumSongs() {
+    return editingAlbumSongs;
+  },
+  set editingAlbumSongs(value: SongEntry[]) {
+    editingAlbumSongs = value;
+  },
+  get editingSong() {
+    return editingSong;
+  },
+  set editingSong(value: SongEntry | null) {
+    editingSong = value;
+  },
+  get loadingSongs() {
+    return loadingSongs;
+  },
+  set loadingSongs(value: boolean) {
+    loadingSongs = value;
   },
   reset,
 };

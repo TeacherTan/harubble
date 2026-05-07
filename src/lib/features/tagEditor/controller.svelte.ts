@@ -1,4 +1,7 @@
 import type {
+  Album,
+  AlbumDetail,
+  SongEntry,
   ConflictResolution,
   TagEditorEntityType,
   TagEditorLocalizedValue,
@@ -37,6 +40,7 @@ interface TagEditorControllerDeps {
     dimensionKey: string,
     keep: ConflictResolution
   ) => Promise<void>;
+  getAlbumDetail: (albumCid: string) => Promise<AlbumDetail>;
   notifyError: (message: string) => void;
 }
 
@@ -158,6 +162,40 @@ export function createTagEditorController(deps: TagEditorControllerDeps) {
     }
   }
 
+  async function selectAlbumForEdit(album: Album) {
+    tagEditorStore.editingAlbum = album;
+    tagEditorStore.editingSong = null;
+    tagEditorStore.selectedEntityType = 'album';
+    tagEditorStore.selectedCid = album.cid;
+    tagEditorStore.loadingSongs = true;
+
+    try {
+      const detail = await deps.getAlbumDetail(album.cid);
+      tagEditorStore.editingAlbumSongs = detail.songs;
+    } catch (e: unknown) {
+      deps.notifyError(
+        `加载专辑歌曲失败: ${e instanceof Error ? e.message : String(e)}`
+      );
+      tagEditorStore.editingAlbumSongs = [];
+    } finally {
+      tagEditorStore.loadingSongs = false;
+    }
+  }
+
+  function selectSongForEdit(song: SongEntry) {
+    tagEditorStore.editingSong = song;
+    tagEditorStore.selectedEntityType = 'song';
+    tagEditorStore.selectedCid = song.cid;
+  }
+
+  function backToAlbum() {
+    tagEditorStore.editingSong = null;
+    if (tagEditorStore.editingAlbum) {
+      tagEditorStore.selectedEntityType = 'album';
+      tagEditorStore.selectedCid = tagEditorStore.editingAlbum.cid;
+    }
+  }
+
   function dispose() {
     loadSeq += 1;
     tagEditorStore.reset();
@@ -185,8 +223,23 @@ export function createTagEditorController(deps: TagEditorControllerDeps) {
     get loading() {
       return tagEditorStore.loading;
     },
+    get editingAlbum() {
+      return tagEditorStore.editingAlbum;
+    },
+    get editingAlbumSongs() {
+      return tagEditorStore.editingAlbumSongs;
+    },
+    get editingSong() {
+      return tagEditorStore.editingSong;
+    },
+    get loadingSongs() {
+      return tagEditorStore.loadingSongs;
+    },
     loadData,
     selectEntity,
+    selectAlbumForEdit,
+    selectSongForEdit,
+    backToAlbum,
     setTag,
     removeTag,
     addDimension,

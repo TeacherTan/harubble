@@ -1,16 +1,902 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "updatedAt": "2026-05-07T12:00:00Z",
   "tagDimensions": [
-    { "key": "faction", "label": { "zh-CN": "阵营", "en-US": "Faction" } },
-    { "key": "genre", "label": { "zh-CN": "曲风", "en-US": "Genre" } },
-    { "key": "era", "label": { "zh-CN": "时代", "en-US": "Era" } },
-    { "key": "event", "label": { "zh-CN": "活动", "en-US": "Event" } }
+    {
+      "key": "type",
+      "label": {
+        "zh-CN": "类型",
+        "en-US": "Type"
+      }
+    },
+    {
+      "key": "faction",
+      "label": {
+        "zh-CN": "阵营",
+        "en-US": "Faction"
+      }
+    },
+    {
+      "key": "character",
+      "label": {
+        "zh-CN": "角色",
+        "en-US": "Character"
+      }
+    }
   ],
-  "albums": {},
+  "albums": [
+    {
+      "cid": "7762",
+      "type": "Character EP",
+      "name": "Innocence",
+      "releaseDate": "2024-06-01",
+      "faction": "Rhodes Island",
+      "character": "Kal'tsit",
+      "artistes": [
+        "塞壬唱片-MSR"
+      ]
+    },
+    {
+      "cid": "1011",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "1013",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "1016",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "1022",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "1024",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "1025",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "1026",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "1027",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "1029",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "1034",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "2442",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "2443",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "2444",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "2445",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "2450",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "2451",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "2455",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "2462",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "2469",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "3806",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "3882",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "3890",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "3893",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "3894",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "3896",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "3898",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "3899",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4501",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4503",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4504",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4507",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4508",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4510",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4512",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4513",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4515",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4516",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4520",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4522",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4524",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4527",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4528",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "4529",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5101",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5102",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5103",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5104",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5105",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5109",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5191",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5192",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5193",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "5196",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "6650",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "6652",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "6662",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "6665",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "6666",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "6667",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "6674",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7763",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7764",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7767",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7769",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7770",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7772",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7773",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7775",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7777",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "7779",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "8920",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "8922",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "8924",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "8927",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "8930",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "8933",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "8938",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "8940",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "8948",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "9373",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "9379",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "9385",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "9389",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "9397",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "9398",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "9399",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "0230",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "0235",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "0236",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "0238",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "0239",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "0243",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "0244",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "0245",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    },
+    {
+      "cid": "0247",
+      "type": "OST",
+      "name": null,
+      "releaseDate": null,
+      "faction": null,
+      "character": null,
+      "artistes": null
+    }
+  ],
   "songs": {
     "880309": {
-      "event": ["2026音律联觉"]
+      "event": [
+        "2026音律联觉"
+      ]
     }
   }
 }

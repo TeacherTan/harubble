@@ -180,7 +180,12 @@
     }}
   >
     <svg class="play-indicator-icon" viewBox="0 0 24 24" aria-hidden="true">
-      {#if isPlaying && !isPaused}<rect x="7.15" y="5.95" width="3.4" height="12.1" rx="1.25"
+      {#if isPlaying && !isPaused}<rect
+          x="7.15"
+          y="5.95"
+          width="3.4"
+          height="12.1"
+          rx="1.25"
         ></rect><rect x="13.45" y="5.95" width="3.4" height="12.1" rx="1.25"
         ></rect>{:else}<path d="M8.2 6.3v11.4L17.35 12z"></path>{/if}
     </svg>

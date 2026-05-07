@@ -13,17 +13,15 @@
     onRemoveTag: (dimensionKey: string) => Promise<void>;
   }
 
-  let {
-    dimensionKey,
-    dimensionLabel,
-    values,
-    onSetTag,
-    onRemoveTag,
-  }: Props = $props();
+  let { dimensionKey, dimensionLabel, values, onSetTag, onRemoveTag }: Props =
+    $props();
 
   let newValueZh = $state('');
   let newValueEn = $state('');
 
+  function displayValue(val: TagEditorLocalizedValue): string {
+    return val['zh-CN'] || val['en-US'] || Object.values(val)[0] || '';
+  }
   async function handleAdd() {
     if (!newValueZh.trim()) return;
     const newVal: TagEditorLocalizedValue = { 'zh-CN': newValueZh.trim() };
@@ -54,27 +52,20 @@
   <div class="dimension-values">
     {#each values as val, idx (idx)}
       <span class="value-chip">
-        {val['zh-CN'] ?? val['en-US'] ?? Object.values(val)[0] ?? ''}
+        {displayValue(val)}
         <button
+          type="button"
           class="chip-remove"
           onclick={() => handleRemoveValue(idx)}
-          aria-label="移除"
-        >×</button>
+          aria-label="移除">×</button
+        >
       </span>
     {/each}
   </div>
 
   <div class="dimension-add">
-    <input
-      bind:value={newValueZh}
-      placeholder="中文值"
-      class="value-input"
-    />
-    <input
-      bind:value={newValueEn}
-      placeholder="English"
-      class="value-input"
-    />
+    <input bind:value={newValueZh} placeholder="中文值" class="value-input" />
+    <input bind:value={newValueEn} placeholder="English" class="value-input" />
     <Button size="sm" onclick={handleAdd}>+</Button>
   </div>
 </div>

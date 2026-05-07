@@ -25,11 +25,17 @@ use tempfile::NamedTempFile;
 // ─── 公开常量 ────────────────────────────────────────────────────────────────
 
 /// 当前支持的 tag 注册表 schema 版本。加载缓存时若版本不匹配则拒绝并降级为空注册表。
-pub(crate) const CURRENT_SCHEMA_VERSION: u32 = 1;
+pub(crate) const CURRENT_SCHEMA_VERSION: u32 = 2;
 
 /// 远端 tag 注册表 JSON 文件地址，用于后台增量拉取与版本比对。
+#[cfg(not(debug_assertions))]
 pub(crate) const REMOTE_URL: &str =
     "https://raw.githubusercontent.com/anselyuki/siren-music-download/main/data/tag_registry.json";
+
+/// dev 模式下使用的本地 tag 注册表文件路径（相对于 src-tauri 目录）。
+#[cfg(debug_assertions)]
+pub(crate) const DEV_LOCAL_PATH: &str =
+    concat!(env!("CARGO_MANIFEST_DIR"), "/../data/tag_registry.json");
 
 // ─── 缓存文件名 ───────────────────────────────────────────────────────────────
 
@@ -44,7 +50,7 @@ const CACHE_FILE_NAME: &str = "tag_registry.json";
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TagRegistry {
-    /// 注册表 schema 版本，当前为 1。
+    /// 注册表 schema 版本，当前为 2。
     #[serde(default)]
     pub(crate) schema_version: u32,
     /// 注册表最后更新时间（ISO 8601 字符串），用于远端版本对比。
@@ -53,12 +59,40 @@ pub struct TagRegistry {
     /// 所有 tag 维度定义，包含 key 与各语种的展示名称。
     #[serde(default)]
     pub(crate) tag_dimensions: Vec<TagDimension>,
-    /// 专辑 CID → 专辑标签集合的映射。
+    /// 专辑条目列表，每个条目包含 cid 与扁平化的 tag 字段。
     #[serde(default)]
-    pub(crate) albums: HashMap<String, TagSet>,
+    pub(crate) albums: Vec<AlbumEntry>,
     /// 单曲 CID → 单曲标签集合的映射。
     #[serde(default)]
     pub(crate) songs: HashMap<String, TagSet>,
+}
+
+/// 单个专辑的扁平化 tag 条目（对应 JSON 中 albums 数组的元素）。
+///
+/// 所有字段均可为空（`None`），表示该维度尚未填写。
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AlbumEntry {
+    /// 专辑 CID（唯一标识）。
+    pub(crate) cid: String,
+    /// 专辑类型（如 "OST"、"Character EP"）。
+    #[serde(default, rename = "type")]
+    pub(crate) album_type: Option<String>,
+    /// 专辑名称。
+    #[serde(default)]
+    pub(crate) name: Option<String>,
+    /// 发行日期（ISO 8601 日期字符串）。
+    #[serde(default)]
+    pub(crate) release_date: Option<String>,
+    /// 所属阵营。
+    #[serde(default)]
+    pub(crate) faction: Option<String>,
+    /// 关联角色。
+    #[serde(default)]
+    pub(crate) character: Option<String>,
+    /// 艺术家列表。
+    #[serde(default)]
+    pub(crate) artistes: Option<Vec<String>>,
 }
 
 /// 单个 tag 维度的定义。
@@ -103,6 +137,11 @@ pub struct TagDimensionResolved {
 
 // ─── 服务结构 ─────────────────────────────────────────────────────────────────
 
+/// 运行时使用的专辑 tag 查询索引，从 `Vec<AlbumEntry>` 派生。
+///
+/// 将扁平化的 `AlbumEntry` 转换为 `cid → TagSet` 的 HashMap，供查询方法使用。
+type AlbumTagIndex = HashMap<String, TagSet>;
+
 /// Tag 注册表服务。
 ///
 /// 负责从本地缓存文件加载 tag 注册表，并以读多写少的 `Arc<RwLock<TagRegistry>>` 模式
@@ -123,6 +162,7 @@ pub struct TagDimensionResolved {
 #[derive(Clone)]
 pub(crate) struct TagRegistryService {
     registry: Arc<RwLock<TagRegistry>>,
+    album_index: Arc<RwLock<AlbumTagIndex>>,
     cache_path: PathBuf,
 }
 
@@ -137,8 +177,10 @@ impl TagRegistryService {
     pub(crate) fn new(app_data_dir: &Path) -> Self {
         let cache_path = app_data_dir.join(CACHE_FILE_NAME);
         let registry = load_from_cache(&cache_path).unwrap_or_default();
+        let album_index = build_album_index(&registry.albums);
         Self {
             registry: Arc::new(RwLock::new(registry)),
+            album_index: Arc::new(RwLock::new(album_index)),
             cache_path,
         }
     }
@@ -172,11 +214,11 @@ impl TagRegistryService {
     /// - `locale`：目标语种。
     pub(crate) fn get_album_tags(&self, album_cid: &str, locale: Locale) -> Vec<TagEntry> {
         let registry = self.registry.read().expect("tag registry RwLock poisoned");
-        resolve_tag_set(
-            registry.albums.get(album_cid),
-            &registry.tag_dimensions,
-            locale,
-        )
+        let index = self
+            .album_index
+            .read()
+            .expect("album_index RwLock poisoned");
+        resolve_tag_set(index.get(album_cid), &registry.tag_dimensions, locale)
     }
 
     /// 获取指定单曲的 tag 列表，合并专辑继承标签后按指定 locale 解析。
@@ -196,8 +238,12 @@ impl TagRegistryService {
         locale: Locale,
     ) -> Vec<TagEntry> {
         let registry = self.registry.read().expect("tag registry RwLock poisoned");
+        let index = self
+            .album_index
+            .read()
+            .expect("album_index RwLock poisoned");
         resolve_merged_tag_set(
-            registry.albums.get(album_cid),
+            index.get(album_cid),
             registry.songs.get(song_cid),
             &registry.tag_dimensions,
             locale,
@@ -213,8 +259,11 @@ impl TagRegistryService {
     ///
     /// - `album_cid`：专辑 CID。
     pub(crate) fn get_all_locale_tag_values_for_album(&self, album_cid: &str) -> String {
-        let registry = self.registry.read().expect("tag registry RwLock poisoned");
-        collect_all_locale_values(registry.albums.get(album_cid), None)
+        let index = self
+            .album_index
+            .read()
+            .expect("album_index RwLock poisoned");
+        collect_all_locale_values(index.get(album_cid), None)
     }
 
     /// 获取指定单曲（含继承专辑 tag）的全语种 tag 值拼接串，供搜索索引使用。
@@ -232,7 +281,11 @@ impl TagRegistryService {
         album_cid: &str,
     ) -> String {
         let registry = self.registry.read().expect("tag registry RwLock poisoned");
-        collect_all_locale_values(registry.albums.get(album_cid), registry.songs.get(song_cid))
+        let index = self
+            .album_index
+            .read()
+            .expect("album_index RwLock poisoned");
+        collect_all_locale_values(index.get(album_cid), registry.songs.get(song_cid))
     }
 
     /// 按维度 key 聚合专辑 CID，返回 tag 值 → 专辑 CID 列表的映射。
@@ -249,9 +302,12 @@ impl TagRegistryService {
         dimension_key: &str,
         locale: Locale,
     ) -> HashMap<String, Vec<String>> {
-        let registry = self.registry.read().expect("tag registry RwLock poisoned");
+        let index = self
+            .album_index
+            .read()
+            .expect("album_index RwLock poisoned");
         let mut result: HashMap<String, Vec<String>> = HashMap::new();
-        for (album_cid, tag_set) in &registry.albums {
+        for (album_cid, tag_set) in index.iter() {
             if let Some(values) = tag_set.tags.get(dimension_key) {
                 for localized in values {
                     let label = resolve_localized_value(&localized.0, locale);
@@ -275,9 +331,17 @@ impl TagRegistryService {
     ///
     /// 若创建临时文件、写入内容或原子重命名失败，返回 `Err`。
     pub(crate) fn update(&self, new_registry: TagRegistry) -> Result<()> {
+        let new_index = build_album_index(&new_registry.albums);
         {
             let mut registry = self.registry.write().expect("tag registry RwLock poisoned");
             *registry = new_registry.clone();
+        }
+        {
+            let mut index = self
+                .album_index
+                .write()
+                .expect("album_index RwLock poisoned");
+            *index = new_index;
         }
         persist_to_cache(&self.cache_path, &new_registry)
     }
@@ -293,6 +357,85 @@ impl TagRegistryService {
 }
 
 // ─── 私有辅助函数 ─────────────────────────────────────────────────────────────
+
+/// 从 `AlbumEntry` 列表构建 cid → TagSet 的查询索引。
+///
+/// 将扁平字段转换为 `LocalizedValue` 格式，跳过 `None` 字段。
+fn build_album_index(albums: &[AlbumEntry]) -> AlbumTagIndex {
+    albums
+        .iter()
+        .filter_map(|entry| {
+            let tag_set = album_entry_to_tag_set(entry);
+            if tag_set.tags.is_empty() {
+                None
+            } else {
+                Some((entry.cid.clone(), tag_set))
+            }
+        })
+        .collect()
+}
+
+/// 将单个 `AlbumEntry` 的扁平字段转换为 `TagSet`。
+fn album_entry_to_tag_set(entry: &AlbumEntry) -> TagSet {
+    let mut tags: HashMap<String, Vec<LocalizedValue>> = HashMap::new();
+
+    if let Some(ref v) = entry.album_type {
+        tags.insert("type".to_string(), vec![plain_localized_value(v)]);
+    }
+    if let Some(ref v) = entry.faction {
+        tags.insert("faction".to_string(), vec![plain_localized_value(v)]);
+    }
+    if let Some(ref v) = entry.character {
+        tags.insert("character".to_string(), vec![plain_localized_value(v)]);
+    }
+
+    TagSet { tags }
+}
+
+/// 创建一个不区分语种的 `LocalizedValue`（zh-CN 和 en-US 使用相同值）。
+fn plain_localized_value(value: &str) -> LocalizedValue {
+    LocalizedValue(HashMap::from([
+        ("zh-CN".to_string(), value.to_string()),
+        ("en-US".to_string(), value.to_string()),
+    ]))
+}
+
+/// 将 `Vec<AlbumEntry>` 转换为 `HashMap<String, TagSet>`（供 tag editor 使用）。
+pub(crate) fn albums_to_tag_map(albums: &[AlbumEntry]) -> HashMap<String, TagSet> {
+    build_album_index(albums)
+}
+
+/// 将 `HashMap<String, TagSet>` 转换回 `Vec<AlbumEntry>`（供 tag editor 持久化使用）。
+pub(crate) fn tag_map_to_albums(map: &HashMap<String, TagSet>) -> Vec<AlbumEntry> {
+    map.iter()
+        .map(|(cid, tag_set)| tag_set_to_album_entry(cid, tag_set))
+        .collect()
+}
+
+/// 将单个 `TagSet` 转换回 `AlbumEntry`。
+fn tag_set_to_album_entry(cid: &str, tag_set: &TagSet) -> AlbumEntry {
+    let get_first = |key: &str| -> Option<String> {
+        tag_set.tags.get(key).and_then(|vals| {
+            vals.first().map(|lv| {
+                lv.0.get("zh-CN")
+                    .or_else(|| lv.0.get("en-US"))
+                    .or_else(|| lv.0.values().next())
+                    .cloned()
+                    .unwrap_or_default()
+            })
+        })
+    };
+
+    AlbumEntry {
+        cid: cid.to_string(),
+        album_type: get_first("type"),
+        name: get_first("name"),
+        release_date: get_first("releaseDate"),
+        faction: get_first("faction"),
+        character: get_first("character"),
+        artistes: None,
+    }
+}
 
 /// 将 `Locale` 枚举转换为 BCP 47 语言标签字符串。
 fn locale_to_key(locale: Locale) -> &'static str {
@@ -472,19 +615,6 @@ mod tests {
     use super::*;
 
     fn make_registry() -> TagRegistry {
-        let mut albums = HashMap::new();
-        let mut album_tags = HashMap::new();
-        album_tags.insert(
-            "faction".to_string(),
-            vec![LocalizedValue({
-                let mut m = HashMap::new();
-                m.insert("zh-CN".to_string(), "罗德岛".to_string());
-                m.insert("en-US".to_string(), "Rhodes Island".to_string());
-                m
-            })],
-        );
-        albums.insert("ALBUM_CID".to_string(), TagSet { tags: album_tags });
-
         let mut songs = HashMap::new();
         let mut song_tags = HashMap::new();
         song_tags.insert(
@@ -521,14 +651,20 @@ mod tests {
                     },
                 },
             ],
-            albums,
+            albums: vec![AlbumEntry {
+                cid: "ALBUM_CID".to_string(),
+                faction: Some("罗德岛".to_string()),
+                ..Default::default()
+            }],
             songs,
         }
     }
 
     fn make_service_with(registry: TagRegistry) -> TagRegistryService {
+        let album_index = build_album_index(&registry.albums);
         TagRegistryService {
             registry: Arc::new(RwLock::new(registry)),
+            album_index: Arc::new(RwLock::new(album_index)),
             cache_path: PathBuf::from("/tmp/test_tag_registry.json"),
         }
     }
@@ -575,12 +711,10 @@ mod tests {
     }
 
     #[test]
-    fn get_all_locale_tag_values_for_album_contains_all_locales() {
+    fn get_all_locale_tag_values_for_album_contains_value() {
         let svc = make_service_with(make_registry());
         let text = svc.get_all_locale_tag_values_for_album("ALBUM_CID");
-        // 应同时包含中文和英文值
-        assert!(text.contains("罗德岛"), "should contain zh-CN value");
-        assert!(text.contains("Rhodes Island"), "should contain en-US value");
+        assert!(text.contains("罗德岛"), "should contain faction value");
     }
 
     #[test]
@@ -607,14 +741,11 @@ mod tests {
             "schemaVersion": 99,
             "updatedAt": "",
             "tagDimensions": [],
-            "albums": {},
+            "albums": [],
             "songs": {}
         });
         std::fs::write(&path, serde_json::to_vec(&bad).unwrap()).unwrap();
-        // schema_version 字段对应 camelCase，但我们的结构体用 rename_all = "camelCase"
-        // 此处写 schemaVersion 即为 JSON key；load_from_cache 应该 parse 成功但 schema 不匹配返回 None
         let result = load_from_cache(&path.to_path_buf());
-        // version=99 与 CURRENT_SCHEMA_VERSION=1 不同，应返回 None
         assert!(result.is_none());
     }
 
@@ -626,7 +757,7 @@ mod tests {
         persist_to_cache(&path.to_path_buf(), &registry).unwrap();
         let loaded = load_from_cache(&path.to_path_buf()).unwrap();
         assert_eq!(loaded.updated_at, "2026-04-29T12:00:00Z");
-        assert!(loaded.albums.contains_key("ALBUM_CID"));
+        assert!(loaded.albums.iter().any(|a| a.cid == "ALBUM_CID"));
     }
 
     #[test]

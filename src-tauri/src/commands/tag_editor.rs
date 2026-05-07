@@ -3,7 +3,7 @@
 //! 提供双层存储（remote + local overlay）的 CRUD、合并计算、三路合并与冲突解决能力。
 
 use crate::app_state::AppState;
-use crate::tag_editor::{ConflictResolution, EntityType, MergeConflict, MergeResult};
+use crate::tag_editor::{ConflictResolution, EntityType, MergeResult};
 use crate::tag_registry::{LocalizedValue, TagRegistry};
 use tauri::State;
 
@@ -16,7 +16,7 @@ pub fn get_tag_editor_merged(state: State<'_, AppState>) -> Result<TagRegistry, 
 /// 返回本地 overlay 层的原始内容。
 #[tauri::command]
 pub fn get_tag_editor_local_overlay(state: State<'_, AppState>) -> Result<TagRegistry, String> {
-    Ok(state.tag_editor.local_registry().clone())
+    Ok(state.tag_editor.local_registry())
 }
 
 /// 设置指定实体在指定维度上的 tag 值（写入本地 overlay）。

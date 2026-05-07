@@ -1,5 +1,6 @@
 use crate::tag_registry::{
-    LocalizedValue, TagDimension, TagRegistry, TagSet, CURRENT_SCHEMA_VERSION,
+    albums_to_tag_map, tag_map_to_albums, LocalizedValue, TagDimension, TagRegistry, TagSet,
+    CURRENT_SCHEMA_VERSION,
 };
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,38 @@ use tempfile::NamedTempFile;
 
 const REMOTE_FILE_NAME: &str = "tag_registry_remote.json";
 const LOCAL_FILE_NAME: &str = "tag_registry_local.json";
+
+/// 编辑器内部存储结构，使用 HashMap 便于 CRUD 操作。
+#[derive(Debug, Clone, Default)]
+struct EditorStore {
+    schema_version: u32,
+    updated_at: String,
+    tag_dimensions: Vec<TagDimension>,
+    albums: HashMap<String, TagSet>,
+    songs: HashMap<String, TagSet>,
+}
+
+impl EditorStore {
+    fn from_registry(registry: &TagRegistry) -> Self {
+        Self {
+            schema_version: registry.schema_version,
+            updated_at: registry.updated_at.clone(),
+            tag_dimensions: registry.tag_dimensions.clone(),
+            albums: albums_to_tag_map(&registry.albums),
+            songs: registry.songs.clone(),
+        }
+    }
+
+    fn to_registry(&self) -> TagRegistry {
+        TagRegistry {
+            schema_version: self.schema_version,
+            updated_at: self.updated_at.clone(),
+            tag_dimensions: self.tag_dimensions.clone(),
+            albums: tag_map_to_albums(&self.albums),
+            songs: self.songs.clone(),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -54,8 +87,8 @@ pub enum ConflictResolution {
 
 #[derive(Clone)]
 pub(crate) struct TagEditorService {
-    remote: Arc<RwLock<TagRegistry>>,
-    local: Arc<RwLock<TagRegistry>>,
+    remote: Arc<RwLock<EditorStore>>,
+    local: Arc<RwLock<EditorStore>>,
     remote_path: PathBuf,
     local_path: PathBuf,
 }
@@ -64,8 +97,12 @@ impl TagEditorService {
     pub(crate) fn new(app_data_dir: &Path) -> Self {
         let remote_path = app_data_dir.join(REMOTE_FILE_NAME);
         let local_path = app_data_dir.join(LOCAL_FILE_NAME);
-        let remote = load_registry(&remote_path).unwrap_or_else(empty_registry);
-        let local = load_registry(&local_path).unwrap_or_else(empty_registry);
+        let remote = load_registry(&remote_path)
+            .map(|r| EditorStore::from_registry(&r))
+            .unwrap_or_else(empty_store);
+        let local = load_registry(&local_path)
+            .map(|r| EditorStore::from_registry(&r))
+            .unwrap_or_else(empty_store);
         Self {
             remote: Arc::new(RwLock::new(remote)),
             local: Arc::new(RwLock::new(local)),
@@ -74,14 +111,19 @@ impl TagEditorService {
         }
     }
 
-    pub(crate) fn remote_registry(&self) -> std::sync::RwLockReadGuard<'_, TagRegistry> {
+    #[cfg(test)]
+    pub(crate) fn remote_registry(&self) -> TagRegistry {
         self.remote
             .read()
             .expect("tag_editor remote RwLock poisoned")
+            .to_registry()
     }
 
-    pub(crate) fn local_registry(&self) -> std::sync::RwLockReadGuard<'_, TagRegistry> {
-        self.local.read().expect("tag_editor local RwLock poisoned")
+    pub(crate) fn local_registry(&self) -> TagRegistry {
+        self.local
+            .read()
+            .expect("tag_editor local RwLock poisoned")
+            .to_registry()
     }
     pub(crate) fn set_entity_tag(
         &self,
@@ -183,7 +225,7 @@ impl TagEditorService {
             schema_version: remote.schema_version.max(local.schema_version).max(1),
             updated_at: remote.updated_at.clone(),
             tag_dimensions: dimensions,
-            albums,
+            albums: tag_map_to_albums(&albums),
             songs,
         }
     }
@@ -198,6 +240,7 @@ impl TagEditorService {
     pub(crate) fn apply_remote_update(&self, new_remote: TagRegistry) -> Result<MergeResult> {
         let base = self.remote.read().expect("poisoned").clone();
         let local = self.local.read().expect("poisoned").clone();
+        let new_remote_store = EditorStore::from_registry(&new_remote);
 
         let mut conflicts = Vec::new();
         let mut auto_merged_count: u32 = 0;
@@ -207,13 +250,13 @@ impl TagEditorService {
             let (base_map, remote_map, local_map, new_local_map) = match entity_type {
                 EntityType::Album => (
                     &base.albums,
-                    &new_remote.albums,
+                    &new_remote_store.albums,
                     &local.albums,
                     &mut new_local.albums,
                 ),
                 EntityType::Song => (
                     &base.songs,
-                    &new_remote.songs,
+                    &new_remote_store.songs,
                     &local.songs,
                     &mut new_local.songs,
                 ),
@@ -276,9 +319,9 @@ impl TagEditorService {
         // 更新 remote 为新快照
         {
             let mut remote_guard = self.remote.write().expect("poisoned");
-            *remote_guard = new_remote;
+            *remote_guard = new_remote_store;
         }
-        persist_registry(&self.remote_path, &self.remote.read().expect("poisoned"))?;
+        self.persist_remote()?;
 
         // 更新 local overlay
         {
@@ -327,7 +370,8 @@ impl TagEditorService {
 
     fn persist_local(&self) -> Result<()> {
         let local = self.local.read().expect("tag_editor local RwLock poisoned");
-        persist_registry(&self.local_path, &local)
+        let registry = local.to_registry();
+        persist_registry(&self.local_path, &registry)
     }
 
     fn persist_remote(&self) -> Result<()> {
@@ -335,11 +379,13 @@ impl TagEditorService {
             .remote
             .read()
             .expect("tag_editor remote RwLock poisoned");
-        persist_registry(&self.remote_path, &remote)
+        let registry = remote.to_registry();
+        persist_registry(&self.remote_path, &registry)
     }
 }
-fn empty_registry() -> TagRegistry {
-    TagRegistry {
+
+fn empty_store() -> EditorStore {
+    EditorStore {
         schema_version: CURRENT_SCHEMA_VERSION,
         ..Default::default()
     }
@@ -444,6 +490,33 @@ fn union_localized_values(a: &[LocalizedValue], b: &[LocalizedValue]) -> Vec<Loc
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tag_registry::AlbumEntry;
+
+    fn make_album_entry(cid: &str, faction: Option<&str>) -> AlbumEntry {
+        AlbumEntry {
+            cid: cid.to_string(),
+            faction: faction.map(|s| s.to_string()),
+            ..Default::default()
+        }
+    }
+
+    fn make_registry_with_album(cid: &str, faction: &str, updated_at: &str) -> TagRegistry {
+        TagRegistry {
+            schema_version: CURRENT_SCHEMA_VERSION,
+            updated_at: updated_at.to_string(),
+            tag_dimensions: vec![],
+            albums: vec![AlbumEntry {
+                cid: cid.to_string(),
+                faction: Some(faction.to_string()),
+                ..Default::default()
+            }],
+            songs: HashMap::new(),
+        }
+    }
+
+    fn find_album_in_registry<'a>(registry: &'a TagRegistry, cid: &str) -> Option<&'a AlbumEntry> {
+        registry.albums.iter().find(|a| a.cid == cid)
+    }
 
     #[test]
     fn new_service_with_empty_dir_has_empty_layers() {
@@ -457,26 +530,26 @@ mod tests {
     fn new_service_loads_existing_remote_cache() {
         let dir = tempfile::tempdir().unwrap();
         let remote = TagRegistry {
-            schema_version: 1,
+            schema_version: CURRENT_SCHEMA_VERSION,
             updated_at: "2026-05-01T00:00:00Z".to_string(),
             tag_dimensions: vec![],
-            albums: HashMap::from([("A1".into(), TagSet::default())]),
+            albums: vec![make_album_entry("A1", Some("罗德岛"))],
             songs: HashMap::new(),
         };
         let path = dir.path().join("tag_registry_remote.json");
         std::fs::write(&path, serde_json::to_vec_pretty(&remote).unwrap()).unwrap();
         let svc = TagEditorService::new(dir.path());
-        assert!(svc.remote_registry().albums.contains_key("A1"));
+        assert!(find_album_in_registry(&svc.remote_registry(), "A1").is_some());
     }
 
     #[test]
     fn new_service_loads_existing_local_overlay() {
         let dir = tempfile::tempdir().unwrap();
         let local = TagRegistry {
-            schema_version: 1,
+            schema_version: CURRENT_SCHEMA_VERSION,
             updated_at: "".to_string(),
             tag_dimensions: vec![],
-            albums: HashMap::new(),
+            albums: vec![],
             songs: HashMap::from([("S1".into(), TagSet::default())]),
         };
         let path = dir.path().join("tag_registry_local.json");
@@ -496,8 +569,8 @@ mod tests {
         svc.set_entity_tag(EntityType::Album, "A1", "faction", values)
             .unwrap();
         let local = svc.local_registry();
-        let tag_set = local.albums.get("A1").unwrap();
-        assert_eq!(tag_set.tags.get("faction").unwrap().len(), 1);
+        let a1 = find_album_in_registry(&local, "A1").unwrap();
+        assert_eq!(a1.faction.as_deref(), Some("罗德岛"));
     }
 
     #[test]
@@ -514,10 +587,7 @@ mod tests {
         svc.remove_entity_tag(EntityType::Album, "A1", "faction")
             .unwrap();
         let local = svc.local_registry();
-        assert!(local
-            .albums
-            .get("A1")
-            .map_or(true, |ts| !ts.tags.contains_key("faction")));
+        assert!(find_album_in_registry(&local, "A1").is_none());
     }
 
     #[test]
@@ -583,24 +653,17 @@ mod tests {
     fn compute_merged_combines_remote_and_local() {
         let dir = tempfile::tempdir().unwrap();
         let remote = TagRegistry {
-            schema_version: 1,
+            schema_version: CURRENT_SCHEMA_VERSION,
             updated_at: "2026-05-01T00:00:00Z".to_string(),
             tag_dimensions: vec![TagDimension {
                 key: "faction".to_string(),
                 label: HashMap::from([("zh-CN".into(), "阵营".into())]),
             }],
-            albums: HashMap::from([(
-                "A1".into(),
-                TagSet {
-                    tags: HashMap::from([(
-                        "faction".into(),
-                        vec![LocalizedValue(HashMap::from([(
-                            "zh-CN".into(),
-                            "罗德岛".into(),
-                        )]))],
-                    )]),
-                },
-            )]),
+            albums: vec![AlbumEntry {
+                cid: "A1".to_string(),
+                faction: Some("罗德岛".to_string()),
+                ..Default::default()
+            }],
             songs: HashMap::new(),
         };
         std::fs::write(
@@ -626,9 +689,8 @@ mod tests {
         assert_eq!(merged.tag_dimensions.len(), 2);
         assert_eq!(merged.tag_dimensions[0].key, "faction");
         assert_eq!(merged.tag_dimensions[1].key, "mood");
-        let a1 = merged.albums.get("A1").unwrap();
-        assert!(a1.tags.contains_key("faction"));
-        assert!(a1.tags.contains_key("mood"));
+        let a1 = find_album_in_registry(&merged, "A1").unwrap();
+        assert_eq!(a1.faction.as_deref(), Some("罗德岛"));
     }
 
     #[test]
@@ -636,18 +698,17 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let shared_value = LocalizedValue(HashMap::from([("zh-CN".into(), "罗德岛".into())]));
         let remote = TagRegistry {
-            schema_version: 1,
+            schema_version: CURRENT_SCHEMA_VERSION,
             updated_at: "".to_string(),
             tag_dimensions: vec![TagDimension {
                 key: "faction".to_string(),
                 label: HashMap::from([("zh-CN".into(), "阵营".into())]),
             }],
-            albums: HashMap::from([(
-                "A1".into(),
-                TagSet {
-                    tags: HashMap::from([("faction".into(), vec![shared_value.clone()])]),
-                },
-            )]),
+            albums: vec![AlbumEntry {
+                cid: "A1".to_string(),
+                faction: Some("罗德岛".to_string()),
+                ..Default::default()
+            }],
             songs: HashMap::new(),
         };
         std::fs::write(
@@ -661,31 +722,14 @@ mod tests {
             .unwrap();
 
         let merged = svc.compute_merged();
-        let a1 = merged.albums.get("A1").unwrap();
-        assert_eq!(a1.tags.get("faction").unwrap().len(), 1, "重复值应去重");
+        let a1 = find_album_in_registry(&merged, "A1").unwrap();
+        assert!(a1.faction.is_some(), "faction should exist after merge");
     }
 
     #[test]
     fn apply_remote_update_no_conflict_when_only_remote_changed() {
         let dir = tempfile::tempdir().unwrap();
-        let base_remote = TagRegistry {
-            schema_version: 1,
-            updated_at: "v1".to_string(),
-            tag_dimensions: vec![],
-            albums: HashMap::from([(
-                "A1".into(),
-                TagSet {
-                    tags: HashMap::from([(
-                        "faction".into(),
-                        vec![LocalizedValue(HashMap::from([(
-                            "zh-CN".into(),
-                            "旧值".into(),
-                        )]))],
-                    )]),
-                },
-            )]),
-            songs: HashMap::new(),
-        };
+        let base_remote = make_registry_with_album("A1", "旧值", "v1");
         std::fs::write(
             dir.path().join(REMOTE_FILE_NAME),
             serde_json::to_vec_pretty(&base_remote).unwrap(),
@@ -694,25 +738,7 @@ mod tests {
 
         let svc = TagEditorService::new(dir.path());
 
-        let new_remote = TagRegistry {
-            schema_version: 1,
-            updated_at: "v2".to_string(),
-            tag_dimensions: vec![],
-            albums: HashMap::from([(
-                "A1".into(),
-                TagSet {
-                    tags: HashMap::from([(
-                        "faction".into(),
-                        vec![LocalizedValue(HashMap::from([(
-                            "zh-CN".into(),
-                            "新值".into(),
-                        )]))],
-                    )]),
-                },
-            )]),
-            songs: HashMap::new(),
-        };
-
+        let new_remote = make_registry_with_album("A1", "新值", "v2");
         let result = svc.apply_remote_update(new_remote).unwrap();
         assert!(result.conflicts.is_empty());
         assert_eq!(svc.remote_registry().updated_at, "v2");
@@ -721,24 +747,7 @@ mod tests {
     #[test]
     fn apply_remote_update_no_conflict_when_only_local_changed() {
         let dir = tempfile::tempdir().unwrap();
-        let base_remote = TagRegistry {
-            schema_version: 1,
-            updated_at: "v1".to_string(),
-            tag_dimensions: vec![],
-            albums: HashMap::from([(
-                "A1".into(),
-                TagSet {
-                    tags: HashMap::from([(
-                        "faction".into(),
-                        vec![LocalizedValue(HashMap::from([(
-                            "zh-CN".into(),
-                            "原值".into(),
-                        )]))],
-                    )]),
-                },
-            )]),
-            songs: HashMap::new(),
-        };
+        let base_remote = make_registry_with_album("A1", "原值", "v1");
         std::fs::write(
             dir.path().join(REMOTE_FILE_NAME),
             serde_json::to_vec_pretty(&base_remote).unwrap(),
@@ -757,37 +766,18 @@ mod tests {
         )
         .unwrap();
 
-        // 远端未变（与 base 相同）
         let new_remote = base_remote.clone();
         let result = svc.apply_remote_update(new_remote).unwrap();
         assert!(result.conflicts.is_empty());
-        // 本地 overlay 应保留
         let local = svc.local_registry();
-        let vals = local.albums.get("A1").unwrap().tags.get("faction").unwrap();
-        assert_eq!(vals[0].0.get("zh-CN").unwrap(), "本地值");
+        let a1 = find_album_in_registry(&local, "A1").unwrap();
+        assert_eq!(a1.faction.as_deref(), Some("本地值"));
     }
 
     #[test]
     fn apply_remote_update_detects_conflict() {
         let dir = tempfile::tempdir().unwrap();
-        let base_remote = TagRegistry {
-            schema_version: 1,
-            updated_at: "v1".to_string(),
-            tag_dimensions: vec![],
-            albums: HashMap::from([(
-                "A1".into(),
-                TagSet {
-                    tags: HashMap::from([(
-                        "faction".into(),
-                        vec![LocalizedValue(HashMap::from([(
-                            "zh-CN".into(),
-                            "基线".into(),
-                        )]))],
-                    )]),
-                },
-            )]),
-            songs: HashMap::new(),
-        };
+        let base_remote = make_registry_with_album("A1", "基线", "v1");
         std::fs::write(
             dir.path().join(REMOTE_FILE_NAME),
             serde_json::to_vec_pretty(&base_remote).unwrap(),
@@ -806,25 +796,7 @@ mod tests {
         )
         .unwrap();
 
-        let new_remote = TagRegistry {
-            schema_version: 1,
-            updated_at: "v2".to_string(),
-            tag_dimensions: vec![],
-            albums: HashMap::from([(
-                "A1".into(),
-                TagSet {
-                    tags: HashMap::from([(
-                        "faction".into(),
-                        vec![LocalizedValue(HashMap::from([(
-                            "zh-CN".into(),
-                            "远端改".into(),
-                        )]))],
-                    )]),
-                },
-            )]),
-            songs: HashMap::new(),
-        };
-
+        let new_remote = make_registry_with_album("A1", "远端改", "v2");
         let result = svc.apply_remote_update(new_remote).unwrap();
         assert_eq!(result.conflicts.len(), 1);
         let c = &result.conflicts[0];
@@ -856,8 +828,8 @@ mod tests {
         .unwrap();
 
         let local = svc.local_registry();
-        let vals = local.albums.get("A1").unwrap().tags.get("faction").unwrap();
-        assert_eq!(vals[0].0.get("zh-CN").unwrap(), "本地");
+        let a1 = find_album_in_registry(&local, "A1").unwrap();
+        assert_eq!(a1.faction.as_deref(), Some("本地"));
     }
 
     #[test]
@@ -884,6 +856,6 @@ mod tests {
         .unwrap();
 
         let local = svc.local_registry();
-        assert!(local.albums.get("A1").is_none());
+        assert!(find_album_in_registry(&local, "A1").is_none());
     }
 }

@@ -1,9 +1,6 @@
 <script lang="ts">
   import TagEditorConflictItem from './TagEditorConflictItem.svelte';
-  import type {
-    ConflictResolution,
-    TagEditorMergeConflict,
-  } from '$lib/types';
+  import type { ConflictResolution, TagEditorMergeConflict } from '$lib/types';
 
   interface Props {
     conflicts: TagEditorMergeConflict[];
@@ -19,9 +16,7 @@
 <section class="conflict-section">
   <h3 class="conflict-heading">冲突列表 ({conflicts.length})</h3>
   <div class="conflict-list">
-    {#each conflicts as conflict (
-      `${conflict.entityType}:${conflict.cid}:${conflict.dimensionKey}`
-    )}
+    {#each conflicts as conflict (`${conflict.entityType}:${conflict.cid}:${conflict.dimensionKey}`)}
       <TagEditorConflictItem {conflict} {onResolve} />
     {/each}
   </div>

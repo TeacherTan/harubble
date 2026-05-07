@@ -195,6 +195,7 @@ export function createAppRuntime() {
     removeTagEditorDimension,
     applyTagEditorRemoteUpdate,
     resolveTagEditorConflict,
+    getAlbumDetail: (albumCid: string) => getAlbumDetail(albumCid),
     notifyError,
   });
 
@@ -231,7 +232,11 @@ export function createAppRuntime() {
   const prefersReducedMotion = $derived(envStore.prefersReducedMotion);
   const albums = $derived(libraryController.albums);
   const selectedAlbum = $derived(libraryController.selectedAlbum);
-  const selectedAlbumCid = $derived(libraryController.selectedAlbumCid);
+  const selectedAlbumCid = $derived(
+    shellStore.currentView === 'tagEditor'
+      ? (tagEditorController.editingAlbum?.cid ?? null)
+      : libraryController.selectedAlbumCid
+  );
   const loadingAlbums = $derived(libraryController.loadingAlbums);
   const loadingDetail = $derived(libraryController.loadingDetail);
   const errorMsg = $derived(libraryController.errorMsg);
@@ -416,6 +421,10 @@ export function createAppRuntime() {
   }
 
   async function handleSelectAlbum(album: Album) {
+    if (shellStore.currentView === 'tagEditor') {
+      await tagEditorController.selectAlbumForEdit(album);
+      return;
+    }
     shellStore.navigateToLibrary();
     clearSongSelection();
     selectionModeEnabled = false;

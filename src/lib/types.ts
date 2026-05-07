@@ -394,11 +394,21 @@ export interface TagEditorDimension {
   label: Record<string, string>;
 }
 
+export interface TagEditorAlbumEntry {
+  cid: string;
+  type: string | null;
+  name: string | null;
+  releaseDate: string | null;
+  faction: string | null;
+  character: string | null;
+  artistes: string[] | null;
+}
+
 export interface TagEditorRegistry {
   schemaVersion: number;
   updatedAt: string;
   tagDimensions: TagEditorDimension[];
-  albums: Record<string, TagEditorTagSet>;
+  albums: TagEditorAlbumEntry[];
   songs: Record<string, TagEditorTagSet>;
 }
 

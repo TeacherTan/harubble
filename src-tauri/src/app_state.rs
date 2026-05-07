@@ -796,6 +796,26 @@ pub fn spawn_belong_warmup(app_handle: tauri::AppHandle, state: &AppState) {
     });
 }
 
+/// dev 模式下从本地项目文件加载 tag registry，release 模式下从远端拉取。
+#[cfg(debug_assertions)]
+async fn load_tag_registry_bytes(_state: &AppState) -> anyhow::Result<Vec<u8>> {
+    let path = std::path::Path::new(crate::tag_registry::DEV_LOCAL_PATH);
+    std::fs::read(path).map_err(|e| {
+        anyhow::anyhow!(
+            "failed to read local tag registry at {}: {e}",
+            path.display()
+        )
+    })
+}
+
+#[cfg(not(debug_assertions))]
+async fn load_tag_registry_bytes(state: &AppState) -> anyhow::Result<Vec<u8>> {
+    state
+        .api
+        .download_bytes(crate::tag_registry::REMOTE_URL, |_, _| {})
+        .await
+}
+
 /// 启动 tag registry 远程同步后台任务。
 ///
 /// 在应用启动后异步从远程拉取最新 tag JSON，与本地版本比对后按需替换。
@@ -806,17 +826,14 @@ pub fn spawn_tag_registry_sync(state: &AppState) {
 
     tauri::async_runtime::spawn(async move {
         let updated = async {
-            let response_bytes = state
-                .api
-                .download_bytes(crate::tag_registry::REMOTE_URL, |_, _| {})
-                .await?;
+            let response_bytes = load_tag_registry_bytes(&state).await?;
             let new_registry: crate::tag_registry::TagRegistry =
                 serde_json::from_slice(&response_bytes)
-                    .map_err(|e| anyhow::anyhow!("failed to parse remote tag registry: {e}"))?;
+                    .map_err(|e| anyhow::anyhow!("failed to parse tag registry: {e}"))?;
 
             if new_registry.schema_version != crate::tag_registry::CURRENT_SCHEMA_VERSION {
                 anyhow::bail!(
-                    "remote tag registry schema version {} does not match expected {}",
+                    "tag registry schema version {} does not match expected {}",
                     new_registry.schema_version,
                     crate::tag_registry::CURRENT_SCHEMA_VERSION
                 );

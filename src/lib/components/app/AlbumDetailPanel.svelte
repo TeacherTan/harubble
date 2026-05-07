@@ -107,9 +107,14 @@
       in:fly={{ y: 14, duration: dur(220), delay: dur(30) }}
       out:fly={{ y: 8, duration: dur(220) }}
     >
-      {#if props.album.belong}
+      {#if props.album.belong && props.album.belong.toLowerCase() !== 'arknights'}
         <span class="album-belong-tag">{props.album.belong.toUpperCase()}</span>
       {/if}
+      {#each props.album.tags as tag (tag.dimension)}
+        {#each tag.values as value (value)}
+          <span class="album-belong-tag">{value}</span>
+        {/each}
+      {/each}
       <h1 class="album-hero-title">{props.album.name}</h1>
       {#if props.album.artists && props.album.artists.length > 0}
         <p class="album-hero-artists">{props.album.artists.join(', ')}</p>

@@ -1,9 +1,6 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
-  import type {
-    ConflictResolution,
-    TagEditorMergeConflict,
-  } from '$lib/types';
+  import type { ConflictResolution, TagEditorMergeConflict } from '$lib/types';
 
   interface Props {
     conflict: TagEditorMergeConflict;
@@ -16,11 +13,11 @@
   let { conflict, onResolve }: Props = $props();
 
   function formatValues(
-    values: Record<string, string>[] | null
+    values: Record<string, string | undefined>[] | null
   ): string {
     if (!values || values.length === 0) return '(空)';
     return values
-      .map((v) => v['zh-CN'] ?? v['en-US'] ?? Object.values(v)[0] ?? '')
+      .map((v) => v['zh-CN'] || v['en-US'] || Object.values(v)[0] || '')
       .join(', ');
   }
 </script>
@@ -46,9 +43,7 @@
     </div>
     <div class="value-row">
       <span class="value-label">本地:</span>
-      <span class="value-text local"
-        >{formatValues(conflict.localValues)}</span
-      >
+      <span class="value-text local">{formatValues(conflict.localValues)}</span>
     </div>
   </div>
 
