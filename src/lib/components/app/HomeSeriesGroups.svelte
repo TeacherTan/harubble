@@ -135,8 +135,9 @@
   }
 
   .overflow-badge {
-    font-family: var(--font-body);
+    font-family: var(--font-wide);
     font-size: 0.75rem;
+    font-weight: 700;
     color: var(--text-secondary, rgba(255, 255, 255, 0.6));
     padding: 0 0.25rem;
   }

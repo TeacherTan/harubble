@@ -20,6 +20,7 @@
     selectedAlbumArtworkUrl: string | null;
     currentSongCid: string | null;
     isPlaybackActive: boolean;
+    isPlaybackPaused: boolean;
     downloadingAlbumCid: string | null;
     selectionModeEnabled: boolean;
     selectedSongCids: string[];
@@ -41,6 +42,7 @@
     onDownloadAlbum: (albumCid: string) => void | Promise<void>;
     onDownloadSelection: (songCids: string[]) => void | Promise<void>;
     onPlaySong: (song: SongEntry) => void | Promise<void>;
+    onTogglePlay: () => void | Promise<void>;
     onDownloadSong: (songCid: string) => void | Promise<void>;
     onToggleSongSelection: (songCid: string) => void;
     isSongSelected: (songCid: string) => boolean;
@@ -60,6 +62,7 @@
     selectedAlbumArtworkUrl,
     currentSongCid,
     isPlaybackActive,
+    isPlaybackPaused,
     downloadingAlbumCid,
     selectionModeEnabled,
     selectedSongCids,
@@ -81,6 +84,7 @@
     onDownloadAlbum,
     onDownloadSelection,
     onPlaySong,
+    onTogglePlay,
     onDownloadSong,
     onToggleSongSelection,
     isSongSelected,
@@ -154,6 +158,7 @@
           album={selectedAlbum}
           {currentSongCid}
           {isPlaybackActive}
+          {isPlaybackPaused}
           {downloadingAlbumCid}
           {selectionModeEnabled}
           {selectedSongCids}
@@ -165,6 +170,7 @@
           {onDownloadAlbum}
           {onDownloadSelection}
           {onPlaySong}
+          {onTogglePlay}
           {onDownloadSong}
           {onToggleSongSelection}
           {isSongSelected}

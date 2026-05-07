@@ -45,3 +45,27 @@
   font-display: swap;
   src: url('../../assets/fonts/HarmonyOS-Sans-SC-Black.woff2') format('woff2');
 }
+
+@font-face {
+  font-family: 'Geometos';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('../../assets/fonts/Geometos.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'NovecentoSansWide';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('../../assets/fonts/NovecentoSansWide-Normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'NovecentoSansWide';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('../../assets/fonts/NovecentoSansWide-Bold.woff2') format('woff2');
+}

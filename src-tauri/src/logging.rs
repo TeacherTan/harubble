@@ -500,5 +500,4 @@ mod tests {
         assert_eq!(LogLevel::parse("error"), Some(LogLevel::Error));
         assert_eq!(LogLevel::parse("bogus"), None);
     }
-
 }

@@ -520,8 +520,11 @@ mod tests {
     fn selection_jobs_use_album_subdirectory() {
         let task = make_task("My Album");
 
-        let out_dir =
-            resolve_task_output_dir(DownloadJobKind::Selection, Path::new("/tmp/downloads"), &task);
+        let out_dir = resolve_task_output_dir(
+            DownloadJobKind::Selection,
+            Path::new("/tmp/downloads"),
+            &task,
+        );
 
         assert_eq!(out_dir, Path::new("/tmp/downloads").join("My Album"));
     }
@@ -530,8 +533,7 @@ mod tests {
     fn sanitizes_all_illegal_path_characters() {
         let task = make_task("A\\B*C\"D<E>F|G\0H");
 
-        let out_dir =
-            resolve_task_output_dir(DownloadJobKind::Album, Path::new("/out"), &task);
+        let out_dir = resolve_task_output_dir(DownloadJobKind::Album, Path::new("/out"), &task);
 
         let dir_name = out_dir.file_name().unwrap().to_str().unwrap();
         assert!(

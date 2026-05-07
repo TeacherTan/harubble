@@ -1,11 +1,16 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-04-29T12:00:00Z",
+  "updatedAt": "2026-05-07T12:00:00Z",
   "tagDimensions": [
     { "key": "faction", "label": { "zh-CN": "阵营", "en-US": "Faction" } },
     { "key": "genre", "label": { "zh-CN": "曲风", "en-US": "Genre" } },
-    { "key": "era", "label": { "zh-CN": "时代", "en-US": "Era" } }
+    { "key": "era", "label": { "zh-CN": "时代", "en-US": "Era" } },
+    { "key": "event", "label": { "zh-CN": "活动", "en-US": "Event" } }
   ],
   "albums": {},
-  "songs": {}
+  "songs": {
+    "880309": {
+      "event": ["2026音律联觉"]
+    }
+  }
 }

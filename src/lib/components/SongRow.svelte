@@ -12,6 +12,7 @@
     song: SongEntry;
     index: number;
     isPlaying?: boolean;
+    isPaused?: boolean;
     downloadState?: SongDownloadState;
     downloadDisabled?: boolean;
     selectionMode?: boolean;
@@ -19,6 +20,7 @@
     selectionDisabled?: boolean;
     reducedMotion?: boolean;
     onclick?: () => void;
+    onTogglePlay?: () => void;
     onDownload?: () => void;
     onToggleSelection?: () => void;
   }
@@ -26,6 +28,7 @@
     song,
     index,
     isPlaying = false,
+    isPaused = false,
     downloadState = 'idle',
     downloadDisabled = false,
     selectionMode = false,
@@ -33,6 +36,7 @@
     selectionDisabled = false,
     reducedMotion = false,
     onclick,
+    onTogglePlay,
     onDownload,
     onToggleSelection,
   }: Props = $props();
@@ -161,17 +165,26 @@
     <div class="song-name" class:is-emphasis={showEmphasis}>{song.name}</div>
     <div class="song-artists">{song.artists.join(' · ')}</div>
   </div>
-  <div
+  <button
+    type="button"
     class="song-play-indicator"
     class:is-playing={isPlaying}
     class:is-visible={showPlayIndicator}
+    onclick={(event: MouseEvent) => {
+      event.stopPropagation();
+      if (isPlaying) {
+        onTogglePlay?.();
+      } else {
+        onclick?.();
+      }
+    }}
   >
     <svg class="play-indicator-icon" viewBox="0 0 24 24" aria-hidden="true">
-      {#if isPlaying}<rect x="7.15" y="5.95" width="3.4" height="12.1" rx="1.25"
+      {#if isPlaying && !isPaused}<rect x="7.15" y="5.95" width="3.4" height="12.1" rx="1.25"
         ></rect><rect x="13.45" y="5.95" width="3.4" height="12.1" rx="1.25"
         ></rect>{:else}<path d="M8.2 6.3v11.4L17.35 12z"></path>{/if}
     </svg>
-  </div>
+  </button>
   <div class="song-actions">
     {#if showDownloadedBadge}<span class="song-download-badge"
         >{downloadedBadgeLabel}</span
@@ -286,6 +299,10 @@
     margin-top: 2px;
   }
   .song-play-indicator {
+    appearance: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
     width: 32px;
     height: 32px;
     border-radius: 50%;

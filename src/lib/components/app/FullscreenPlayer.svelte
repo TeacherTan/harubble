@@ -7,6 +7,7 @@
   import type { LyricLine } from '$lib/features/player/lyrics';
 
   type RepeatMode = 'all' | 'one';
+  type SongDownloadState = 'idle' | 'creating' | 'queued' | 'running';
 
   interface Song {
     name: string;
@@ -36,6 +37,9 @@
     onNext: () => void | Promise<void>;
     onShuffleChange: (next: boolean) => void | Promise<void>;
     onRepeatModeChange: (next: RepeatMode) => void | Promise<void>;
+    onDownload: () => void | Promise<void>;
+    downloadState: SongDownloadState;
+    downloadDisabled: boolean;
     onClose: () => void;
   }
 
@@ -61,6 +65,9 @@
     onNext,
     onShuffleChange,
     onRepeatModeChange,
+    onDownload,
+    downloadState,
+    downloadDisabled,
     onClose,
   }: Props = $props();
 
@@ -70,6 +77,10 @@
   let resolvedCoverUrl = $state<string | null>(null);
   let activeCoverUrl: string | null = null;
   let coverRequestSeq = 0;
+  let titleRef = $state<HTMLElement | null>(null);
+  let artistRef = $state<HTMLElement | null>(null);
+  let titleOverflows = $state(false);
+  let artistOverflows = $state(false);
 
   function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
@@ -133,6 +144,22 @@
     repeatMode === 'one' ? labels.repeatOne : labels.repeatAll
   );
 
+  const downloadButtonLabel = $derived.by(() => {
+    switch (downloadState) {
+      case 'creating':
+        return m.common_download_creating_aria({ name: song.name });
+      case 'queued':
+        return m.common_download_queued_aria({ name: song.name });
+      case 'running':
+        return m.common_download_running_aria({ name: song.name });
+      default:
+        return m.common_download_idle_aria({ name: song.name });
+    }
+  });
+  const canDownload = $derived(
+    !isLoading && downloadState === 'idle' && !downloadDisabled
+  );
+
   $effect(() => {
     const coverUrl = song.coverUrl ?? null;
     if (coverUrl === activeCoverUrl) return;
@@ -186,6 +213,20 @@
     }
   });
 
+  $effect(() => {
+    void song.name;
+    if (titleRef) {
+      titleOverflows = titleRef.scrollWidth > titleRef.clientWidth;
+    }
+  });
+
+  $effect(() => {
+    void artistText;
+    if (artistRef) {
+      artistOverflows = artistRef.scrollWidth > artistRef.clientWidth;
+    }
+  });
+
   function handleSeekInput(event: Event) {
     if (!canSeek) return;
     draggingSeek = true;
@@ -217,6 +258,12 @@
   transition:dockTransition={{ duration: dur(380) }}
   onkeydown={(e) => e.key === 'Escape' && onClose()}
 >
+  <div
+    class="fullscreen-drag-region"
+    data-tauri-drag-region
+    aria-hidden="true"
+  ></div>
+
   {#if resolvedCoverUrl}
     <div
       class="fullscreen-bg fullscreen-bg-base"
@@ -266,8 +313,35 @@
     </div>
 
     <div class="fullscreen-meta">
-      <h2 class="fullscreen-title">{song.name}</h2>
-      <p class="fullscreen-artist">{artistText}</p>
+      <div class="fullscreen-meta-text">
+        <h2 class="fullscreen-title" class:overflowing={titleOverflows} bind:this={titleRef}><span class="fullscreen-title-inner">{song.name}</span></h2>
+        <p class="fullscreen-artist" class:overflowing={artistOverflows} bind:this={artistRef}><span class="fullscreen-artist-inner">{artistText}</span></p>
+      </div>
+      <button
+        type="button"
+        class="fs-btn fs-download"
+        class:download-active={downloadState !== 'idle'}
+        aria-label={downloadButtonLabel}
+        title={downloadButtonLabel}
+        disabled={!canDownload}
+        onclick={() => onDownload?.()}
+      >
+        {#if downloadState === 'creating'}
+          <svg class="fs-spin" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+            <path d="M21 3v6h-6"></path>
+          </svg>
+        {:else}
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v9"></path>
+            <path d="m8.5 10.5 3.5 3.5 3.5-3.5"></path>
+            <path d="M5 18h14"></path>
+            {#if downloadState === 'queued'}
+              <path d="M8 4.5h8"></path>
+            {/if}
+          </svg>
+        {/if}
+      </button>
     </div>
 
     <div

@@ -116,6 +116,16 @@
     const nextIndex = (currentIndex + 1) % scopeOptions.length;
     onSearchScopeChange(scopeOptions[nextIndex]?.value ?? 'all');
   }
+  let scrollAreaEl: HTMLElement | undefined = $state();
+  let scrollTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function handleScroll() {
+    scrollAreaEl?.classList.add('is-scrolling');
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      scrollAreaEl?.classList.remove('is-scrolling');
+    }, 1200);
+  }
 </script>
 
 <div class="sidebar-layout">
@@ -147,7 +157,11 @@
     <div class="library-search-divider" aria-hidden="true"></div>
   </div>
 
-  <div class="sidebar-scroll-area">
+  <div
+    class="sidebar-scroll-area"
+    bind:this={scrollAreaEl}
+    onscroll={handleScroll}
+  >
     {#if loadingAlbums}
       <div class="loading">
         <span>{labels.loadingAlbums}</span><MotionSpinner
@@ -263,7 +277,13 @@
     overflow-y: auto;
     min-height: 0;
     scrollbar-width: thin;
-    padding-right: 0;
+    scrollbar-color: transparent transparent;
+    padding-right: 8px;
+  }
+
+  .sidebar-scroll-area:hover,
+  .sidebar-scroll-area.is-scrolling {
+    scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
   }
 
   .sidebar-scroll-area::-webkit-scrollbar {
@@ -272,10 +292,17 @@
 
   .sidebar-scroll-area::-webkit-scrollbar-track {
     background: transparent;
+    margin: 4px 0;
   }
 
   .sidebar-scroll-area::-webkit-scrollbar-thumb {
     border-radius: 4px;
+    background: rgba(255, 255, 255, 0);
+    transition: background 0.3s ease;
+  }
+
+  .sidebar-scroll-area:hover::-webkit-scrollbar-thumb,
+  .sidebar-scroll-area.is-scrolling::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.28);
   }
 
@@ -370,9 +397,10 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
       0 5px 12px color-mix(in srgb, var(--scope-bg) 24%, transparent);
     color: var(--accent-readable-foreground);
+    font-family: var(--font-wide);
     font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     line-height: 1;
     white-space: nowrap;
     transition:

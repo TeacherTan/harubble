@@ -149,20 +149,23 @@ env → library → player → download → home → shell
 
 ### 字体方案
 
-全局字体使用 HarmonyOS Sans SC，通过本地 `@font-face` 声明加载，不依赖外部 CDN。
+全局字体使用 HarmonyOS Sans SC，通过本地 `@font-face` 声明加载，不依赖外部 CDN。西文展示场景额外提供 Geometos（品牌标识）和 NovecentoSansWide（宽体标签）两套专用字体。
 
 **字体文件**
 
-6 个字重的 woff2 全量字体文件位于 `src/assets/fonts/`，由 `src/lib/styles/fonts.css` 声明 `@font-face`，在 `src/app.css` 顶部通过 `@import './lib/styles/fonts.css'` 引入。
+woff2 全量字体文件位于 `src/assets/fonts/`，由 `src/lib/styles/fonts.css` 声明 `@font-face`，在 `src/app.css` 顶部通过 `@import './lib/styles/fonts.css'` 引入。
 
-| 字重    | 文件                            | 对应 CSS `font-weight` |
-| ------- | ------------------------------- | ---------------------- |
-| Thin    | HarmonyOS-Sans-SC-Thin.woff2    | 100                    |
-| Light   | HarmonyOS-Sans-SC-Light.woff2   | 300                    |
-| Regular | HarmonyOS-Sans-SC-Regular.woff2 | 400                    |
-| Medium  | HarmonyOS-Sans-SC-Medium.woff2  | 500                    |
-| Bold    | HarmonyOS-Sans-SC-Bold.woff2    | 700                    |
-| Black   | HarmonyOS-Sans-SC-Black.woff2   | 900                    |
+| 字体族            | 字重    | 文件                            | 对应 CSS `font-weight` |
+| ----------------- | ------- | ------------------------------- | ---------------------- |
+| HarmonyOS Sans SC | Thin    | HarmonyOS-Sans-SC-Thin.woff2    | 100                    |
+| HarmonyOS Sans SC | Light   | HarmonyOS-Sans-SC-Light.woff2   | 300                    |
+| HarmonyOS Sans SC | Regular | HarmonyOS-Sans-SC-Regular.woff2 | 400                    |
+| HarmonyOS Sans SC | Medium  | HarmonyOS-Sans-SC-Medium.woff2  | 500                    |
+| HarmonyOS Sans SC | Bold    | HarmonyOS-Sans-SC-Bold.woff2    | 700                    |
+| HarmonyOS Sans SC | Black   | HarmonyOS-Sans-SC-Black.woff2   | 900                    |
+| Geometos          | Regular | Geometos.woff2                  | 400                    |
+| NovecentoSansWide | Normal  | NovecentoSansWide-Normal.woff2  | 400                    |
+| NovecentoSansWide | Bold    | NovecentoSansWide-Bold.woff2    | 700                    |
 
 所有 `@font-face` 均声明 `font-display: swap`，确保字体加载期间文本可见。
 
@@ -170,14 +173,29 @@ env → library → player → download → home → shell
 
 字体通过 `:root` 级 CSS 变量统一管理，组件不直接硬编码 `font-family`：
 
-| 变量             | 值                                                    | 用途           |
-| ---------------- | ----------------------------------------------------- | -------------- |
-| `--font-sans`    | `'HarmonyOS Sans SC', sans-serif`                     | 基础无衬线栈   |
-| `--font-display` | `var(--font-sans)`                                    | 标题与展示文案 |
-| `--font-body`    | `var(--font-sans)`                                    | 正文与 UI 文案 |
-| `--font-mono`    | `ui-monospace, 'SF Mono', 'Cascadia Code', monospace` | 等宽场景       |
+| 变量             | 值                                                    | 用途                                  |
+| ---------------- | ----------------------------------------------------- | ------------------------------------- |
+| `--font-sans`    | `'HarmonyOS Sans SC', sans-serif`                     | 基础无衬线栈                          |
+| `--font-display` | `var(--font-sans)`                                    | 标题与展示文案                        |
+| `--font-body`    | `var(--font-sans)`                                    | 正文与 UI 文案                        |
+| `--font-mono`    | `ui-monospace, 'SF Mono', 'Cascadia Code', monospace` | 等宽场景                              |
+| `--font-brand`   | `'Geometos', var(--font-sans)`                        | 品牌标识、Logo 文字、大号英文展示标题 |
+| `--font-wide`    | `'NovecentoSansWide', var(--font-sans)`               | 英文分类标签、导航标题、badge         |
 
 `body` 的 `font-family` 绑定 `var(--font-body)`。`--font-display` 和 `--font-body` 当前指向同一字体栈，保留为独立变量以便后续按需分离。
+
+**西文展示字体使用规则**
+
+| 变量           | 适用范围                                         | 典型组件                                    |
+| -------------- | ------------------------------------------------ | ------------------------------------------- |
+| `--font-brand` | 品牌标识、侧栏 Logo 文字、大号英文标题（App 名） | Sidebar logo、启动画面标题                  |
+| `--font-wide`  | 英文分类标签、导航 tab、badge、专辑英文副标题    | TagChip、NavTab、SectionHeader 中的英文部分 |
+
+约束：
+
+- 这两种字体仅用于纯西文/数字内容，中文仍走 `--font-body` / `--font-display`
+- 不修改 `--font-display` 的默认值——需要西文展示效果的组件显式引用 `--font-brand` 或 `--font-wide`
+- 回退栈末尾保留 `var(--font-sans)` 确保中文混排时无断裂
 
 **字重使用约定**
 
@@ -197,9 +215,10 @@ env → library → player → download → home → shell
 **扩展规则**
 
 1. 新增组件的 `font-family` 统一通过 `--font-body` 或 `--font-display` 变量引用，不直接写字体名
-2. 如需引入新字体族（如衬线体、手写体），新增独立 CSS 变量并在 `:root` 中声明，不修改现有变量语义
-3. 等宽场景（代码片段、日志 viewer 等）使用 `--font-mono`
-4. 字体文件随应用打包分发，不引入外部 CDN 依赖
+2. 纯西文展示场景使用 `--font-brand`（品牌/Logo）或 `--font-wide`（标签/导航）
+3. 如需引入新字体族（如衬线体、手写体），新增独立 CSS 变量并在 `:root` 中声明，不修改现有变量语义
+4. 等宽场景（代码片段、日志 viewer 等）使用 `--font-mono`
+5. 字体文件随应用打包分发，不引入外部 CDN 依赖
 
 ### Apple 化边界
 

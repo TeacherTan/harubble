@@ -237,4 +237,3 @@ fn index_directory_name(inventory_version: &str) -> String {
         })
         .collect()
 }
-

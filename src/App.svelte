@@ -78,6 +78,7 @@
           selectedAlbumArtworkUrl={runtime.selectedAlbumArtworkUrl}
           currentSongCid={runtime.currentSong?.cid ?? null}
           isPlaybackActive={runtime.isPlaying || runtime.isPaused}
+          isPlaybackPaused={runtime.isPaused}
           downloadingAlbumCid={runtime.downloadingAlbumCid}
           selectionModeEnabled={runtime.selectionModeEnabled}
           selectedSongCids={runtime.selectedSongCids}
@@ -99,6 +100,9 @@
           onDownloadAlbum={runtime.downloadController.handleAlbumDownload}
           onDownloadSelection={runtime.handleDownloadSelection}
           onPlaySong={runtime.handlePlay}
+          onTogglePlay={runtime.isPlaying
+            ? runtime.playerController.pause
+            : runtime.playerController.resume}
           onDownloadSong={runtime.downloadController.handleSongDownload}
           onToggleSongSelection={runtime.toggleSongSelection}
           isSongSelected={runtime.isSongSelected}
@@ -177,6 +181,9 @@
         onNext={runtime.playerController.playNext}
         onShuffleChange={runtime.playerController.toggleShuffle}
         onRepeatModeChange={runtime.playerController.toggleRepeat}
+        onDownload={runtime.handleCurrentSongDownload}
+        downloadState={runtime.currentSongDownloadState}
+        downloadDisabled={runtime.currentSongDownloadDisabled}
         onClose={runtime.playerController.toggleFullscreen}
       />
     {/if}

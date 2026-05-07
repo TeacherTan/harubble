@@ -15,6 +15,7 @@
     album: AlbumDetail;
     currentSongCid: string | null;
     isPlaybackActive: boolean;
+    isPlaybackPaused: boolean;
     downloadingAlbumCid: string | null;
     selectionModeEnabled: boolean;
     selectedSongCids: string[];
@@ -26,6 +27,7 @@
     onDownloadAlbum: (albumCid: string) => void | Promise<void>;
     onDownloadSelection: (songCids: string[]) => void | Promise<void>;
     onPlaySong: (song: SongEntry) => void | Promise<void>;
+    onTogglePlay: () => void | Promise<void>;
     onDownloadSong: (songCid: string) => void | Promise<void>;
     onToggleSongSelection: (songCid: string) => void;
     isSongSelected: (songCid: string) => boolean;
@@ -202,6 +204,7 @@
         {song}
         {index}
         isPlaying={props.currentSongCid === song.cid && props.isPlaybackActive}
+        isPaused={props.currentSongCid === song.cid && props.isPlaybackPaused}
         downloadState={props.getSongDownloadState(song.cid)}
         downloadDisabled={props.isSongDownloadInteractionBlocked(song.cid)}
         selectionMode={props.selectionModeEnabled}
@@ -209,6 +212,7 @@
         selectionDisabled={isSelectionCreating}
         reducedMotion={props.reducedMotion}
         onclick={() => props.onPlaySong(song)}
+        onTogglePlay={() => props.onTogglePlay()}
         onDownload={() => props.onDownloadSong(song.cid)}
         onToggleSelection={() => props.onToggleSongSelection(song.cid)}
       />

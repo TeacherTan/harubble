@@ -181,4 +181,3 @@ pub fn get_default_output_dir() -> String {
         .to_string_lossy()
         .to_string()
 }
-
