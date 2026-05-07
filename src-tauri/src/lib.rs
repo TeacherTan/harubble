@@ -46,6 +46,7 @@ mod notification;
 mod player;
 mod preferences;
 mod search;
+mod tag_editor;
 mod tag_registry;
 mod theme;
 

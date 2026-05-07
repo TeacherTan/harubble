@@ -85,7 +85,7 @@ pub(crate) struct TagSet {
 /// 单个 tag 值的多语种本地化映射。
 ///
 /// key 为 BCP 47 语言标签（如 `"zh-CN"`、`"en-US"`），value 为对应语种下的文本。
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct LocalizedValue(pub HashMap<String, String>);
 
 // ─── 前端展示类型 ─────────────────────────────────────────────────────────────
