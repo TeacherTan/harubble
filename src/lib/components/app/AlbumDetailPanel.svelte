@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade, fly } from 'svelte/transition';
   import SongRow from '$lib/components/SongRow.svelte';
+  import MetadataPopover from '$lib/components/MetadataPopover.svelte';
   import {
     getDownloadBadgeLabel,
     shouldShowDownloadBadge,
@@ -107,15 +108,28 @@
       in:fly={{ y: 14, duration: dur(220), delay: dur(30) }}
       out:fly={{ y: 8, duration: dur(220) }}
     >
-      {#if props.album.belong && props.album.belong.toLowerCase() !== 'arknights'}
-        <span class="album-belong-tag">{props.album.belong.toUpperCase()}</span>
-      {/if}
-      {#each props.album.tags as tag (tag.dimension)}
-        {#each tag.values as value (value)}
-          <span class="album-belong-tag">{value}</span>
+      <div class="album-tags-row">
+        {#if props.album.belong && props.album.belong.toLowerCase() !== 'arknights'}
+          <span class="album-belong-tag"
+            >{props.album.belong.toUpperCase()}</span
+          >
+        {/if}
+        {#each props.album.tags as tag (tag.dimension)}
+          {#each tag.values as value, i (value)}
+            <span
+              class="album-belong-tag"
+              style:color={tag.colors?.[i] ?? undefined}
+              style:background={tag.colors?.[i]
+                ? `${tag.colors[i]}1a`
+                : undefined}>{value}</span
+            >
+          {/each}
         {/each}
-      {/each}
-      <h1 class="album-hero-title">{props.album.name}</h1>
+      </div>
+      <div class="album-title-row">
+        <h1 class="album-hero-title">{props.album.name}</h1>
+        <MetadataPopover target={{ kind: 'album', album: props.album }} />
+      </div>
       {#if props.album.artists && props.album.artists.length > 0}
         <p class="album-hero-artists">{props.album.artists.join(', ')}</p>
       {/if}
@@ -208,6 +222,7 @@
       <SongRow
         {song}
         {index}
+        albumCid={props.album.cid}
         isPlaying={props.currentSongCid === song.cid && props.isPlaybackActive}
         isPaused={props.currentSongCid === song.cid && props.isPlaybackPaused}
         downloadState={props.getSongDownloadState(song.cid)}
@@ -226,6 +241,12 @@
 </div>
 
 <style>
+  .album-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .btn {
     transition:
       background-color 0.16s ease-out,

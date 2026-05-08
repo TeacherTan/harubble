@@ -485,8 +485,9 @@ fn merge_tag_sets(remote: Option<&TagSet>, local: Option<&TagSet>) -> TagSet {
 fn union_localized_values(a: &[LocalizedValue], b: &[LocalizedValue]) -> Vec<LocalizedValue> {
     let mut result = a.to_vec();
     for val in b {
-        let duplicate = result.iter().any(|existing| existing.0 == val.0);
-        if !duplicate {
+        if let Some(existing) = result.iter_mut().find(|e| e.text_eq(val)) {
+            *existing = LocalizedValue::merge_metadata(existing, val);
+        } else {
             result.push(val.clone());
         }
     }

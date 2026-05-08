@@ -233,5 +233,17 @@
   "download_filter_kind_aria": "Filter by type",
   "download_job_cancel_aria": "Cancel {name}",
   "download_job_retry_aria": "Retry {name}",
-  "download_job_progress_aria": "{name} download progress"
+  "download_job_progress_aria": "{name} download progress",
+  "metadata_trigger_aria": "Metadata details",
+  "metadata_label_cid": "CID",
+  "metadata_label_album_name": "Album",
+  "metadata_label_artists": "Artists",
+  "metadata_label_belong": "Belongs to",
+  "metadata_label_intro": "Intro",
+  "metadata_label_cover_url": "Cover URL",
+  "metadata_label_cover_de_url": "Cover (HD)",
+  "metadata_label_song_count": "Tracks",
+  "metadata_label_tags": "Tags",
+  "metadata_label_song_name": "Title",
+  "metadata_label_album_cid": "Album CID"
 }

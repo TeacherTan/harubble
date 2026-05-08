@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { SongEntry } from '$lib/types';
+  import MetadataPopover from '$lib/components/MetadataPopover.svelte';
   import {
     getDownloadBadgeLabel,
     shouldShowDownloadBadge,
@@ -11,6 +12,7 @@
   interface Props {
     song: SongEntry;
     index: number;
+    albumCid: string;
     isPlaying?: boolean;
     isPaused?: boolean;
     downloadState?: SongDownloadState;
@@ -27,6 +29,7 @@
   let {
     song,
     index,
+    albumCid,
     isPlaying = false,
     isPaused = false,
     downloadState = 'idle',
@@ -111,6 +114,8 @@
   }
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   class="song-row"
   class:is-selection-mode={selectionMode}
@@ -119,13 +124,8 @@
   class:is-hovered={isHovered || isFocused}
   class:is-reduced-motion={reducedMotion}
   data-song-cid={song.cid}
-  role="button"
-  tabindex="0"
-  aria-label={selectionMode
-    ? isSelected
-      ? labels.deselectAria
-      : labels.selectAria
-    : labels.playAria}
+  role="group"
+  aria-label={song.name}
   onclick={handleRowActivate}
   onmouseenter={() => {
     isHovered = true;
@@ -138,12 +138,6 @@
   }}
   onfocusout={() => {
     isFocused = false;
-  }}
-  onkeydown={(e: KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleRowActivate();
-    }
   }}
 >
   {#if selectionMode}
@@ -170,6 +164,7 @@
     class="song-play-indicator"
     class:is-playing={isPlaying}
     class:is-visible={showPlayIndicator}
+    aria-label={labels.playAria}
     onclick={(event: MouseEvent) => {
       event.stopPropagation();
       if (isPlaying) {
@@ -194,6 +189,9 @@
     {#if showDownloadedBadge}<span class="song-download-badge"
         >{downloadedBadgeLabel}</span
       >{/if}
+    <span class="song-meta-wrapper">
+      <MetadataPopover target={{ kind: 'song', song, albumCid }} />
+    </span>
     <button
       type="button"
       class="song-download-button"
@@ -353,8 +351,21 @@
   .song-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     flex-shrink: 0;
+  }
+  .song-meta-wrapper {
+    display: inline-flex;
+    opacity: 0;
+    transition: opacity 0.16s ease-out;
+  }
+  .song-row:hover .song-meta-wrapper,
+  .song-row:focus-within .song-meta-wrapper {
+    opacity: 1;
+  }
+  .song-row.is-reduced-motion .song-meta-wrapper {
+    transition: none;
+    opacity: 1;
   }
   .song-download-badge {
     display: inline-flex;

@@ -691,6 +691,12 @@ body {
   max-width: none;
 }
 
+.album-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .album-belong-tag {
   display: inline-block;
   font-size: 10px;
@@ -698,10 +704,8 @@ body {
   letter-spacing: 1px;
   color: var(--accent);
   background: var(--accent-light);
-  padding: 3px 8px;
-  border-radius: 4px;
-  width: fit-content;
-  margin-bottom: 4px;
+  padding: 3px 10px;
+  border-radius: 9999px;
 }
 
 .album-hero-title {
@@ -2456,9 +2460,8 @@ body {
 }
 
 .album-belong-tag {
-  margin-bottom: 0;
-  padding: 0;
-  background: transparent;
+  padding: 3px 10px;
+  background: var(--accent-light);
   color: rgba(var(--accent-rgb), 0.82);
   font-size: 11px;
   letter-spacing: 0.14em;

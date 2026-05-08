@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-05-07T12:00:00Z",
+  "updatedAt": "2026-05-08T12:00:00Z",
   "tagDimensions": [
     {
       "key": "type",
@@ -42,11 +42,13 @@
       "releaseDate": "2024-06-01",
       "faction": {
         "zh-CN": "罗德岛",
-        "en-US": "Rhodes Island"
+        "en-US": "Rhodes Island",
+        "color": "#3B82F6"
       },
       "character": {
         "zh-CN": "凯尔希",
-        "en-US": "Kal'tsit"
+        "en-US": "Kal'tsit",
+        "color": "#A8C113"
       }
     },
     {

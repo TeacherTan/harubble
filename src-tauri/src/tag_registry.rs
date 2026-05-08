@@ -122,6 +122,35 @@ pub struct TagSet {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LocalizedValue(pub HashMap<String, String>);
 
+impl LocalizedValue {
+    /// 基于语言文本身份判断两个 `LocalizedValue` 是否等价（忽略 `"color"` 等元数据字段）。
+    pub(crate) fn text_eq(&self, other: &Self) -> bool {
+        let self_text: HashMap<&str, &str> = self
+            .0
+            .iter()
+            .filter(|(k, _)| is_locale_key(k))
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+        let other_text: HashMap<&str, &str> = other
+            .0
+            .iter()
+            .filter(|(k, _)| is_locale_key(k))
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+        self_text == other_text
+    }
+
+    /// 合并两个文本等价的 `LocalizedValue`，优先保留带 color 的一方。
+    pub(crate) fn merge_metadata(a: &Self, b: &Self) -> Self {
+        let has_color_a = a.0.contains_key("color");
+        if has_color_a {
+            a.clone()
+        } else {
+            b.clone()
+        }
+    }
+}
+
 // ─── 前端展示类型 ─────────────────────────────────────────────────────────────
 
 /// 已解析为单一语种的 tag 维度条目，供前端展示用。
@@ -480,9 +509,16 @@ fn locale_to_key(locale: Locale) -> &'static str {
     }
 }
 
+/// 判断 `LocalizedValue` 内部 map 的 key 是否为已知 locale 标签。
+///
+/// 非 locale key（如 `"color"`）属于元数据字段，不应参与文本解析或搜索索引。
+fn is_locale_key(key: &str) -> bool {
+    matches!(key, "zh-CN" | "en-US" | "ja-JP" | "ko-KR")
+}
+
 /// 从多语种字符串 map 中按 locale 回退策略取值。
 ///
-/// 回退顺序：locale 对应 key → "zh-CN" → "en-US" → map 中第一个可用值 → 空字符串。
+/// 回退顺序：locale 对应 key → "zh-CN" → "en-US" → map 中第一个 locale key 的值 → 空字符串。
 fn resolve_locale_str(map: &HashMap<String, String>, locale: Locale) -> String {
     let key = locale_to_key(locale);
     if let Some(v) = map.get(key) {
@@ -494,7 +530,10 @@ fn resolve_locale_str(map: &HashMap<String, String>, locale: Locale) -> String {
     if let Some(v) = map.get("en-US") {
         return v.clone();
     }
-    map.values().next().cloned().unwrap_or_default()
+    map.iter()
+        .find(|(k, _)| is_locale_key(k))
+        .map(|(_, v)| v.clone())
+        .unwrap_or_default()
 }
 
 /// 从单个 `LocalizedValue` 内部的 map 中按 locale 回退策略取值。
@@ -537,9 +576,9 @@ fn resolve_merged_tag_set(
         for (dim_key, values) in &set.tags {
             let entry = merged.entry(dim_key.clone()).or_default();
             for v in values {
-                // 去重：若内部 map 完全相同则跳过
-                let duplicate = entry.iter().any(|existing| existing.0 == v.0);
-                if !duplicate {
+                if let Some(existing) = entry.iter_mut().find(|e| e.text_eq(v)) {
+                    *existing = LocalizedValue::merge_metadata(existing, v);
+                } else {
                     entry.push(v.clone());
                 }
             }
@@ -569,9 +608,17 @@ fn build_tag_entries(
         if resolved_values.is_empty() {
             continue;
         }
+        let colors: Vec<Option<String>> =
+            values.iter().map(|lv| lv.0.get("color").cloned()).collect();
+        let colors = if colors.iter().any(|c| c.is_some()) {
+            colors
+        } else {
+            Vec::new()
+        };
         result.push(TagEntry {
             dimension: resolve_locale_str(&dim.label, locale),
             values: resolved_values,
+            colors,
         });
     }
     result
@@ -586,8 +633,8 @@ fn collect_all_locale_values(album: Option<&TagSet>, song: Option<&TagSet>) -> S
         let Some(set) = set_opt else { continue };
         for values in set.tags.values() {
             for lv in values {
-                for v in lv.0.values() {
-                    if !v.is_empty() {
+                for (k, v) in &lv.0 {
+                    if is_locale_key(k) && !v.is_empty() {
                         all_values.push(v.clone());
                     }
                 }
@@ -838,5 +885,131 @@ mod tests {
         let entries = resolve_merged_tag_set(albums.get("A"), songs.get("S"), &dims, Locale::ZhCN);
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].values.len(), 1, "重复值应被去重");
+    }
+
+    #[test]
+    fn collect_all_locale_values_excludes_color() {
+        let mut tags = HashMap::new();
+        tags.insert(
+            "faction".to_string(),
+            vec![LocalizedValue({
+                let mut m = HashMap::new();
+                m.insert("zh-CN".to_string(), "罗德岛".to_string());
+                m.insert("en-US".to_string(), "Rhodes Island".to_string());
+                m.insert("color".to_string(), "#3B82F6".to_string());
+                m
+            })],
+        );
+        let set = TagSet { tags };
+        let result = collect_all_locale_values(Some(&set), None);
+        assert!(
+            !result.contains("#3B82F6"),
+            "color 值不应出现在搜索索引文本中: {result}"
+        );
+        assert!(result.contains("罗德岛"));
+        assert!(result.contains("Rhodes Island"));
+    }
+
+    #[test]
+    fn resolve_locale_str_skips_non_locale_keys_in_fallback() {
+        let mut map = HashMap::new();
+        map.insert("color".to_string(), "#A8C113".to_string());
+        map.insert("ja-JP".to_string(), "ロドス".to_string());
+        let result = resolve_locale_str(&map, Locale::ZhCN);
+        assert_eq!(result, "ロドス", "应回退到 locale key 而非 color");
+    }
+
+    #[test]
+    fn resolve_locale_str_returns_empty_when_only_non_locale_keys() {
+        let mut map = HashMap::new();
+        map.insert("color".to_string(), "#A8C113".to_string());
+        let result = resolve_locale_str(&map, Locale::ZhCN);
+        assert_eq!(result, "", "仅含非 locale key 时应返回空字符串");
+    }
+
+    #[test]
+    fn merge_deduplicates_same_text_different_color() {
+        let album_value = LocalizedValue({
+            let mut m = HashMap::new();
+            m.insert("zh-CN".to_string(), "罗德岛".to_string());
+            m.insert("color".to_string(), "#3B82F6".to_string());
+            m
+        });
+        let song_value = LocalizedValue({
+            let mut m = HashMap::new();
+            m.insert("zh-CN".to_string(), "罗德岛".to_string());
+            m
+        });
+
+        let mut albums = HashMap::new();
+        albums.insert(
+            "A".to_string(),
+            TagSet {
+                tags: HashMap::from([("faction".to_string(), vec![album_value])]),
+            },
+        );
+        let mut songs = HashMap::new();
+        songs.insert(
+            "S".to_string(),
+            TagSet {
+                tags: HashMap::from([("faction".to_string(), vec![song_value])]),
+            },
+        );
+
+        let dims = vec![TagDimension {
+            key: "faction".to_string(),
+            label: HashMap::from([("zh-CN".to_string(), "阵营".to_string())]),
+        }];
+
+        let entries = resolve_merged_tag_set(albums.get("A"), songs.get("S"), &dims, Locale::ZhCN);
+        assert_eq!(entries[0].values.len(), 1, "同文本不同 color 应去重");
+        assert_eq!(
+            entries[0].colors[0],
+            Some("#3B82F6".to_string()),
+            "应保留带 color 的一方"
+        );
+    }
+
+    #[test]
+    fn merge_prefers_colored_value_from_later_source() {
+        let album_value = LocalizedValue({
+            let mut m = HashMap::new();
+            m.insert("zh-CN".to_string(), "罗德岛".to_string());
+            m
+        });
+        let song_value = LocalizedValue({
+            let mut m = HashMap::new();
+            m.insert("zh-CN".to_string(), "罗德岛".to_string());
+            m.insert("color".to_string(), "#EF4444".to_string());
+            m
+        });
+
+        let mut albums = HashMap::new();
+        albums.insert(
+            "A".to_string(),
+            TagSet {
+                tags: HashMap::from([("faction".to_string(), vec![album_value])]),
+            },
+        );
+        let mut songs = HashMap::new();
+        songs.insert(
+            "S".to_string(),
+            TagSet {
+                tags: HashMap::from([("faction".to_string(), vec![song_value])]),
+            },
+        );
+
+        let dims = vec![TagDimension {
+            key: "faction".to_string(),
+            label: HashMap::from([("zh-CN".to_string(), "阵营".to_string())]),
+        }];
+
+        let entries = resolve_merged_tag_set(albums.get("A"), songs.get("S"), &dims, Locale::ZhCN);
+        assert_eq!(entries[0].values.len(), 1, "同文本不同 color 应去重");
+        assert_eq!(
+            entries[0].colors[0],
+            Some("#EF4444".to_string()),
+            "无 color 的先出现时，后来带 color 的应覆盖"
+        );
     }
 }

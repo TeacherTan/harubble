@@ -49,6 +49,7 @@ export interface AlbumDownloadBadge {
 export interface TagEntry {
   dimension: string;
   values: string[];
+  colors?: (string | null)[];
 }
 
 export interface TagDimension {

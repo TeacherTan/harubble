@@ -296,6 +296,7 @@
 
 - `dimension: string` — 维度展示名（已本地化）
 - `values: string[]` — 当前维度下的 tag 值列表（已本地化、已去重）
+- `colors?: (string | null)[]` — 每个 tag 值对应的可选颜色（hex 色值），与 `values` 索引一一对齐；当所有值均无颜色时整个字段省略（序列化时 skip_serializing_if empty）
 
 ### `TagDimensionResolved`
 

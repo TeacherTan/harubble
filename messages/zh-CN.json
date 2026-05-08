@@ -233,5 +233,17 @@
   "download_filter_kind_aria": "筛选下载类型",
   "download_job_cancel_aria": "取消 {name}",
   "download_job_retry_aria": "重试 {name}",
-  "download_job_progress_aria": "{name} 下载进度"
+  "download_job_progress_aria": "{name} 下载进度",
+  "metadata_trigger_aria": "元数据详情",
+  "metadata_label_cid": "CID",
+  "metadata_label_album_name": "专辑名",
+  "metadata_label_artists": "艺术家",
+  "metadata_label_belong": "所属",
+  "metadata_label_intro": "简介",
+  "metadata_label_cover_url": "封面 URL",
+  "metadata_label_cover_de_url": "封面(高清)",
+  "metadata_label_song_count": "曲目数",
+  "metadata_label_tags": "标签",
+  "metadata_label_song_name": "曲名",
+  "metadata_label_album_cid": "专辑 CID"
 }

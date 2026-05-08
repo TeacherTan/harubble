@@ -137,6 +137,9 @@ pub struct TagEntry {
     pub dimension: String,
     /// 当前维度下的 tag 值列表（已本地化、已去重）。
     pub values: Vec<String>,
+    /// 每个 tag 值对应的可选颜色（hex 色值），与 `values` 索引一一对应。
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub colors: Vec<Option<String>>,
 }
 
 #[derive(Debug, Deserialize)]
