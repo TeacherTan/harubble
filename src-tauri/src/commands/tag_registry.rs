@@ -5,15 +5,16 @@ use siren_core::api::Album;
 use siren_core::homepage::TagGroup;
 use tauri::State;
 
-/// 获取当前可用的 tag 维度列表。
+/// 获取适用于专辑粒度的 tag 维度列表。
 ///
-/// 返回值为已本地化的维度列表；若 tag registry 为空或未加载，返回空数组。
+/// 过滤掉 `scope = "song"` 的维度（如 "event"），仅返回可用于专辑分组浏览的维度。
+/// 若 tag registry 为空或未加载，返回空数组。
 #[tauri::command]
 pub fn get_tag_dimensions(
     state: State<'_, AppState>,
 ) -> Result<Vec<crate::tag_registry::TagDimensionResolved>, String> {
     let locale = state.preferences().locale;
-    Ok(state.tag_registry.get_dimensions(locale))
+    Ok(state.tag_registry.get_album_dimensions(locale))
 }
 
 /// 按指定 tag 维度聚合专辑，用于分组浏览。

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-05-08T12:00:00Z",
+  "updatedAt": "2026-05-08T16:00:00Z",
   "tagDimensions": [
     {
       "key": "type",
@@ -22,6 +22,14 @@
         "zh-CN": "角色",
         "en-US": "Character"
       }
+    },
+    {
+      "key": "event",
+      "label": {
+        "zh-CN": "活动",
+        "en-US": "Event"
+      },
+      "scope": "song"
     }
   ],
   "typeDefinitions": {
@@ -812,11 +820,17 @@
       "character": null
     }
   ],
-  "songs": {
-    "880309": {
+  "songs": [
+    {
+      "cid": "880309",
+      "faction": null,
+      "character": null,
       "event": [
-        "2026音律联觉"
+        {
+          "zh-CN": "2026 音律联觉",
+          "en-US": "2026 Ambience Synesthesia"
+        }
       ]
     }
-  }
+  ]
 }

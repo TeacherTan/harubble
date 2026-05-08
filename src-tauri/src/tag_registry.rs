@@ -65,9 +65,9 @@ pub struct TagRegistry {
     /// 专辑条目列表，每个条目包含 cid 与扁平化的 tag 字段。
     #[serde(default)]
     pub(crate) albums: Vec<AlbumEntry>,
-    /// 单曲 CID → 单曲标签集合的映射。
+    /// 单曲条目列表，每个条目包含 cid 与扁平化的 tag 字段。
     #[serde(default)]
-    pub(crate) songs: HashMap<String, TagSet>,
+    pub(crate) songs: Vec<SongRegistryEntry>,
 }
 
 /// 单个专辑的扁平化 tag 条目（对应 JSON 中 albums 数组的元素）。
@@ -95,15 +95,40 @@ pub struct AlbumEntry {
     pub(crate) character: Option<LocalizedValue>,
 }
 
+/// 单首歌曲的扁平化 tag 条目（对应 JSON 中 songs 数组的元素）。
+///
+/// 结构与 [`AlbumEntry`] 类似，但不含 `name`/`releaseDate`/`type` 等专辑元数据字段。
+/// 所有维度字段均可为空（`None`），表示该维度尚未填写。
+/// `extra` 字段捕获未在结构体中显式定义的额外维度。
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SongRegistryEntry {
+    /// 单曲 CID（唯一标识）。
+    pub(crate) cid: String,
+    /// 所属阵营，多语种。
+    #[serde(default)]
+    pub(crate) faction: Option<LocalizedValue>,
+    /// 关联角色，多语种。
+    #[serde(default)]
+    pub(crate) character: Option<LocalizedValue>,
+    /// 额外维度（未在结构体中显式定义的 tag 维度）。
+    #[serde(flatten, default)]
+    pub(crate) extra: HashMap<String, Vec<LocalizedValue>>,
+}
+
 /// 单个 tag 维度的定义。
 ///
 /// `key` 是维度的唯一标识符（如 `"faction"`），`label` 是各语种的展示名称映射。
+/// `scope` 可选，标识该维度适用的粒度（`"album"` / `"song"`）；缺省时视为同时适用于两者。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TagDimension {
     /// 维度唯一键，与 [`TagSet`] 中的字段 key 对应。
     pub(crate) key: String,
     /// 各语种的维度展示名称，key 为 BCP 47 语言标签（如 `"zh-CN"`、`"en-US"`）。
     pub(crate) label: HashMap<String, String>,
+    /// 维度适用粒度：`"album"` 仅专辑、`"song"` 仅单曲、缺省或其他值视为两者皆适用。
+    #[serde(default)]
+    pub(crate) scope: Option<String>,
 }
 
 /// 单个实体（专辑或单曲）的标签集合。
@@ -171,6 +196,11 @@ pub struct TagDimensionResolved {
 /// 将扁平化的 `AlbumEntry` 转换为 `cid → TagSet` 的 HashMap，供查询方法使用。
 type AlbumTagIndex = HashMap<String, TagSet>;
 
+/// 运行时使用的单曲 tag 查询索引，从 `Vec<SongRegistryEntry>` 派生。
+///
+/// 将扁平化的 `SongRegistryEntry` 转换为 `cid → TagSet` 的 HashMap，供查询方法使用。
+type SongTagIndex = HashMap<String, TagSet>;
+
 /// Tag 注册表服务。
 ///
 /// 负责从本地缓存文件加载 tag 注册表，并以读多写少的 `Arc<RwLock<TagRegistry>>` 模式
@@ -192,6 +222,7 @@ type AlbumTagIndex = HashMap<String, TagSet>;
 pub(crate) struct TagRegistryService {
     registry: Arc<RwLock<TagRegistry>>,
     album_index: Arc<RwLock<AlbumTagIndex>>,
+    song_index: Arc<RwLock<SongTagIndex>>,
     cache_path: PathBuf,
 }
 
@@ -207,9 +238,11 @@ impl TagRegistryService {
         let cache_path = app_data_dir.join(CACHE_FILE_NAME);
         let registry = load_from_cache(&cache_path).unwrap_or_default();
         let album_index = build_album_index(&registry.albums, &registry.type_definitions);
+        let song_index = build_song_index(&registry.songs);
         Self {
             registry: Arc::new(RwLock::new(registry)),
             album_index: Arc::new(RwLock::new(album_index)),
+            song_index: Arc::new(RwLock::new(song_index)),
             cache_path,
         }
     }
@@ -226,6 +259,26 @@ impl TagRegistryService {
         registry
             .tag_dimensions
             .iter()
+            .map(|dim| TagDimensionResolved {
+                key: dim.key.clone(),
+                label: resolve_locale_str(&dim.label, locale),
+            })
+            .collect()
+    }
+
+    /// 获取适用于专辑粒度的 tag 维度，过滤掉 `scope = "song"` 的维度。
+    ///
+    /// 用于主页按维度分组浏览专辑的场景，避免展示仅适用于单曲的维度（如 "event"）。
+    ///
+    /// # 参数
+    ///
+    /// - `locale`：目标语种。
+    pub(crate) fn get_album_dimensions(&self, locale: Locale) -> Vec<TagDimensionResolved> {
+        let registry = self.registry.read().expect("tag registry RwLock poisoned");
+        registry
+            .tag_dimensions
+            .iter()
+            .filter(|dim| dim.scope.as_deref() != Some("song"))
             .map(|dim| TagDimensionResolved {
                 key: dim.key.clone(),
                 label: resolve_locale_str(&dim.label, locale),
@@ -267,13 +320,14 @@ impl TagRegistryService {
         locale: Locale,
     ) -> Vec<TagEntry> {
         let registry = self.registry.read().expect("tag registry RwLock poisoned");
-        let index = self
+        let album_idx = self
             .album_index
             .read()
             .expect("album_index RwLock poisoned");
+        let song_idx = self.song_index.read().expect("song_index RwLock poisoned");
         resolve_merged_tag_set(
-            index.get(album_cid),
-            registry.songs.get(song_cid),
+            album_idx.get(album_cid),
+            song_idx.get(song_cid),
             &registry.tag_dimensions,
             locale,
         )
@@ -309,12 +363,12 @@ impl TagRegistryService {
         song_cid: &str,
         album_cid: &str,
     ) -> String {
-        let registry = self.registry.read().expect("tag registry RwLock poisoned");
-        let index = self
+        let album_idx = self
             .album_index
             .read()
             .expect("album_index RwLock poisoned");
-        collect_all_locale_values(index.get(album_cid), registry.songs.get(song_cid))
+        let song_idx = self.song_index.read().expect("song_index RwLock poisoned");
+        collect_all_locale_values(album_idx.get(album_cid), song_idx.get(song_cid))
     }
 
     /// 按维度 key 聚合专辑 CID，返回 tag 值 → 专辑 CID 列表的映射。
@@ -360,7 +414,9 @@ impl TagRegistryService {
     ///
     /// 若创建临时文件、写入内容或原子重命名失败，返回 `Err`。
     pub(crate) fn update(&self, new_registry: TagRegistry) -> Result<()> {
-        let new_index = build_album_index(&new_registry.albums, &new_registry.type_definitions);
+        let new_album_index =
+            build_album_index(&new_registry.albums, &new_registry.type_definitions);
+        let new_song_index = build_song_index(&new_registry.songs);
         {
             let mut registry = self.registry.write().expect("tag registry RwLock poisoned");
             *registry = new_registry.clone();
@@ -370,7 +426,11 @@ impl TagRegistryService {
                 .album_index
                 .write()
                 .expect("album_index RwLock poisoned");
-            *index = new_index;
+            *index = new_album_index;
+        }
+        {
+            let mut index = self.song_index.write().expect("song_index RwLock poisoned");
+            *index = new_song_index;
         }
         persist_to_cache(&self.cache_path, &new_registry)
     }
@@ -379,6 +439,7 @@ impl TagRegistryService {
     ///
     /// 适用于与远端版本进行对比，判断是否需要拉取更新。若注册表为空（初始状态），
     /// 返回空字符串。
+    #[cfg(not(debug_assertions))]
     pub(crate) fn current_updated_at(&self) -> String {
         let registry = self.registry.read().expect("tag registry RwLock poisoned");
         registry.updated_at.clone()
@@ -435,6 +496,42 @@ fn album_entry_to_tag_set(
     TagSet { tags }
 }
 
+/// 从 `SongRegistryEntry` 列表构建 cid → TagSet 的查询索引。
+///
+/// 将扁平字段转换为 `LocalizedValue` 格式，跳过全空条目。
+fn build_song_index(songs: &[SongRegistryEntry]) -> SongTagIndex {
+    songs
+        .iter()
+        .filter_map(|entry| {
+            let tag_set = song_entry_to_tag_set(entry);
+            if tag_set.tags.is_empty() {
+                None
+            } else {
+                Some((entry.cid.clone(), tag_set))
+            }
+        })
+        .collect()
+}
+
+/// 将单个 `SongRegistryEntry` 的扁平字段转换为 `TagSet`。
+fn song_entry_to_tag_set(entry: &SongRegistryEntry) -> TagSet {
+    let mut tags: HashMap<String, Vec<LocalizedValue>> = HashMap::new();
+
+    if let Some(ref v) = entry.faction {
+        tags.insert("faction".to_string(), vec![v.clone()]);
+    }
+    if let Some(ref v) = entry.character {
+        tags.insert("character".to_string(), vec![v.clone()]);
+    }
+    for (key, values) in &entry.extra {
+        if !values.is_empty() {
+            tags.insert(key.clone(), values.clone());
+        }
+    }
+
+    TagSet { tags }
+}
+
 /// 将 `Vec<AlbumEntry>` 转换为 `HashMap<String, TagSet>`（供 tag editor 使用）。
 pub(crate) fn albums_to_tag_map(
     albums: &[AlbumEntry],
@@ -451,6 +548,45 @@ pub(crate) fn tag_map_to_albums(
     map.iter()
         .map(|(cid, tag_set)| tag_set_to_album_entry(cid, tag_set, type_defs))
         .collect()
+}
+
+/// 将 `Vec<SongRegistryEntry>` 转换为 `HashMap<String, TagSet>`（供 tag editor 使用）。
+///
+/// 与 [`build_song_index`] 不同，此函数保留所有条目（包括空 tag 的），
+/// 以确保 editor 的 CRUD 操作不会丢失仅有 cid 的占位条目。
+pub(crate) fn songs_to_tag_map(songs: &[SongRegistryEntry]) -> HashMap<String, TagSet> {
+    songs
+        .iter()
+        .map(|entry| (entry.cid.clone(), song_entry_to_tag_set(entry)))
+        .collect()
+}
+
+/// 将 `HashMap<String, TagSet>` 转换回 `Vec<SongRegistryEntry>`（供 tag editor 持久化使用）。
+pub(crate) fn tag_map_to_songs(map: &HashMap<String, TagSet>) -> Vec<SongRegistryEntry> {
+    map.iter()
+        .map(|(cid, tag_set)| tag_set_to_song_entry(cid, tag_set))
+        .collect()
+}
+
+/// 将单个 `TagSet` 转换回 `SongRegistryEntry`。
+fn tag_set_to_song_entry(cid: &str, tag_set: &TagSet) -> SongRegistryEntry {
+    let get_first_lv = |key: &str| -> Option<LocalizedValue> {
+        tag_set.tags.get(key).and_then(|vals| vals.first().cloned())
+    };
+
+    let extra: HashMap<String, Vec<LocalizedValue>> = tag_set
+        .tags
+        .iter()
+        .filter(|(k, _)| k.as_str() != "faction" && k.as_str() != "character")
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+
+    SongRegistryEntry {
+        cid: cid.to_string(),
+        faction: get_first_lv("faction"),
+        character: get_first_lv("character"),
+        extra,
+    }
 }
 
 /// 将单个 `TagSet` 转换回 `AlbumEntry`。
@@ -697,18 +833,16 @@ mod tests {
     use super::*;
 
     fn make_registry() -> TagRegistry {
-        let mut songs = HashMap::new();
-        let mut song_tags = HashMap::new();
-        song_tags.insert(
-            "character".to_string(),
-            vec![LocalizedValue({
+        let songs = vec![SongRegistryEntry {
+            cid: "SONG_CID".to_string(),
+            character: Some(LocalizedValue({
                 let mut m = HashMap::new();
                 m.insert("zh-CN".to_string(), "陈".to_string());
                 m.insert("en-US".to_string(), "Ch'en".to_string());
                 m
-            })],
-        );
-        songs.insert("SONG_CID".to_string(), TagSet { tags: song_tags });
+            })),
+            ..Default::default()
+        }];
 
         TagRegistry {
             schema_version: CURRENT_SCHEMA_VERSION,
@@ -722,6 +856,7 @@ mod tests {
                         m.insert("en-US".to_string(), "Faction".to_string());
                         m
                     },
+                    scope: None,
                 },
                 TagDimension {
                     key: "character".to_string(),
@@ -731,6 +866,7 @@ mod tests {
                         m.insert("en-US".to_string(), "Character".to_string());
                         m
                     },
+                    scope: None,
                 },
             ],
             type_definitions: HashMap::new(),
@@ -748,9 +884,11 @@ mod tests {
 
     fn make_service_with(registry: TagRegistry) -> TagRegistryService {
         let album_index = build_album_index(&registry.albums, &registry.type_definitions);
+        let song_index = build_song_index(&registry.songs);
         TagRegistryService {
             registry: Arc::new(RwLock::new(registry)),
             album_index: Arc::new(RwLock::new(album_index)),
+            song_index: Arc::new(RwLock::new(song_index)),
             cache_path: PathBuf::from("/tmp/test_tag_registry.json"),
         }
     }
@@ -880,6 +1018,7 @@ mod tests {
                 m.insert("zh-CN".to_string(), "阵营".to_string());
                 m
             },
+            scope: None,
         }];
 
         let entries = resolve_merged_tag_set(albums.get("A"), songs.get("S"), &dims, Locale::ZhCN);
@@ -959,6 +1098,7 @@ mod tests {
         let dims = vec![TagDimension {
             key: "faction".to_string(),
             label: HashMap::from([("zh-CN".to_string(), "阵营".to_string())]),
+            scope: None,
         }];
 
         let entries = resolve_merged_tag_set(albums.get("A"), songs.get("S"), &dims, Locale::ZhCN);
@@ -1002,6 +1142,7 @@ mod tests {
         let dims = vec![TagDimension {
             key: "faction".to_string(),
             label: HashMap::from([("zh-CN".to_string(), "阵营".to_string())]),
+            scope: None,
         }];
 
         let entries = resolve_merged_tag_set(albums.get("A"), songs.get("S"), &dims, Locale::ZhCN);
@@ -1011,5 +1152,37 @@ mod tests {
             Some("#EF4444".to_string()),
             "无 color 的先出现时，后来带 color 的应覆盖"
         );
+    }
+
+    #[test]
+    fn dev_json_deserializes_song_extra_fields() {
+        let content = std::fs::read(DEV_LOCAL_PATH).unwrap();
+        let registry: TagRegistry = serde_json::from_slice(&content).unwrap();
+        let song = registry.songs.iter().find(|s| s.cid == "880309").unwrap();
+        assert!(
+            song.extra.contains_key("event"),
+            "song 880309 should have 'event' in extra, got: {:?}",
+            song.extra
+        );
+        assert_eq!(song.extra["event"].len(), 1);
+    }
+
+    #[test]
+    fn dev_json_get_song_tags_returns_event() {
+        let content = std::fs::read(DEV_LOCAL_PATH).unwrap();
+        let registry: TagRegistry = serde_json::from_slice(&content).unwrap();
+        let svc = make_service_with(registry);
+        let tags = svc.get_song_tags("880309", "7762", Locale::ZhCN);
+        eprintln!("get_song_tags result: {:?}", tags);
+        let event_tag = tags.iter().find(|t| t.dimension == "活动");
+        assert!(
+            event_tag.is_some(),
+            "song 880309 should have '活动' dimension in tags, got: {:?}",
+            tags
+        );
+        assert!(event_tag
+            .unwrap()
+            .values
+            .contains(&"2026 音律联觉".to_string()));
     }
 }

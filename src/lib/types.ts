@@ -112,6 +112,16 @@ export interface AlbumDetail {
   songs: SongEntry[];
 }
 
+export interface AudioFileMetadata {
+  format: string;
+  sampleRate: number;
+  channels: number;
+  bitsPerSample: number | null;
+  durationSecs: number;
+  bitrateKbps: number | null;
+  fileSize: number;
+}
+
 export type LibrarySearchScope = 'all' | 'albums' | 'songs';
 
 export type LibrarySearchHitField =

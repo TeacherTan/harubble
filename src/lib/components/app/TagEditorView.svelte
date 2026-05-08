@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import * as m from '$lib/paraglide/messages.js';
   import { OverlayScrollbarsComponent } from 'overlayscrollbars-svelte';
   import TagEditorPanel from './TagEditorPanel.svelte';
   import TagEditorSongPanel from './TagEditorSongPanel.svelte';
@@ -73,11 +74,11 @@
   >
     {#if controller.loading && !controller.merged}
       <div class="tag-editor-loading">
-        <p>加载中...</p>
+        <p>{m.tag_editor_loading()}</p>
       </div>
     {:else if !controller.editingAlbum}
       <div class="tag-editor-empty">
-        <p>请从左侧选择一个专辑进行 Tag 编辑</p>
+        <p>{m.tag_editor_select_album_hint()}</p>
       </div>
     {:else if controller.editingSong}
       <TagEditorSongPanel

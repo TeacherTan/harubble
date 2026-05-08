@@ -33,6 +33,7 @@
       refresh: m.shell_toolbar_refresh(),
       downloads: m.shell_toolbar_downloads(),
       settings: m.shell_toolbar_settings(),
+      tagEditor: m.shell_toolbar_tag_editor(),
     };
   });
 </script>
@@ -73,8 +74,8 @@
       variant="ghost"
       class={`text-base ${toolbarIconButton({ active: false })}`}
       onclick={onOpenTagEditor}
-      aria-label="Tag Editor"
-      title="Tag Editor"
+      aria-label={labels.tagEditor}
+      title={labels.tagEditor}
     >
       <Tag size={16} />
     </Button>

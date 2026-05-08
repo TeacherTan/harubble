@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SongEntry } from '$lib/types';
+  import type { SongEntry, TagEntry } from '$lib/types';
   import MetadataPopover from '$lib/components/MetadataPopover.svelte';
   import {
     getDownloadBadgeLabel,
@@ -13,6 +13,7 @@
     song: SongEntry;
     index: number;
     albumCid: string;
+    albumName: string;
     isPlaying?: boolean;
     isPaused?: boolean;
     downloadState?: SongDownloadState;
@@ -21,6 +22,7 @@
     isSelected?: boolean;
     selectionDisabled?: boolean;
     reducedMotion?: boolean;
+    albumTags?: TagEntry[];
     onclick?: () => void;
     onTogglePlay?: () => void;
     onDownload?: () => void;
@@ -30,6 +32,7 @@
     song,
     index,
     albumCid,
+    albumName,
     isPlaying = false,
     isPaused = false,
     downloadState = 'idle',
@@ -38,6 +41,7 @@
     isSelected = false,
     selectionDisabled = false,
     reducedMotion = false,
+    albumTags = [],
     onclick,
     onTogglePlay,
     onDownload,
@@ -112,6 +116,34 @@
     }
     onclick?.();
   }
+
+  function computeExtraTags(
+    songTags: TagEntry[],
+    albumTags: TagEntry[]
+  ): TagEntry[] {
+    return songTags
+      .map((st): TagEntry | null => {
+        const albumValues =
+          albumTags.find((at) => at.dimension === st.dimension)?.values ?? [];
+        const albumSet = new Set(albumValues);
+        const filtered = st.values
+          .map((v, i) => ({
+            value: v,
+            color: st.colors?.[i] ?? null,
+            keep: !albumSet.has(v),
+          }))
+          .filter((x) => x.keep);
+        if (filtered.length === 0) return null;
+        return {
+          dimension: st.dimension,
+          values: filtered.map((x) => x.value),
+          colors: filtered.map((x) => x.color),
+        };
+      })
+      .filter((entry): entry is TagEntry => entry !== null);
+  }
+
+  const extraTags = $derived.by(() => computeExtraTags(song.tags, albumTags));
 </script>
 
 <div
@@ -163,6 +195,21 @@
   <div class="song-info">
     <div class="song-name" class:is-emphasis={showEmphasis}>{song.name}</div>
     <div class="song-artists">{song.artists.join(' · ')}</div>
+    {#if extraTags.length > 0}
+      <div class="song-extra-tags">
+        {#each extraTags as tag (tag.dimension)}
+          {#each tag.values as value, i (`${tag.dimension}:${i}`)}
+            <span
+              class="song-tag-badge"
+              style:color={tag.colors?.[i] ?? undefined}
+              style:background={tag.colors?.[i]
+                ? `${tag.colors[i]}1a`
+                : undefined}>{value}</span
+            >
+          {/each}
+        {/each}
+      </div>
+    {/if}
   </div>
   <button
     type="button"
@@ -195,7 +242,7 @@
         >{downloadedBadgeLabel}</span
       >{/if}
     <span class="song-meta-wrapper">
-      <MetadataPopover target={{ kind: 'song', song, albumCid }} />
+      <MetadataPopover target={{ kind: 'song', song, albumCid, albumName }} />
     </span>
     <button
       type="button"
@@ -305,6 +352,21 @@
     overflow: hidden;
     text-overflow: ellipsis;
     margin-top: 2px;
+  }
+  .song-extra-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 3px;
+  }
+  .song-tag-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(var(--accent-rgb), 0.08);
+    color: var(--text-secondary);
+    white-space: nowrap;
   }
   .song-play-indicator {
     appearance: none;

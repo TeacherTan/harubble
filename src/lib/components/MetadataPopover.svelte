@@ -2,7 +2,8 @@
   import { Popover } from 'bits-ui';
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
-  import type { AlbumDetail, SongEntry } from '$lib/types';
+  import { getAudioMetadata } from '$lib/api';
+  import type { AlbumDetail, AudioFileMetadata, SongEntry } from '$lib/types';
 
   interface AlbumMetadata {
     kind: 'album';
@@ -13,6 +14,7 @@
     kind: 'song';
     song: SongEntry;
     albumCid: string;
+    albumName: string;
   }
 
   export type MetadataTarget = AlbumMetadata | SongMetadata;
@@ -22,6 +24,29 @@
   }
 
   let { target }: Props = $props();
+
+  let audioMeta: AudioFileMetadata | null = $state(null);
+  let audioMetaLoaded = $state(false);
+
+  const isDownloaded = $derived(
+    target.kind === 'song' && target.song.download.isDownloaded
+  );
+
+  $effect(() => {
+    if (target.kind === 'song' && isDownloaded) {
+      audioMetaLoaded = false;
+      audioMeta = null;
+      getAudioMetadata(target.albumName, target.song.name)
+        .then((result) => {
+          audioMeta = result;
+          audioMetaLoaded = true;
+        })
+        .catch((err) => {
+          console.error('[MetadataPopover] getAudioMetadata failed:', err);
+          audioMetaLoaded = true;
+        });
+    }
+  });
 
   const title = $derived.by(() => {
     return target.kind === 'album' ? target.album.name : target.song.name;
@@ -37,7 +62,28 @@
     return m.metadata_trigger_aria();
   });
 
-  const rows = $derived.by((): MetadataRow[] => {
+  function formatDuration(secs: number): string {
+    const minutes = Math.floor(secs / 60);
+    const seconds = Math.floor(secs % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function formatSampleRate(hz: number): string {
+    return `${(hz / 1000).toFixed(1)} kHz`;
+  }
+
+  interface TagRow {
+    dimension: string;
+    values: string;
+  }
+
+  const infoRows = $derived.by((): MetadataRow[] => {
     void localeState.current;
     if (target.kind === 'album') {
       const a = target.album;
@@ -70,31 +116,57 @@
         label: m.metadata_label_song_count(),
         value: String(a.songs.length),
       });
-      if (a.tags.length > 0) {
-        result.push({
-          label: m.metadata_label_tags(),
-          value: a.tags
-            .map((t) => `${t.dimension}: ${t.values.join(', ')}`)
-            .join(' | '),
-        });
-      }
       return result;
     }
     const s = target.song;
-    const result: MetadataRow[] = [
+    return [
       { label: m.metadata_label_cid(), value: s.cid },
       { label: m.metadata_label_song_name(), value: s.name },
       { label: m.metadata_label_album_cid(), value: target.albumCid },
       { label: m.metadata_label_artists(), value: s.artists.join(', ') },
     ];
-    if (s.tags.length > 0) {
+  });
+
+  const tagRows = $derived.by((): TagRow[] => {
+    void localeState.current;
+    const tags = target.kind === 'album' ? target.album.tags : target.song.tags;
+    return tags.map((t) => ({
+      dimension: t.dimension,
+      values: t.values.join(', '),
+    }));
+  });
+
+  const audioRows = $derived.by((): MetadataRow[] => {
+    void localeState.current;
+    if (!audioMetaLoaded || !audioMeta) return [];
+    const result: MetadataRow[] = [
+      { label: m.metadata_label_format(), value: audioMeta.format },
+      {
+        label: m.metadata_label_sample_rate(),
+        value: formatSampleRate(audioMeta.sampleRate),
+      },
+      { label: m.metadata_label_channels(), value: String(audioMeta.channels) },
+    ];
+    if (audioMeta.bitsPerSample != null) {
       result.push({
-        label: m.metadata_label_tags(),
-        value: s.tags
-          .map((t) => `${t.dimension}: ${t.values.join(', ')}`)
-          .join(' | '),
+        label: m.metadata_label_bits_per_sample(),
+        value: `${audioMeta.bitsPerSample} bit`,
       });
     }
+    result.push({
+      label: m.metadata_label_duration(),
+      value: formatDuration(audioMeta.durationSecs),
+    });
+    if (audioMeta.bitrateKbps != null) {
+      result.push({
+        label: m.metadata_label_bitrate(),
+        value: `${audioMeta.bitrateKbps} kbps`,
+      });
+    }
+    result.push({
+      label: m.metadata_label_file_size(),
+      value: formatFileSize(audioMeta.fileSize),
+    });
     return result;
   });
 </script>
@@ -125,13 +197,43 @@
       <Popover.Arrow class="meta-popover-arrow" />
       <div class="meta-popover-header">{title}</div>
       <div class="meta-popover-rows">
-        {#each rows as row (row.label)}
+        {#each infoRows as row (row.label)}
           <div class="meta-popover-row">
             <span class="meta-popover-label">{row.label}</span>
             <span class="meta-popover-value">{row.value}</span>
           </div>
         {/each}
       </div>
+      {#if tagRows.length > 0}
+        <div class="meta-popover-section-divider">
+          <span class="meta-popover-section-badge"
+            >{m.metadata_section_tags()}</span
+          >
+        </div>
+        <div class="meta-popover-rows">
+          {#each tagRows as tag (tag.dimension)}
+            <div class="meta-popover-row">
+              <span class="meta-popover-label">{tag.dimension}</span>
+              <span class="meta-popover-value">{tag.values}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
+      {#if audioRows.length > 0}
+        <div class="meta-popover-section-divider">
+          <span class="meta-popover-section-badge"
+            >{m.metadata_section_audio()}</span
+          >
+        </div>
+        <div class="meta-popover-rows">
+          {#each audioRows as row (row.label)}
+            <div class="meta-popover-row">
+              <span class="meta-popover-label">{row.label}</span>
+              <span class="meta-popover-value">{row.value}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </Popover.Content>
   </Popover.Portal>
 </Popover.Root>
@@ -206,6 +308,28 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+  .meta-popover-section-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 8px;
+  }
+  .meta-popover-section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(var(--accent-rgb), 0.08);
+  }
+  .meta-popover-section-badge {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    background: rgba(var(--accent-rgb), 0.12);
+    color: var(--accent);
+    flex-shrink: 0;
   }
   .meta-popover-row {
     display: flex;

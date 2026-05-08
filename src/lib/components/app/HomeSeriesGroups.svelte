@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
   import type { SeriesGroup } from '$lib/types';
 
   interface Props {
@@ -10,8 +11,8 @@
   let { groups, belongReady, onSelectSeries }: Props = $props();
 </script>
 
-<section class="series-groups" aria-label="系列分组">
-  <h2 class="section-title">系列</h2>
+<section class="series-groups" aria-label={m.home_series_aria()}>
+  <h2 class="section-title">{m.home_series_title()}</h2>
 
   {#if !belongReady}
     <div class="skeleton-list">
@@ -20,7 +21,7 @@
       {/each}
     </div>
   {:else if groups.length === 0}
-    <p class="empty-hint">暂无系列数据</p>
+    <p class="empty-hint">{m.home_empty_series()}</p>
   {:else}
     <ul class="group-list" role="list">
       {#each groups as group (group.series)}
@@ -31,7 +32,9 @@
             onclick={() => onSelectSeries(group.series)}
           >
             <span class="group-name">{group.series}</span>
-            <span class="group-count">{group.albums.length} 张专辑</span>
+            <span class="group-count"
+              >{m.home_album_count({ count: group.albums.length })}</span
+            >
           </button>
 
           <div class="group-albums">

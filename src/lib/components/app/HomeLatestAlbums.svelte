@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
   import type { Album } from '$lib/types';
 
   interface Props {
@@ -10,8 +11,8 @@
   let { albums, loading, onSelect }: Props = $props();
 </script>
 
-<section class="latest-albums" aria-label="最新专辑">
-  <h2 class="section-title">最新专辑</h2>
+<section class="latest-albums" aria-label={m.home_latest_albums_title()}>
+  <h2 class="section-title">{m.home_latest_albums_title()}</h2>
 
   {#if loading && albums.length === 0}
     <div class="skeleton-row">
@@ -20,7 +21,7 @@
       {/each}
     </div>
   {:else if albums.length === 0}
-    <p class="empty-hint">暂无专辑数据</p>
+    <p class="empty-hint">{m.home_empty_albums()}</p>
   {:else}
     <div class="album-scroll">
       {#each albums as album (album.cid)}

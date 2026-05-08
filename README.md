@@ -105,20 +105,20 @@ cargo doc -p siren-music-download --bin siren-music-download --no-deps --documen
 
 更多实现细节与协作约定见：
 
-- [前端开发指南](./doc/guides/frontend-guide.md)
-- [后端 API 契约](./doc/reference/backend-api-contract.md)
-- [Release 流程](./doc/process/release-process.md)
-- [后端阶段记录](./doc/history/backend-completed-phases.md)
-- [后端增强路线](./doc/history/backend-pending-phases.md)
+- [前端开发指南](./docs/guides/frontend-guide.md)
+- [后端 API 契约](./docs/reference/backend-api-contract.md)
+- [Release 流程](./docs/process/release-process.md)
+- [后端阶段记录](./docs/history/backend-completed-phases.md)
+- [后端增强路线](./docs/history/backend-pending-phases.md)
 
 ## 开发指南
 
-- [Claude Code Hook 安装与启用说明](./doc/guides/claude-code-hook-setup.md)
-- [前端开发指南](./doc/guides/frontend-guide.md)
-- [后端 API 契约](./doc/reference/backend-api-contract.md)
-- [Release 流程](./doc/process/release-process.md)
-- [评审规则](./doc/guides/review-rules.md)
-- [技术决策记录](./doc/history/decisions.md)
+- [Claude Code Hook 安装与启用说明](./docs/guides/claude-code-hook-setup.md)
+- [前端开发指南](./docs/guides/frontend-guide.md)
+- [后端 API 契约](./docs/reference/backend-api-contract.md)
+- [Release 流程](./docs/process/release-process.md)
+- [评审规则](./docs/guides/review-rules.md)
+- [技术决策记录](./docs/history/decisions.md)
 
 ## 说明
 

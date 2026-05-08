@@ -1,6 +1,6 @@
 use crate::tag_registry::{
-    albums_to_tag_map, tag_map_to_albums, LocalizedValue, TagDimension, TagRegistry, TagSet,
-    CURRENT_SCHEMA_VERSION,
+    albums_to_tag_map, songs_to_tag_map, tag_map_to_albums, tag_map_to_songs, LocalizedValue,
+    TagDimension, TagRegistry, TagSet, CURRENT_SCHEMA_VERSION,
 };
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -32,7 +32,7 @@ impl EditorStore {
             tag_dimensions: registry.tag_dimensions.clone(),
             type_definitions: registry.type_definitions.clone(),
             albums: albums_to_tag_map(&registry.albums, &registry.type_definitions),
-            songs: registry.songs.clone(),
+            songs: songs_to_tag_map(&registry.songs),
         }
     }
 
@@ -43,7 +43,7 @@ impl EditorStore {
             tag_dimensions: self.tag_dimensions.clone(),
             type_definitions: self.type_definitions.clone(),
             albums: tag_map_to_albums(&self.albums, &self.type_definitions),
-            songs: self.songs.clone(),
+            songs: tag_map_to_songs(&self.songs),
         }
     }
 }
@@ -196,6 +196,7 @@ impl TagEditorService {
                     ("zh-CN".to_string(), label_zh.to_string()),
                     ("en-US".to_string(), label_en.to_string()),
                 ]),
+                scope: None,
             });
         }
         self.persist_local()
@@ -231,7 +232,7 @@ impl TagEditorService {
             tag_dimensions: dimensions,
             type_definitions,
             albums: tag_map_to_albums(&albums, &remote.type_definitions),
-            songs,
+            songs: tag_map_to_songs(&songs),
         }
     }
 
@@ -491,7 +492,7 @@ fn union_localized_values(a: &[LocalizedValue], b: &[LocalizedValue]) -> Vec<Loc
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tag_registry::AlbumEntry;
+    use crate::tag_registry::{songs_to_tag_map, AlbumEntry, SongRegistryEntry};
 
     fn make_lv(value: &str) -> LocalizedValue {
         LocalizedValue(HashMap::from([("zh-CN".to_string(), value.to_string())]))
@@ -521,7 +522,7 @@ mod tests {
                 faction: Some(make_lv(faction)),
                 ..Default::default()
             }],
-            songs: HashMap::new(),
+            songs: Vec::new(),
         }
     }
 
@@ -546,7 +547,7 @@ mod tests {
             tag_dimensions: vec![],
             type_definitions: HashMap::new(),
             albums: vec![make_album_entry("A1", Some("罗德岛"))],
-            songs: HashMap::new(),
+            songs: Vec::new(),
         };
         let path = dir.path().join("tag_registry_remote.json");
         std::fs::write(&path, serde_json::to_vec_pretty(&remote).unwrap()).unwrap();
@@ -563,12 +564,15 @@ mod tests {
             tag_dimensions: vec![],
             type_definitions: HashMap::new(),
             albums: vec![],
-            songs: HashMap::from([("S1".into(), TagSet::default())]),
+            songs: vec![SongRegistryEntry {
+                cid: "S1".to_string(),
+                ..Default::default()
+            }],
         };
         let path = dir.path().join("tag_registry_local.json");
         std::fs::write(&path, serde_json::to_vec_pretty(&local).unwrap()).unwrap();
         let svc = TagEditorService::new(dir.path());
-        assert!(svc.local_registry().songs.contains_key("S1"));
+        assert!(svc.local_registry().songs.iter().any(|s| s.cid == "S1"));
     }
     #[test]
     fn set_entity_tag_writes_to_local_overlay() {
@@ -616,7 +620,8 @@ mod tests {
             .unwrap();
         let svc2 = TagEditorService::new(dir.path());
         let local = svc2.local_registry();
-        assert!(local.songs.get("S1").unwrap().tags.contains_key("genre"));
+        let s1_tags = songs_to_tag_map(&local.songs);
+        assert!(s1_tags.get("S1").unwrap().tags.contains_key("genre"));
     }
     #[test]
     fn add_local_dimension_appends_to_local_dimensions() {
@@ -657,8 +662,8 @@ mod tests {
         svc.remove_local_dimension("mood").unwrap();
         let local = svc.local_registry();
         assert!(local.tag_dimensions.iter().all(|d| d.key != "mood"));
-        assert!(local
-            .songs
+        let s1_tags = songs_to_tag_map(&local.songs);
+        assert!(s1_tags
             .get("S1")
             .map_or(true, |ts| !ts.tags.contains_key("mood")));
     }
@@ -671,6 +676,7 @@ mod tests {
             tag_dimensions: vec![TagDimension {
                 key: "faction".to_string(),
                 label: HashMap::from([("zh-CN".into(), "阵营".into())]),
+                scope: None,
             }],
             type_definitions: HashMap::new(),
             albums: vec![AlbumEntry {
@@ -678,7 +684,7 @@ mod tests {
                 faction: Some(make_lv("罗德岛")),
                 ..Default::default()
             }],
-            songs: HashMap::new(),
+            songs: Vec::new(),
         };
         std::fs::write(
             dir.path().join("tag_registry_remote.json"),
@@ -717,6 +723,7 @@ mod tests {
             tag_dimensions: vec![TagDimension {
                 key: "faction".to_string(),
                 label: HashMap::from([("zh-CN".into(), "阵营".into())]),
+                scope: None,
             }],
             type_definitions: HashMap::new(),
             albums: vec![AlbumEntry {
@@ -724,7 +731,7 @@ mod tests {
                 faction: Some(make_lv("罗德岛")),
                 ..Default::default()
             }],
-            songs: HashMap::new(),
+            songs: Vec::new(),
         };
         std::fs::write(
             dir.path().join("tag_registry_remote.json"),

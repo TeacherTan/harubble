@@ -1,30 +1,30 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import * as OpenCC from "opencc-js";
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import * as OpenCC from 'opencc-js';
 
 const ARTIST_ID = 1519954412; // 塞壬唱片-MSR
-const API_BASE = "https://itunes.apple.com";
-const registryPath = resolve(import.meta.dirname, "../data/tag_registry.json");
+const API_BASE = 'https://itunes.apple.com';
+const registryPath = resolve(import.meta.dirname, '../data/tag_registry.json');
 
-const converter = OpenCC.Converter({ from: "t", to: "cn" });
+const converter = OpenCC.Converter({ from: 't', to: 'cn' });
 
 function extractCore(name) {
   return name
-    .replace(/\s*-\s*(Single|EP)$/i, "")
-    .replace(/\s*\(Original Soundtrack\s*\d*\)/i, "")
-    .replace(/\s*\(Deluxe Edition\)/i, "")
-    .replace(/【[^】]*】/g, "")
-    .replace(/《[^》]*》/g, "")
-    .replace(/\s*OST\d*\s*$/i, "")
-    .replace(/[:：]\s*.+$/, "")
+    .replace(/\s*-\s*(Single|EP)$/i, '')
+    .replace(/\s*\(Original Soundtrack\s*\d*\)/i, '')
+    .replace(/\s*\(Deluxe Edition\)/i, '')
+    .replace(/【[^】]*】/g, '')
+    .replace(/《[^》]*》/g, '')
+    .replace(/\s*OST\d*\s*$/i, '')
+    .replace(/[:：]\s*.+$/, '')
     .trim();
 }
 
 function normalizeForMatch(name) {
   return name
-    .replace(/\s+/g, "")
-    .replace(/[·・\-]/g, "")
+    .replace(/\s+/g, '')
+    .replace(/[·・\-]/g, '')
     .toLowerCase();
 }
 
@@ -37,15 +37,17 @@ async function searchAlbumDate(name) {
   const albums = data.results ?? [];
   const core = normalizeForMatch(extractCore(name));
   for (const album of albums) {
-    const itunesCore = normalizeForMatch(converter(extractCore(album.collectionName)));
+    const itunesCore = normalizeForMatch(
+      converter(extractCore(album.collectionName))
+    );
     if (itunesCore.includes(core) || core.includes(itunesCore)) {
-      return album.releaseDate.split("T")[0];
+      return album.releaseDate.split('T')[0];
     }
   }
   return null;
 }
 
-console.log("Fetching albums from iTunes (artist: 塞壬唱片-MSR)...");
+console.log('Fetching albums from iTunes (artist: 塞壬唱片-MSR)...');
 const res = await fetch(
   `${API_BASE}/lookup?id=${ARTIST_ID}&entity=album&country=cn&limit=200`
 );
@@ -55,7 +57,7 @@ if (!res.ok) {
 }
 
 const body = await res.json();
-const itunesAlbums = body.results.filter((r) => r.wrapperType === "collection");
+const itunesAlbums = body.results.filter((r) => r.wrapperType === 'collection');
 console.log(`Found ${itunesAlbums.length} albums on Apple Music.`);
 
 const itunesMap = new Map();
@@ -65,13 +67,13 @@ for (const album of itunesAlbums) {
   const key = normalizeForMatch(simplified);
   if (!itunesMap.has(key)) {
     itunesMap.set(key, {
-      date: album.releaseDate.split("T")[0],
+      date: album.releaseDate.split('T')[0],
       originalName: album.collectionName,
     });
   }
 }
 
-const raw = readFileSync(registryPath, "utf8");
+const raw = readFileSync(registryPath, 'utf8');
 const registry = JSON.parse(raw);
 
 let updated = 0;
@@ -94,7 +96,9 @@ for (const entry of registry.albums) {
 }
 
 if (needSearch.length > 0) {
-  console.log(`\nSearching iTunes for ${needSearch.length} unmatched album(s)...`);
+  console.log(
+    `\nSearching iTunes for ${needSearch.length} unmatched album(s)...`
+  );
   const unmatched = [];
   for (const entry of needSearch) {
     const date = await searchAlbumDate(extractCore(entry.name));
@@ -126,7 +130,7 @@ if (updated > 0) {
     if (numA !== numB) return numA - numB;
     return a.cid.localeCompare(b.cid);
   });
-  writeFileSync(registryPath, JSON.stringify(registry, null, 2) + "\n", "utf8");
+  writeFileSync(registryPath, JSON.stringify(registry, null, 2) + '\n', 'utf8');
 }
 
 console.log(`\nUpdated ${updated} release date(s).`);

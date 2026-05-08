@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import type { TagEditorLocalizedValue } from '$lib/types';
 
@@ -60,15 +61,23 @@
           type="button"
           class="chip-remove"
           onclick={() => handleRemoveValue(idx)}
-          aria-label="移除">×</button
+          aria-label={m.tag_editor_remove_value_aria()}>×</button
         >
       </span>
     {/each}
   </div>
 
   <div class="dimension-add">
-    <input bind:value={newValueZh} placeholder="中文值" class="value-input" />
-    <input bind:value={newValueEn} placeholder="English" class="value-input" />
+    <input
+      bind:value={newValueZh}
+      placeholder={m.tag_editor_placeholder_zh()}
+      class="value-input"
+    />
+    <input
+      bind:value={newValueEn}
+      placeholder={m.tag_editor_placeholder_en()}
+      class="value-input"
+    />
     <Button size="sm" onclick={handleAdd}>+</Button>
   </div>
 </div>

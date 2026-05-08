@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
   import type { HistoryEntry } from '$lib/types';
 
   interface Props {
@@ -15,28 +16,28 @@
     const diffMs = now - date.getTime();
     const diffMin = Math.floor(diffMs / 60000);
 
-    if (diffMin < 1) return '刚刚';
-    if (diffMin < 60) return `${diffMin}分钟前`;
+    if (diffMin < 1) return m.home_time_just_now();
+    if (diffMin < 60) return m.home_time_minutes_ago({ count: diffMin });
     const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) return `${diffHour}小时前`;
+    if (diffHour < 24) return m.home_time_hours_ago({ count: diffHour });
     const diffDay = Math.floor(diffHour / 24);
-    if (diffDay < 30) return `${diffDay}天前`;
+    if (diffDay < 30) return m.home_time_days_ago({ count: diffDay });
     return date.toLocaleDateString();
   }
 </script>
 
-<section class="recent-history" aria-label="最近收听">
+<section class="recent-history" aria-label={m.home_recent_history_title()}>
   <div class="section-header">
-    <h2 class="section-title">最近收听</h2>
+    <h2 class="section-title">{m.home_recent_history_title()}</h2>
     {#if entries.length > 0}
       <button class="clear-btn" onclick={onClear} type="button">
-        清除历史
+        {m.home_clear_history()}
       </button>
     {/if}
   </div>
 
   {#if entries.length === 0}
-    <p class="empty-hint">暂无收听记录</p>
+    <p class="empty-hint">{m.home_empty_history()}</p>
   {:else}
     <div class="history-list">
       {#each entries as entry (entry.id)}

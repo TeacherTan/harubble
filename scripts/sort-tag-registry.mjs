@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-const filePath = process.argv[2]
-  ?? resolve(import.meta.dirname, "../data/tag_registry.json");
+const filePath =
+  process.argv[2] ?? resolve(import.meta.dirname, '../data/tag_registry.json');
 
-const raw = readFileSync(filePath, "utf8");
+const raw = readFileSync(filePath, 'utf8');
 const registry = JSON.parse(raw);
 
 if (Array.isArray(registry.albums)) {
@@ -22,12 +22,14 @@ if (Array.isArray(registry.albums)) {
   });
 }
 
-const sorted = JSON.stringify(registry, null, 2) + "\n";
+const sorted = JSON.stringify(registry, null, 2) + '\n';
 
 if (sorted === raw) {
-  console.log("tag_registry.json: already sorted by cid");
+  console.log('tag_registry.json: already sorted by cid');
   process.exit(0);
 }
 
-writeFileSync(filePath, sorted, "utf8");
-console.log(`tag_registry.json: sorted ${registry.albums.length} albums by cid`);
+writeFileSync(filePath, sorted, 'utf8');
+console.log(
+  `tag_registry.json: sorted ${registry.albums.length} albums by cid`
+);

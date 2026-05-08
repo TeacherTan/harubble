@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
   import TagEditorDimension from './TagEditorDimension.svelte';
   import type {
     SongEntry,
@@ -34,16 +35,16 @@
       type="button"
       class="back-btn"
       onclick={onBack}
-      aria-label="返回专辑"
+      aria-label={m.tag_editor_back_to_album()}
     >
-      ← 返回
+      {m.tag_editor_back()}
     </button>
     <h2 class="song-title">{song.name}</h2>
   </header>
 
   {#if merged}
     <section class="dimensions-section">
-      <h3 class="section-title">歌曲 Tag</h3>
+      <h3 class="section-title">{m.tag_editor_song_tag()}</h3>
       <div class="dimension-rows">
         {#each merged.tagDimensions as dim (dim.key)}
           <TagEditorDimension

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
   import AlbumSidebar from '$lib/components/app/AlbumSidebar.svelte';
   import type {
     Album,
@@ -45,7 +46,7 @@
     class:active={props.currentView === 'home'}
     onclick={props.onNavigateHome}
     type="button"
-    aria-label="首页"
+    aria-label={m.shell_nav_home()}
   >
     <svg
       width="16"
@@ -56,7 +57,7 @@
     >
       <path d="M8 1.5l-6 5v7.5h4v-4h4v4h4v-7.5l-6-5z" />
     </svg>
-    首页
+    {m.shell_nav_home()}
   </button>
   <AlbumSidebar
     albums={props.albums}

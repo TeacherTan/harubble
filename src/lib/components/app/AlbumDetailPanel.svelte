@@ -223,6 +223,8 @@
         {song}
         {index}
         albumCid={props.album.cid}
+        albumName={props.album.name}
+        albumTags={props.album.tags}
         isPlaying={props.currentSongCid === song.cid && props.isPlaybackActive}
         isPaused={props.currentSongCid === song.cid && props.isPlaybackPaused}
         downloadState={props.getSongDownloadState(song.cid)}

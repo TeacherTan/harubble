@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
   import type { HomepageStatus } from '$lib/types';
 
   interface Props {
@@ -24,45 +25,45 @@
   }
 </script>
 
-<section class="status-dashboard" aria-label="状态概览">
-  <h2 class="section-title">概览</h2>
+<section class="status-dashboard" aria-label={m.home_overview_aria()}>
+  <h2 class="section-title">{m.home_overview_title()}</h2>
 
   <div class="stat-grid">
     <div class="stat-card">
-      <span class="stat-label">平台专辑</span>
+      <span class="stat-label">{m.home_stat_platform_albums()}</span>
       <span class="stat-value">{status?.platformAlbumCount ?? '—'}</span>
     </div>
 
     <div class="stat-card">
-      <span class="stat-label">平台曲目</span>
+      <span class="stat-label">{m.home_stat_platform_tracks()}</span>
       <span class="stat-value">{status?.platformSongCount ?? '—'}</span>
     </div>
 
     <div class="stat-card">
-      <span class="stat-label">已下载</span>
+      <span class="stat-label">{m.home_stat_downloaded()}</span>
       <span class="stat-value">{status?.localDownloadedCount ?? '—'}</span>
     </div>
 
     <div class="stat-card">
-      <span class="stat-label">本地占用</span>
+      <span class="stat-label">{m.home_stat_local_storage()}</span>
       <span class="stat-value">
         {status ? formatBytes(status.localStorageBytes) : '—'}
       </span>
     </div>
 
     <div class="stat-card" class:active={activeDownloadCount > 0}>
-      <span class="stat-label">下载中</span>
+      <span class="stat-label">{m.home_stat_downloading()}</span>
       <span class="stat-value">{activeDownloadCount}</span>
     </div>
 
     <div class="stat-card">
-      <span class="stat-label">已完成下载</span>
+      <span class="stat-label">{m.home_stat_completed_downloads()}</span>
       <span class="stat-value">{status?.completedDownloadCount ?? '—'}</span>
     </div>
   </div>
 
   {#if currentSong}
-    <div class="now-playing" aria-label="正在播放">
+    <div class="now-playing" aria-label={m.home_now_playing_aria()}>
       {#if currentSong.coverUrl}
         <img
           src={currentSong.coverUrl}
@@ -74,7 +75,9 @@
         <div class="np-cover-placeholder" class:playing={isPlaying}></div>
       {/if}
       <div class="np-info">
-        <span class="np-label">{isPlaying ? '正在播放' : '已暂停'}</span>
+        <span class="np-label"
+          >{isPlaying ? m.home_now_playing() : m.home_paused()}</span
+        >
         <span class="np-song">{currentSong.name}</span>
         <span class="np-artist">{currentSong.artists.join(', ')}</span>
       </div>

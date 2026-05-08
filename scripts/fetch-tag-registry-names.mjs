@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-const API_BASE = "https://monster-siren.hypergryph.com/api";
-const registryPath = resolve(import.meta.dirname, "../data/tag_registry.json");
+const API_BASE = 'https://monster-siren.hypergryph.com/api';
+const registryPath = resolve(import.meta.dirname, '../data/tag_registry.json');
 
-const raw = readFileSync(registryPath, "utf8");
+const raw = readFileSync(registryPath, 'utf8');
 const registry = JSON.parse(raw);
 
-console.log("Fetching albums from Monster Siren API...");
+console.log('Fetching albums from Monster Siren API...');
 const res = await fetch(`${API_BASE}/albums`);
 if (!res.ok) {
   console.error(`API request failed: ${res.status} ${res.statusText}`);
@@ -33,7 +33,7 @@ for (const entry of registry.albums) {
 }
 
 if (updated === 0) {
-  console.log("All album names are already up to date.");
+  console.log('All album names are already up to date.');
   process.exit(0);
 }
 
@@ -49,5 +49,5 @@ registry.albums.sort((a, b) => {
   return a.cid.localeCompare(b.cid);
 });
 
-writeFileSync(registryPath, JSON.stringify(registry, null, 2) + "\n", "utf8");
+writeFileSync(registryPath, JSON.stringify(registry, null, 2) + '\n', 'utf8');
 console.log(`Updated ${updated} album name(s).`);

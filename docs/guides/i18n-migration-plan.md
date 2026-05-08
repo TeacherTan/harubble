@@ -279,7 +279,7 @@ preferences-output-dir-not-exists = 保存路径不存在
 
 ### 产出
 
-- 新增 `doc/guides/i18n-inventory.md` 作为文件级粗清单，仅用于记录待迁移文件范围和当前状态。
+- 新增 `docs/guides/i18n-inventory.md` 作为文件级粗清单，仅用于记录待迁移文件范围和当前状态。
 - 阶段 0 不维护独立 key 级清单，避免文档和代码脱节。
 - 文件级清单最小列定义：`文件 | 业务域 | 主要类型 | 估算条数 | 状态`。
 - `类型` 取值建议：`static`、`dynamic`、`aria`、`title`、`alt`、`toast`、`backend`。
@@ -608,7 +608,7 @@ export const localeState = new LocaleState();
 - `src-tauri/src/preferences.rs`
 - `src/lib/types.ts`
 - `src/lib/api.ts` 中相关类型说明或调用注释
-- `doc/reference/backend-api-contract.md` 的 `AppPreferences`
+- `docs/reference/backend-api-contract.md` 的 `AppPreferences`
 - 设置面板文档或前端指南中关于设置项的说明
 
 ### 验收
@@ -698,7 +698,7 @@ PR1 至少迁移 `SettingsSheet.svelte` 中语言选择项自身，以及 `TopTo
 - `src/lib/components/SongRow.svelte`
 - `src/lib/downloadBadge.ts`
 
-迁移文件范围以 `doc/guides/i18n-inventory.md` 的文件级粗清单为准；具体 message key 以 Paraglide message 文件和 PR description 为准，不再维护独立 key 级清单。
+迁移文件范围以 `docs/guides/i18n-inventory.md` 的文件级粗清单为准；具体 message key 以 Paraglide message 文件和 PR description 为准，不再维护独立 key 级清单。
 
 迁移要求：
 
@@ -715,7 +715,7 @@ PR1 至少迁移 `SettingsSheet.svelte` 中语言选择项自身，以及 `TopTo
 - `src/lib/components/app/PlayerFlyoutStack.svelte`
 - `src/lib/features/player/controller.svelte.ts`
 
-迁移文件范围以 `doc/guides/i18n-inventory.md` 的文件级粗清单为准；歌曲名、艺术家名不翻译，只作为参数插入模板。
+迁移文件范围以 `docs/guides/i18n-inventory.md` 的文件级粗清单为准；歌曲名、艺术家名不翻译，只作为参数插入模板。
 
 播放器约束：
 
@@ -731,7 +731,7 @@ PR1 至少迁移 `SettingsSheet.svelte` 中语言选择项自身，以及 `TopTo
 - `src/lib/features/library/controller.svelte.ts`
 - `src/App.svelte`
 
-迁移文件范围以 `doc/guides/i18n-inventory.md` 的文件级粗清单为准；搜索结果中的专辑名、歌曲名、艺术家名不翻译。
+迁移文件范围以 `docs/guides/i18n-inventory.md` 的文件级粗清单为准；搜索结果中的专辑名、歌曲名、艺术家名不翻译。
 
 ### 验收
 
@@ -939,9 +939,9 @@ cargo test --workspace
 
 完成迁移后需要同步更新：
 
-- `doc/guides/frontend-guide.md`：新增 Paraglide 目录、使用方式和组件文案规则。
-- `doc/reference/backend-api-contract.md`：新增 `AppPreferences.locale` 和可能的结构化错误契约。
-- `doc/history/decisions.md`：追加 i18n 技术决策，说明前端采用 Paraglide JS、后端采用 Fluent / `fluent-templates` 的原因。
+- `docs/guides/frontend-guide.md`：新增 Paraglide 目录、使用方式和组件文案规则。
+- `docs/reference/backend-api-contract.md`：新增 `AppPreferences.locale` 和可能的结构化错误契约。
+- `docs/history/decisions.md`：追加 i18n 技术决策，说明前端采用 Paraglide JS、后端采用 Fluent / `fluent-templates` 的原因。
 - `README.md`：如对用户暴露语言切换能力，则补充功能说明。
 
 ## 15. 推荐实施顺序总览
@@ -989,7 +989,7 @@ cargo test --workspace
 
 ### PR1：设置面板切换链路打通
 
-1. `doc/guides/i18n-inventory.md` 文件级粗清单。
+1. `docs/guides/i18n-inventory.md` 文件级粗清单。
 2. 前端 Paraglide JS 基础设施。
 3. `AppPreferences.locale` 最小字段、默认值、启动读取和 TS 类型对齐。
 4. `SettingsSheet.svelte` 中实现语言选择项，必须通过 `set_preferences` 更新后端偏好后生效。

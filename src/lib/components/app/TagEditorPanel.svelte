@@ -102,15 +102,19 @@
       {#if dimFormOpen}
         <div class="dim-form">
           <div class="dim-form-row">
-            <input bind:value={newDimKey} placeholder="key" class="dim-input" />
+            <input
+              bind:value={newDimKey}
+              placeholder={m.tag_editor_placeholder_dim_key()}
+              class="dim-input"
+            />
             <input
               bind:value={newDimZh}
-              placeholder="中文名"
+              placeholder={m.tag_editor_placeholder_dim_zh()}
               class="dim-input"
             />
             <input
               bind:value={newDimEn}
-              placeholder="English"
+              placeholder={m.tag_editor_placeholder_dim_en()}
               class="dim-input"
             />
             <button

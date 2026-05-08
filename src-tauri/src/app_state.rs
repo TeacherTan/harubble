@@ -859,9 +859,12 @@ pub fn spawn_tag_registry_sync(state: &AppState) {
                 );
             }
 
-            let current_updated_at = state.tag_registry.current_updated_at();
-            if new_registry.updated_at == current_updated_at && !current_updated_at.is_empty() {
-                return Ok(false);
+            #[cfg(not(debug_assertions))]
+            {
+                let current_updated_at = state.tag_registry.current_updated_at();
+                if new_registry.updated_at == current_updated_at && !current_updated_at.is_empty() {
+                    return Ok(false);
+                }
             }
 
             state.tag_registry.update(new_registry)?;

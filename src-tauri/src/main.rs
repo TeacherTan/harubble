@@ -165,6 +165,7 @@ fn main() {
             commands::local_inventory::get_local_inventory_snapshot,
             commands::local_inventory::rescan_local_inventory,
             commands::local_inventory::cancel_local_inventory_scan,
+            commands::local_inventory::get_audio_metadata,
             commands::preferences::get_notification_permission_state,
             commands::preferences::send_test_notification,
             commands::logging::list_log_records,

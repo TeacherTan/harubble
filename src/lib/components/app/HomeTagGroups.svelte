@@ -1,4 +1,5 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
   import type { Album, TagDimension, TagGroup } from '$lib/types';
 
   interface Props {
@@ -19,8 +20,8 @@
 </script>
 
 {#if dimensions.length > 0}
-  <section class="tag-groups" aria-label="标签分组">
-    <h2 class="section-title">标签</h2>
+  <section class="tag-groups" aria-label={m.home_tags_aria()}>
+    <h2 class="section-title">{m.home_tags_title()}</h2>
 
     <div class="dimension-chips" role="tablist">
       {#each dimensions as dim (dim.key)}
@@ -38,14 +39,16 @@
     </div>
 
     {#if groups.length === 0}
-      <p class="empty-hint">当前维度暂无标签数据</p>
+      <p class="empty-hint">{m.home_empty_tags()}</p>
     {:else}
       <ul class="group-list" role="list">
         {#each groups as group (group.value)}
           <li class="group-item">
             <div class="group-header">
               <span class="group-name">{group.value}</span>
-              <span class="group-count">{group.albums.length} 张专辑</span>
+              <span class="group-count"
+                >{m.home_album_count({ count: group.albums.length })}</span
+              >
             </div>
 
             <div class="group-albums">

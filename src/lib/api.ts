@@ -35,6 +35,7 @@ import type {
   TagEditorRegistry,
   TagEditorMergeResult,
   ConflictResolution,
+  AudioFileMetadata,
 } from './types';
 
 const CACHE_KEY_ALBUM_DETAIL = 'album_detail:';
@@ -269,6 +270,16 @@ export async function rescanLocalInventory(
 
 export async function cancelLocalInventoryScan(): Promise<LocalInventorySnapshot> {
   return invoke<LocalInventorySnapshot>('cancel_local_inventory_scan');
+}
+
+export async function getAudioMetadata(
+  albumName: string,
+  songName: string
+): Promise<AudioFileMetadata | null> {
+  return invoke<AudioFileMetadata | null>('get_audio_metadata', {
+    albumName,
+    songName,
+  });
 }
 
 export async function getPreferences(): Promise<AppPreferences> {
