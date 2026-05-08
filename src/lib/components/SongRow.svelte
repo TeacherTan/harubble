@@ -112,8 +112,11 @@
       if (!selectionDisabled) {
         onToggleSelection?.();
       }
-      return;
     }
+  }
+
+  function handleRowPlay() {
+    if (selectionMode) return;
     onclick?.();
   }
 
@@ -158,10 +161,11 @@
   tabindex="0"
   aria-label={song.name}
   onclick={handleRowActivate}
+  ondblclick={handleRowPlay}
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      handleRowActivate();
+      handleRowPlay();
     }
   }}
   onmouseenter={() => {
