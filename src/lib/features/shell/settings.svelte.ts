@@ -38,10 +38,10 @@ export interface SettingsState {
   suspendDirtyTracking: number;
 }
 
-let initialized = false;
-let currentSavePromise: Promise<boolean> | null = null;
-
 export function createSettingsController(deps: SettingsControllerDeps) {
+  let initialized = false;
+  let currentSavePromise: Promise<boolean> | null = null;
+
   function init() {
     if (initialized) return;
     initialized = true;
@@ -213,10 +213,4 @@ export function createSettingsController(deps: SettingsControllerDeps) {
     savePreferences,
     handleAppError,
   };
-}
-
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    initialized = false;
-  });
 }

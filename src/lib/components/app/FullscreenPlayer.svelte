@@ -6,6 +6,14 @@
   import { localeState } from '$lib/i18n';
   import type { LyricLine } from '$lib/features/player/lyrics';
 
+  let dialogEl: HTMLDivElement | undefined = $state();
+
+  $effect(() => {
+    if (dialogEl) {
+      dialogEl.focus();
+    }
+  });
+
   type RepeatMode = 'all' | 'one';
   type SongDownloadState = 'idle' | 'creating' | 'queued' | 'running';
 
@@ -214,17 +222,19 @@
   });
 
   $effect(() => {
-    void song.name;
-    if (titleRef) {
-      titleOverflows = titleRef.scrollWidth > titleRef.clientWidth;
-    }
-  });
+    const observer = new ResizeObserver(() => {
+      if (titleRef) {
+        titleOverflows = titleRef.scrollWidth > titleRef.clientWidth;
+      }
+      if (artistRef) {
+        artistOverflows = artistRef.scrollWidth > artistRef.clientWidth;
+      }
+    });
 
-  $effect(() => {
-    void artistText;
-    if (artistRef) {
-      artistOverflows = artistRef.scrollWidth > artistRef.clientWidth;
-    }
+    if (titleRef) observer.observe(titleRef);
+    if (artistRef) observer.observe(artistRef);
+
+    return () => observer.disconnect();
   });
 
   function handleSeekInput(event: Event) {
@@ -255,6 +265,7 @@
   aria-modal="true"
   aria-label={song.name}
   tabindex="-1"
+  bind:this={dialogEl}
   transition:dockTransition={{ duration: dur(380) }}
   onkeydown={(e) => e.key === 'Escape' && onClose()}
 >

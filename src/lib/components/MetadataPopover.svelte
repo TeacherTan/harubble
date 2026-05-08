@@ -165,7 +165,7 @@
     fill: currentColor;
   }
   :global(.meta-popover-content) {
-    z-index: 200;
+    z-index: var(--z-popover, 200);
     width: 320px;
     max-width: calc(100vw - 32px);
     max-height: 60vh;

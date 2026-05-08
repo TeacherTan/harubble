@@ -147,6 +147,7 @@ pub struct GrowingFileHandle {
 #[derive(Default)]
 struct GrowingFileState {
     available_len: u64,
+    expected_total_len: Option<u64>,
     complete: bool,
     error: Option<String>,
 }
@@ -237,6 +238,15 @@ impl GrowingFileHandle {
         state.complete = true;
         condvar.notify_all();
     }
+
+    /// 设置预期的文件总长度（来自 Content-Length）。
+    ///
+    /// 设置后 `SeekFrom::End` 将基于此值计算偏移，使解码器能正确推断流时长。
+    pub fn set_expected_total_len(&self, len: u64) {
+        let (lock, _) = &*self.state;
+        let mut state = lock.lock().unwrap();
+        state.expected_total_len = Some(len);
+    }
 }
 
 /// 增长文件的读取端。
@@ -293,7 +303,8 @@ impl Seek for GrowingFileReader {
                 if let Some(error) = &state.error {
                     return Err(io::Error::new(io::ErrorKind::Other, error.clone()));
                 }
-                state.available_len as i128 + offset as i128
+                let end = state.expected_total_len.unwrap_or(state.available_len);
+                end as i128 + offset as i128
             }
         };
 
@@ -314,6 +325,8 @@ impl Seek for GrowingFileReader {
 pub struct SampleBuffer {
     inner: Arc<(Mutex<SampleBufferState>, Condvar)>,
 }
+
+const MAX_BUFFER_SAMPLES: usize = 44100 * 2 * 10;
 
 struct SampleBufferState {
     queue: VecDeque<f32>,
@@ -337,12 +350,20 @@ impl SampleBuffer {
     }
 
     /// 追加一批已解码的浮点采样。
+    ///
+    /// 当缓冲区已满时会阻塞等待消费者消费后再写入。
     pub fn push(&self, samples: &[f32]) {
         if samples.is_empty() {
             return;
         }
         let (lock, condvar) = &*self.inner;
         let mut state = lock.lock().unwrap();
+        while state.queue.len() >= MAX_BUFFER_SAMPLES && !state.finished && state.error.is_none() {
+            let (next_state, _) = condvar
+                .wait_timeout(state, Duration::from_millis(50))
+                .unwrap();
+            state = next_state;
+        }
         state.queue.extend(samples.iter().copied());
         condvar.notify_all();
     }
@@ -368,7 +389,7 @@ impl SampleBuffer {
     ///
     /// 返回值会说明本次写入了多少采样，以及缓冲区是否已经结束或失败。
     pub fn pop_into(&self, output: &mut [f32]) -> PopStatus {
-        let (lock, _) = &*self.inner;
+        let (lock, condvar) = &*self.inner;
         let mut state = lock.lock().unwrap();
         let mut written = 0_usize;
 
@@ -382,11 +403,17 @@ impl SampleBuffer {
             }
         }
 
-        PopStatus {
+        let status = PopStatus {
             written,
             finished: state.finished && state.queue.is_empty(),
             error: state.error.clone(),
+        };
+
+        if written > 0 {
+            condvar.notify_all();
         }
+
+        status
     }
 
     /// 等待缓冲区中至少出现指定数量的采样。

@@ -15,14 +15,18 @@ use crate::download::model::{
     DownloadErrorCode, DownloadErrorInfo, DownloadTaskProgressEvent, InternalDownloadTask,
 };
 use crate::downloader::{
-    download_song_payload, write_payload_to_disk, DownloadProvenanceSeed, MetaOverride,
-    WritePayload,
+    download_song_payload, write_payload_to_disk, DownloadCancelledError, DownloadProvenanceSeed,
+    MetaOverride, WritePayload,
 };
 use anyhow::Error;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+
+fn is_cancellation_error(e: &anyhow::Error) -> bool {
+    e.downcast_ref::<DownloadCancelledError>().is_some()
+}
 
 /// 已完成任务产出的关键工件信息。
 ///
@@ -128,7 +132,7 @@ impl InternalDownloadTask {
                 move |progress| {
                     let now = Instant::now();
                     let prev_time = {
-                        let mut time_guard = last_time.lock().unwrap();
+                        let mut time_guard = last_time.lock().unwrap_or_else(|e| e.into_inner());
                         let prev = *time_guard;
                         *time_guard = now;
                         prev
@@ -165,8 +169,7 @@ impl InternalDownloadTask {
                     provenance_seed: payload.provenance_seed,
                 }),
                 Err(e) => {
-                    let msg = e.to_string();
-                    if msg.contains("cancelled") || msg.contains("Canceled") {
+                    if is_cancellation_error(&e) {
                         TaskExecutionResult::Cancelled
                     } else {
                         TaskExecutionResult::Failed(classify_error(e))
@@ -174,8 +177,7 @@ impl InternalDownloadTask {
                 }
             },
             Err(e) => {
-                let msg = e.to_string();
-                if msg.contains("cancelled") || msg.contains("Canceled") {
+                if is_cancellation_error(&e) {
                     TaskExecutionResult::Cancelled
                 } else {
                     TaskExecutionResult::Failed(classify_error(e))
@@ -258,7 +260,7 @@ impl InternalDownloadTask {
                 move |progress| {
                     let now = Instant::now();
                     let prev_time = {
-                        let mut time_guard = last_time.lock().unwrap();
+                        let mut time_guard = last_time.lock().unwrap_or_else(|e| e.into_inner());
                         let prev = *time_guard;
                         *time_guard = now;
                         prev
@@ -291,8 +293,7 @@ impl InternalDownloadTask {
         match payload_result {
             Ok(payload) => Ok(payload),
             Err(e) => {
-                let msg = e.to_string();
-                if msg.contains("cancelled") || msg.contains("Canceled") {
+                if is_cancellation_error(&e) {
                     Err(TaskExecutionResult::Cancelled)
                 } else {
                     Err(TaskExecutionResult::Failed(classify_error(e)))
@@ -336,8 +337,7 @@ impl InternalDownloadTask {
                 provenance_seed: payload.provenance_seed.clone(),
             }),
             Err(e) => {
-                let msg = e.to_string();
-                if msg.contains("cancelled") || msg.contains("Canceled") {
+                if is_cancellation_error(&e) {
                     TaskExecutionResult::Cancelled
                 } else {
                     TaskExecutionResult::Failed(classify_error(e))

@@ -41,13 +41,21 @@ pub fn ensure_audio_cache_dir() -> Result<PathBuf> {
     Ok(dir)
 }
 
+const ALLOWED_EXTENSIONS: &[&str] = &["flac", "wav", "mp3", "ogg", "bin"];
+
 /// 根据歌曲 CID 与源地址推导缓存文件路径。
 pub fn cached_song_path(song_cid: &str, source_url: &str) -> Result<PathBuf> {
-    let extension = Path::new(source_url.split('?').next().unwrap_or(source_url))
+    let raw_extension = Path::new(source_url.split('?').next().unwrap_or(source_url))
         .extension()
         .and_then(|value| value.to_str())
         .filter(|value| !value.is_empty())
         .unwrap_or("bin");
+
+    let extension = if ALLOWED_EXTENSIONS.contains(&raw_extension) {
+        raw_extension
+    } else {
+        "bin"
+    };
 
     Ok(ensure_audio_cache_dir()?.join(format!("{song_cid}.{extension}")))
 }

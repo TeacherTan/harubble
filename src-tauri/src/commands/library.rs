@@ -126,6 +126,8 @@ pub async fn extract_image_theme(
     state: State<'_, AppState>,
     image_url: String,
 ) -> Result<theme::ThemePalette, String> {
+    siren_core::validate_download_url(&image_url).map_err(|e| e.to_string())?;
+
     let bytes = state
         .api
         .download_bytes(&image_url, |_, _| {})
@@ -156,6 +158,8 @@ pub async fn get_image_data_url(
     state: State<'_, AppState>,
     image_url: String,
 ) -> Result<String, String> {
+    siren_core::validate_download_url(&image_url).map_err(|e| e.to_string())?;
+
     let bytes = state
         .api
         .download_bytes(&image_url, |_, _| {})

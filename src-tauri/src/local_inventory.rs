@@ -470,9 +470,22 @@ fn resolve_verification_state(
 }
 
 fn checksum_path(path: &Path, locale: Locale) -> Result<String, String> {
-    let bytes =
-        std::fs::read(path).map_err(|_| crate::i18n::tr(locale, "inventory-read-audio-failed"))?;
-    Ok(format!("{:x}", md5::compute(bytes)))
+    use std::io::Read;
+    let file = std::fs::File::open(path)
+        .map_err(|_| crate::i18n::tr(locale, "inventory-read-audio-failed"))?;
+    let mut reader = std::io::BufReader::with_capacity(8192, file);
+    let mut context = md5::Context::new();
+    let mut buf = [0u8; 8192];
+    loop {
+        let n = reader
+            .read(&mut buf)
+            .map_err(|_| crate::i18n::tr(locale, "inventory-read-audio-failed"))?;
+        if n == 0 {
+            break;
+        }
+        context.consume(&buf[..n]);
+    }
+    Ok(format!("{:x}", context.compute()))
 }
 
 fn is_audio_file(path: &Path) -> bool {

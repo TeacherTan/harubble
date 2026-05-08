@@ -1,6 +1,7 @@
 <script lang="ts">
   import TagEditorDimension from './TagEditorDimension.svelte';
   import { lazyLoad } from '$lib/lazyLoad';
+  import * as m from '$lib/paraglide/messages.js';
   import type {
     Album,
     SongEntry,
@@ -84,7 +85,7 @@
   {#if merged}
     <section class="dimensions-section">
       <div class="section-header">
-        <h3 class="section-title">专辑 Tag</h3>
+        <h3 class="section-title">{m.tag_editor_album_tag()}</h3>
         <button
           type="button"
           class="dim-manage-btn"
@@ -92,7 +93,9 @@
             dimFormOpen = !dimFormOpen;
           }}
         >
-          {dimFormOpen ? '取消' : '管理维度'}
+          {dimFormOpen
+            ? m.tag_editor_cancel()
+            : m.tag_editor_manage_dimensions()}
         </button>
       </div>
 
@@ -113,7 +116,7 @@
             <button
               type="button"
               class="dim-add-btn"
-              onclick={handleAddDimension}>添加</button
+              onclick={handleAddDimension}>{m.tag_editor_add()}</button
             >
           </div>
           {#if merged.tagDimensions.length > 0}
@@ -125,7 +128,9 @@
                     type="button"
                     class="dim-remove-btn"
                     onclick={() => onRemoveDimension(dim.key)}
-                    aria-label="删除维度 {dim.key}">×</button
+                    aria-label={m.tag_editor_remove_dimension_aria({
+                      key: dim.key,
+                    })}>×</button
                   >
                 </li>
               {/each}
@@ -156,15 +161,15 @@
         }}
       >
         <span class="songs-toggle-icon">{songsExpanded ? '▼' : '▶'}</span>
-        <span>歌曲列表</span>
+        <span>{m.tag_editor_songs_list()}</span>
         <span class="songs-count">({songs.length})</span>
       </button>
 
       {#if songsExpanded}
         {#if loadingSongs}
-          <p class="songs-loading">加载歌曲中...</p>
+          <p class="songs-loading">{m.tag_editor_songs_loading()}</p>
         {:else if songs.length === 0}
-          <p class="songs-empty">暂无歌曲</p>
+          <p class="songs-empty">{m.tag_editor_songs_empty()}</p>
         {:else}
           <ul class="songs-list">
             {#each songs as song (song.cid)}
@@ -177,7 +182,9 @@
                 >
                   <span class="song-name">{song.name}</span>
                   {#if tagCount > 0}
-                    <span class="song-tag-badge">{tagCount} tag</span>
+                    <span class="song-tag-badge"
+                      >{m.tag_editor_song_tag_count({ count: tagCount })}</span
+                    >
                   {/if}
                 </button>
               </li>

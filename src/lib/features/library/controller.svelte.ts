@@ -43,9 +43,8 @@ interface HandleInventoryStateChangedOptions {
   onSelectionInvalidated?: () => void;
 }
 
-let initialized = false;
-
 export function createLibraryController(deps: LibraryControllerDeps) {
+  let initialized = false;
   let albums = $state<Album[]>([]);
   let selectedAlbum = $state<AlbumDetail | null>(null);
   let selectedAlbumCid = $state<string | null>(null);
@@ -460,10 +459,4 @@ export function createLibraryController(deps: LibraryControllerDeps) {
     setPendingScrollToSong,
     clearPendingScrollToSong,
   };
-}
-
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    initialized = false;
-  });
 }

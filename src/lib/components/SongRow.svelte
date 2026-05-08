@@ -114,8 +114,6 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   class="song-row"
   class:is-selection-mode={selectionMode}
@@ -124,9 +122,16 @@
   class:is-hovered={isHovered || isFocused}
   class:is-reduced-motion={reducedMotion}
   data-song-cid={song.cid}
-  role="group"
+  role="button"
+  tabindex="0"
   aria-label={song.name}
   onclick={handleRowActivate}
+  onkeydown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleRowActivate();
+    }
+  }}
   onmouseenter={() => {
     isHovered = true;
   }}

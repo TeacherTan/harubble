@@ -11,9 +11,15 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 const DEFAULT_BASE_URL: &str = "https://monster-siren.hypergryph.com/api";
 const DEFAULT_CACHE_CAPACITY: usize = 100;
+
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
+const MAX_JSON_RESPONSE_SIZE: u64 = 10 * 1024 * 1024;
+const MAX_AUDIO_RESPONSE_SIZE: u64 = 2 * 1024 * 1024 * 1024;
 
 /// 专辑列表查询返回的基础条目。
 ///
@@ -173,6 +179,8 @@ impl ApiClient {
     fn new_with_config(base_url: String, capacity: usize) -> Result<Self> {
         let client = Client::builder()
             .user_agent("Mozilla/5.0 (compatible; siren-music-download)")
+            .connect_timeout(CONNECT_TIMEOUT)
+            .timeout(REQUEST_TIMEOUT)
             .build()?;
         let capacity = NonZeroUsize::new(capacity).expect("cache capacity must be non-zero");
         Ok(Self {
@@ -210,7 +218,19 @@ impl ApiClient {
         }
 
         let response = request.send().await?.error_for_status()?;
-        Ok(response.bytes().await?.to_vec())
+        if let Some(len) = response.content_length() {
+            anyhow::ensure!(
+                len <= MAX_JSON_RESPONSE_SIZE,
+                "response too large: {len} bytes exceeds limit of {MAX_JSON_RESPONSE_SIZE}"
+            );
+        }
+        let bytes = response.bytes().await?;
+        anyhow::ensure!(
+            (bytes.len() as u64) <= MAX_JSON_RESPONSE_SIZE,
+            "response too large: {} bytes exceeds limit of {MAX_JSON_RESPONSE_SIZE}",
+            bytes.len()
+        );
+        Ok(bytes.to_vec())
     }
 
     async fn fetch_streamed_bytes(
@@ -222,6 +242,12 @@ impl ApiClient {
 
         let response = self.client.get(url).send().await?.error_for_status()?;
         let total = response.content_length();
+        if let Some(len) = total {
+            anyhow::ensure!(
+                len <= MAX_AUDIO_RESPONSE_SIZE,
+                "response too large: {len} bytes exceeds limit of {MAX_AUDIO_RESPONSE_SIZE}"
+            );
+        }
         let mut stream = response.bytes_stream();
         let mut bytes = Vec::new();
         let mut downloaded = 0_u64;
@@ -229,6 +255,10 @@ impl ApiClient {
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
             downloaded += chunk.len() as u64;
+            anyhow::ensure!(
+                downloaded <= MAX_AUDIO_RESPONSE_SIZE,
+                "download exceeded size limit of {MAX_AUDIO_RESPONSE_SIZE} bytes"
+            );
             bytes.extend_from_slice(&chunk);
             on_progress(downloaded, total);
         }
@@ -302,14 +332,26 @@ impl ApiClient {
     ) -> Result<()> {
         use futures::StreamExt;
 
+        crate::url_validator::validate_download_url(url)?;
+
         let resp = self.client.get(url).send().await?.error_for_status()?;
         let total = resp.content_length();
+        if let Some(len) = total {
+            anyhow::ensure!(
+                len <= MAX_AUDIO_RESPONSE_SIZE,
+                "response too large: {len} bytes exceeds limit of {MAX_AUDIO_RESPONSE_SIZE}"
+            );
+        }
         let mut stream = resp.bytes_stream();
         let mut downloaded = 0_u64;
 
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
             downloaded += chunk.len() as u64;
+            anyhow::ensure!(
+                downloaded <= MAX_AUDIO_RESPONSE_SIZE,
+                "download exceeded size limit of {MAX_AUDIO_RESPONSE_SIZE} bytes"
+            );
             if !on_chunk(&chunk, downloaded, total)? {
                 break;
             }
@@ -330,6 +372,8 @@ impl ApiClient {
         url: &str,
         mut on_progress: impl FnMut(u64, Option<u64>),
     ) -> Result<Vec<u8>> {
+        crate::url_validator::validate_download_url(url)?;
+
         let cache_key = Self::cache_key("GET", url);
         if let Some(bytes) = self.read_cached_bytes(&cache_key) {
             on_progress(bytes.len() as u64, Some(bytes.len() as u64));
@@ -347,6 +391,8 @@ impl ApiClient {
     /// 该接口内部会先下载完整字节，再统一做 BOM 清理，因此适用于歌词等体量较小的
     /// 文本资源，不适合超大文本流式处理。
     pub async fn download_text(&self, url: &str) -> Result<String> {
+        crate::url_validator::validate_download_url(url)?;
+
         let bytes = self.download_bytes(url, |_, _| {}).await?;
         Ok(String::from_utf8_lossy(&bytes)
             .trim_start_matches('\u{feff}')

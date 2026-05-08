@@ -35,9 +35,8 @@ interface LyricLine {
   text: string;
 }
 
-let initialized = false;
-
 export function createPlayerController(deps: PlayerControllerDeps) {
+  let initialized = false;
   let currentSong = $state<PlayerSong | null>(null);
   let isPlaying = $state(false);
   let isPaused = $state(false);
@@ -605,10 +604,4 @@ export function createPlayerController(deps: PlayerControllerDeps) {
     applyPlaybackQueue,
     buildSinglePlaybackEntry,
   };
-}
-
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    initialized = false;
-  });
 }

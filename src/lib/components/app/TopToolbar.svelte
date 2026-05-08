@@ -3,6 +3,7 @@
   import { localeState } from '$lib/i18n';
   import { Button } from '$lib/components/ui/button/index.js';
   import { toolbarIconButton } from '$lib/design/variants';
+  import { RefreshCw, ArrowDown, Tag, Settings } from '@lucide/svelte';
 
   interface Props {
     activeDownloadCount: number;
@@ -49,7 +50,7 @@
       aria-label={labels.refresh}
       title={labels.refresh}
     >
-      ↻
+      <RefreshCw size={16} />
     </Button>
 
     <Button
@@ -61,7 +62,7 @@
       aria-pressed={downloadPanelOpen}
       title={labels.downloads}
     >
-      ↓
+      <ArrowDown size={16} />
       {#if activeDownloadCount > 0}
         <span class="toolbar-badge">{activeDownloadCount}</span>
       {/if}
@@ -75,7 +76,7 @@
       aria-label="Tag Editor"
       title="Tag Editor"
     >
-      🏷
+      <Tag size={16} />
     </Button>
 
     <Button
@@ -87,7 +88,7 @@
       aria-pressed={settingsOpen}
       title={labels.settings}
     >
-      ⚙
+      <Settings size={16} />
     </Button>
   </div>
 </div>

@@ -50,9 +50,8 @@ interface DownloadControllerDeps {
 
 type SongDownloadState = 'idle' | 'creating' | 'queued' | 'running';
 
-let initialized = false;
-
 export function createDownloadController(deps: DownloadControllerDeps) {
+  let initialized = false;
   let manager = $state<DownloadManagerSnapshot | null>(null);
   let downloadingSongCid = $state<string | null>(null);
   let downloadingAlbumCid = $state<string | null>(null);
@@ -640,9 +639,9 @@ export function createDownloadController(deps: DownloadControllerDeps) {
   function getJobSummaryLabel(job: DownloadJobSnapshot): string {
     switch (job.kind) {
       case 'song': {
-        const task = job.tasks[0];
-        return task.albumName
-          ? m.download_job_scope_from_album({ album: task.albumName })
+        const albumName = job.tasks[0]?.albumName;
+        return albumName
+          ? m.download_job_scope_from_album({ album: albumName })
           : m.download_job_summary_single_task();
       }
       case 'album':
@@ -870,10 +869,4 @@ export function createDownloadController(deps: DownloadControllerDeps) {
     handleClearDownloadHistory,
     openPanel,
   };
-}
-
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    initialized = false;
-  });
 }

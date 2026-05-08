@@ -110,7 +110,10 @@ impl AppState {
     }
 
     pub(crate) fn preferences(&self) -> AppPreferences {
-        self.preferences.lock().unwrap().clone()
+        self.preferences
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// 返回当前配置中的根输出目录。
@@ -119,7 +122,11 @@ impl AppState {
     /// 返回值为当前内存中已生效的输出目录字符串。
     /// 该接口不会触发偏好重新加载；若调用方关心磁盘上的最新配置，应先完成偏好同步。
     pub fn output_dir(&self) -> String {
-        self.preferences.lock().unwrap().output_dir.clone()
+        self.preferences
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .output_dir
+            .clone()
     }
 
     /// 绑定系统媒体控制事件。
@@ -149,15 +156,21 @@ impl AppState {
     /// 成功时返回空值。
     /// 该接口会基于当前偏好的日志级别阈值过滤后再落盘，因此持久化文件内容不一定等于会话内全部日志。
     pub fn flush_logs_on_exit(&self) -> Result<(), String> {
-        let threshold =
-            LogLevel::parse(&self.preferences.lock().unwrap().log_level).unwrap_or(LogLevel::Error);
+        let threshold = LogLevel::parse(
+            &self
+                .preferences
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .log_level,
+        )
+        .unwrap_or(LogLevel::Error);
         self.log_center
             .flush_session_to_persistent(threshold)
             .map_err(|error| error.to_string())
     }
 
     pub(crate) fn set_preferences(&self, prefs: AppPreferences) {
-        *self.preferences.lock().unwrap() = prefs;
+        *self.preferences.lock().unwrap_or_else(|e| e.into_inner()) = prefs;
     }
 
     pub(crate) fn preferences_store(&self) -> Arc<PreferencesStore> {
@@ -612,10 +625,17 @@ impl AppState {
         let log_center = Arc::clone(&self.log_center);
 
         tokio::spawn(async move {
+            let total_len_set = std::sync::atomic::AtomicBool::new(false);
             let download_result = api
-                .download_stream(&source_url, |chunk, _, _| {
+                .download_stream(&source_url, |chunk, _, total| {
                     if stop_flag.load(Ordering::SeqCst) {
                         return Ok(false);
+                    }
+                    if !total_len_set.load(Ordering::Relaxed) {
+                        if let Some(total) = total {
+                            handle.set_expected_total_len(total);
+                            total_len_set.store(true, Ordering::Relaxed);
+                        }
                     }
                     handle.append_chunk(&mut writer, chunk)?;
                     Ok(true)

@@ -243,8 +243,11 @@ impl TagEditorService {
     ///
     /// 合并完成后更新 self.remote 为 new_remote，自动合并的部分从 local 中移除。
     pub(crate) fn apply_remote_update(&self, new_remote: TagRegistry) -> Result<MergeResult> {
-        let base = self.remote.read().expect("poisoned").clone();
-        let local = self.local.read().expect("poisoned").clone();
+        let mut remote_guard = self.remote.write().expect("poisoned");
+        let mut local_guard = self.local.write().expect("poisoned");
+
+        let base = remote_guard.clone();
+        let local = local_guard.clone();
         let new_remote_store = EditorStore::from_registry(&new_remote);
 
         let mut conflicts = Vec::new();
@@ -287,7 +290,6 @@ impl TagEditorService {
                     let base_eq_local = base_vals == local_vals;
 
                     if base_eq_remote && base_eq_local {
-                        // 三方一致，本地 overlay 可清除
                         if let Some(ts) = new_local_map.get_mut(cid) {
                             ts.tags.remove(dim_key);
                         }
@@ -295,13 +297,11 @@ impl TagEditorService {
                     } else if base_eq_remote {
                         // 远端未变，本地有修改 → 保留本地
                     } else if base_eq_local {
-                        // 本地未动，远端有修改 → 接受远端，清除本地 overlay
                         if let Some(ts) = new_local_map.get_mut(cid) {
                             ts.tags.remove(dim_key);
                         }
                         auto_merged_count += 1;
                     } else {
-                        // 三方各不同 → 冲突
                         conflicts.push(MergeConflict {
                             entity_type,
                             cid: cid.to_string(),
@@ -321,18 +321,13 @@ impl TagEditorService {
             }
         }
 
-        // 更新 remote 为新快照
-        {
-            let mut remote_guard = self.remote.write().expect("poisoned");
-            *remote_guard = new_remote_store;
-        }
-        self.persist_remote()?;
+        *remote_guard = new_remote_store;
+        *local_guard = new_local;
 
-        // 更新 local overlay
-        {
-            let mut local_guard = self.local.write().expect("poisoned");
-            *local_guard = new_local;
-        }
+        drop(remote_guard);
+        drop(local_guard);
+
+        self.persist_remote()?;
         self.persist_local()?;
 
         Ok(MergeResult {

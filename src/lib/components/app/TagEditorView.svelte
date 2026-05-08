@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { OverlayScrollbarsComponent } from 'overlayscrollbars-svelte';
   import TagEditorPanel from './TagEditorPanel.svelte';
   import TagEditorSongPanel from './TagEditorSongPanel.svelte';
@@ -58,7 +59,9 @@
   const controller = $derived(runtime.tagEditorController);
 
   $effect(() => {
-    void controller.loadData();
+    untrack(() => {
+      void controller.loadData();
+    });
   });
 </script>
 
@@ -128,6 +131,6 @@
     justify-content: center;
     padding: 4rem;
     color: var(--color-text-secondary, #6b7280);
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
   }
 </style>

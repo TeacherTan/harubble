@@ -48,6 +48,7 @@ pub mod downloader;
 pub mod homepage;
 pub mod local_inventory;
 pub mod search;
+pub mod url_validator;
 
 // 重新导出公共 API，便于上层直接使用
 /// Monster Siren 上游数据访问相关的公共类型与客户端入口。
@@ -65,8 +66,8 @@ pub use download::service::DownloadService;
 /// 高层下载编排、写盘与进度上报相关公共接口。
 pub use downloader::{
     album_cover_exists, album_output_dir, download_album_cover, download_song,
-    write_album_cover_bytes, write_payload_to_disk, DownloadProgress, DownloadProvenanceSeed,
-    MetaOverride, OwnedFlacMetadata, WritePayload,
+    write_album_cover_bytes, write_payload_to_disk, DownloadCancelledError, DownloadProgress,
+    DownloadProvenanceSeed, MetaOverride, OwnedFlacMetadata, WritePayload,
 };
 /// 首页数据结构：系列分组、收听历史、收听事件与状态仪表盘。
 pub use homepage::{HistoryEntry, HomepageStatus, ListeningEvent, SeriesGroup, TagGroup};
@@ -87,3 +88,5 @@ pub use search::{
     SEARCH_LIBRARY_DEFAULT_LIMIT, SEARCH_LIBRARY_DEFAULT_OFFSET, SEARCH_LIBRARY_MAX_LIMIT,
     SEARCH_LIBRARY_MAX_OFFSET, SEARCH_LIBRARY_QUERY_MAX_LENGTH,
 };
+/// 下载 URL 域名白名单校验。
+pub use url_validator::validate_download_url;

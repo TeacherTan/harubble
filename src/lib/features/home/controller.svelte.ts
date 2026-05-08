@@ -100,7 +100,7 @@ export function createHomeController(deps: HomeControllerDeps) {
   }
 
   async function loadTagGroups(dimensionKey: string) {
-    const requestSeq = loadRequestSeq;
+    const requestSeq = ++loadRequestSeq;
     try {
       const groups = await deps.getAlbumsByTagDimension(dimensionKey);
       if (requestSeq !== loadRequestSeq) return;

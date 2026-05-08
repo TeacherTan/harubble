@@ -9,7 +9,7 @@ use crate::audio::{
     FlacMetadata, OutputFormat,
 };
 use crate::download::model::DownloadTaskStatus;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -201,12 +201,24 @@ async fn fetch_lyric_text(client: &ApiClient, song: &SongDetail) -> Result<Optio
     Ok(Some(lyric_text))
 }
 
+/// 下载被取消时返回的类型化错误。
+#[derive(Debug)]
+pub struct DownloadCancelledError;
+
+impl std::fmt::Display for DownloadCancelledError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "download cancelled")
+    }
+}
+
+impl std::error::Error for DownloadCancelledError {}
+
 fn ensure_not_cancelled(cancellation_flag: Option<&Arc<AtomicBool>>) -> Result<()> {
     if cancellation_flag
         .map(|flag| flag.load(Ordering::SeqCst))
         .unwrap_or(false)
     {
-        return Err(anyhow!("download cancelled"));
+        return Err(DownloadCancelledError.into());
     }
 
     Ok(())
@@ -558,7 +570,8 @@ fn build_owned_flac_metadata(
 ///
 /// 会在每个文件的每个下载分块后调用 `on_progress`，并按专辑曲序返回
 /// 最终写入的文件路径列表。
-pub async fn download_album(
+#[allow(dead_code)]
+pub(crate) async fn download_album(
     client: &ApiClient,
     album_cid: &str,
     base_out_dir: &Path,

@@ -41,6 +41,9 @@
       await onSetTag(dimensionKey, updated);
     }
   }
+  function valueKey(val: TagEditorLocalizedValue, idx: number): string {
+    return `${idx}-${val['zh-CN'] ?? ''}-${val['en-US'] ?? ''}`;
+  }
 </script>
 
 <div class="dimension-row">
@@ -50,7 +53,7 @@
   </div>
 
   <div class="dimension-values">
-    {#each values as val, idx (idx)}
+    {#each values as val, idx (valueKey(val, idx))}
       <span class="value-chip">
         {displayValue(val)}
         <button
@@ -90,7 +93,7 @@
     font-size: 0.8125rem;
     font-weight: 500;
     color: var(--color-text-primary, #1f2937);
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
   }
 
   .dim-key {
@@ -114,7 +117,7 @@
     background: var(--color-chip-bg, #f3f4f6);
     border-radius: 9999px;
     color: var(--color-text-primary, #374151);
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
   }
 
   .chip-remove {
@@ -143,6 +146,6 @@
     padding: 0.25rem 0.5rem;
     border: 1px solid var(--color-border, #d1d5db);
     border-radius: 4px;
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
   }
 </style>
