@@ -399,15 +399,15 @@ export interface TagEditorAlbumEntry {
   type: string | null;
   name: string | null;
   releaseDate: string | null;
-  faction: string | null;
-  character: string | null;
-  artistes: string[] | null;
+  faction: TagEditorLocalizedValue | null;
+  character: TagEditorLocalizedValue | null;
 }
 
 export interface TagEditorRegistry {
   schemaVersion: number;
   updatedAt: string;
   tagDimensions: TagEditorDimension[];
+  typeDefinitions: Record<string, TagEditorLocalizedValue>;
   albums: TagEditorAlbumEntry[];
   songs: Record<string, TagEditorTagSet>;
 }

@@ -19,6 +19,7 @@ struct EditorStore {
     schema_version: u32,
     updated_at: String,
     tag_dimensions: Vec<TagDimension>,
+    type_definitions: HashMap<String, LocalizedValue>,
     albums: HashMap<String, TagSet>,
     songs: HashMap<String, TagSet>,
 }
@@ -29,7 +30,8 @@ impl EditorStore {
             schema_version: registry.schema_version,
             updated_at: registry.updated_at.clone(),
             tag_dimensions: registry.tag_dimensions.clone(),
-            albums: albums_to_tag_map(&registry.albums),
+            type_definitions: registry.type_definitions.clone(),
+            albums: albums_to_tag_map(&registry.albums, &registry.type_definitions),
             songs: registry.songs.clone(),
         }
     }
@@ -39,7 +41,8 @@ impl EditorStore {
             schema_version: self.schema_version,
             updated_at: self.updated_at.clone(),
             tag_dimensions: self.tag_dimensions.clone(),
-            albums: tag_map_to_albums(&self.albums),
+            type_definitions: self.type_definitions.clone(),
+            albums: tag_map_to_albums(&self.albums, &self.type_definitions),
             songs: self.songs.clone(),
         }
     }
@@ -218,6 +221,7 @@ impl TagEditorService {
         let local = self.local.read().expect("poisoned");
 
         let dimensions = merge_dimensions(&remote.tag_dimensions, &local.tag_dimensions);
+        let type_definitions = remote.type_definitions.clone();
         let albums = merge_entity_maps(&remote.albums, &local.albums);
         let songs = merge_entity_maps(&remote.songs, &local.songs);
 
@@ -225,7 +229,8 @@ impl TagEditorService {
             schema_version: remote.schema_version.max(local.schema_version).max(1),
             updated_at: remote.updated_at.clone(),
             tag_dimensions: dimensions,
-            albums: tag_map_to_albums(&albums),
+            type_definitions,
+            albums: tag_map_to_albums(&albums, &remote.type_definitions),
             songs,
         }
     }
@@ -492,10 +497,19 @@ mod tests {
     use super::*;
     use crate::tag_registry::AlbumEntry;
 
+    fn make_lv(value: &str) -> LocalizedValue {
+        LocalizedValue(HashMap::from([("zh-CN".to_string(), value.to_string())]))
+    }
+
+    fn lv_zh(lv: &Option<LocalizedValue>) -> Option<&str> {
+        lv.as_ref()
+            .and_then(|v| v.0.get("zh-CN").map(|s| s.as_str()))
+    }
+
     fn make_album_entry(cid: &str, faction: Option<&str>) -> AlbumEntry {
         AlbumEntry {
             cid: cid.to_string(),
-            faction: faction.map(|s| s.to_string()),
+            faction: faction.map(make_lv),
             ..Default::default()
         }
     }
@@ -505,9 +519,10 @@ mod tests {
             schema_version: CURRENT_SCHEMA_VERSION,
             updated_at: updated_at.to_string(),
             tag_dimensions: vec![],
+            type_definitions: HashMap::new(),
             albums: vec![AlbumEntry {
                 cid: cid.to_string(),
-                faction: Some(faction.to_string()),
+                faction: Some(make_lv(faction)),
                 ..Default::default()
             }],
             songs: HashMap::new(),
@@ -533,6 +548,7 @@ mod tests {
             schema_version: CURRENT_SCHEMA_VERSION,
             updated_at: "2026-05-01T00:00:00Z".to_string(),
             tag_dimensions: vec![],
+            type_definitions: HashMap::new(),
             albums: vec![make_album_entry("A1", Some("罗德岛"))],
             songs: HashMap::new(),
         };
@@ -549,6 +565,7 @@ mod tests {
             schema_version: CURRENT_SCHEMA_VERSION,
             updated_at: "".to_string(),
             tag_dimensions: vec![],
+            type_definitions: HashMap::new(),
             albums: vec![],
             songs: HashMap::from([("S1".into(), TagSet::default())]),
         };
@@ -570,7 +587,7 @@ mod tests {
             .unwrap();
         let local = svc.local_registry();
         let a1 = find_album_in_registry(&local, "A1").unwrap();
-        assert_eq!(a1.faction.as_deref(), Some("罗德岛"));
+        assert_eq!(lv_zh(&a1.faction), Some("罗德岛"));
     }
 
     #[test]
@@ -659,9 +676,10 @@ mod tests {
                 key: "faction".to_string(),
                 label: HashMap::from([("zh-CN".into(), "阵营".into())]),
             }],
+            type_definitions: HashMap::new(),
             albums: vec![AlbumEntry {
                 cid: "A1".to_string(),
-                faction: Some("罗德岛".to_string()),
+                faction: Some(make_lv("罗德岛")),
                 ..Default::default()
             }],
             songs: HashMap::new(),
@@ -690,7 +708,7 @@ mod tests {
         assert_eq!(merged.tag_dimensions[0].key, "faction");
         assert_eq!(merged.tag_dimensions[1].key, "mood");
         let a1 = find_album_in_registry(&merged, "A1").unwrap();
-        assert_eq!(a1.faction.as_deref(), Some("罗德岛"));
+        assert_eq!(lv_zh(&a1.faction), Some("罗德岛"));
     }
 
     #[test]
@@ -704,9 +722,10 @@ mod tests {
                 key: "faction".to_string(),
                 label: HashMap::from([("zh-CN".into(), "阵营".into())]),
             }],
+            type_definitions: HashMap::new(),
             albums: vec![AlbumEntry {
                 cid: "A1".to_string(),
-                faction: Some("罗德岛".to_string()),
+                faction: Some(make_lv("罗德岛")),
                 ..Default::default()
             }],
             songs: HashMap::new(),
@@ -771,7 +790,7 @@ mod tests {
         assert!(result.conflicts.is_empty());
         let local = svc.local_registry();
         let a1 = find_album_in_registry(&local, "A1").unwrap();
-        assert_eq!(a1.faction.as_deref(), Some("本地值"));
+        assert_eq!(lv_zh(&a1.faction), Some("本地值"));
     }
 
     #[test]
@@ -829,7 +848,7 @@ mod tests {
 
         let local = svc.local_registry();
         let a1 = find_album_in_registry(&local, "A1").unwrap();
-        assert_eq!(a1.faction.as_deref(), Some("本地"));
+        assert_eq!(lv_zh(&a1.faction), Some("本地"));
     }
 
     #[test]

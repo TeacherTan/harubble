@@ -59,6 +59,9 @@ pub struct TagRegistry {
     /// 所有 tag 维度定义，包含 key 与各语种的展示名称。
     #[serde(default)]
     pub(crate) tag_dimensions: Vec<TagDimension>,
+    /// 专辑类型枚举定义表：key → 多语种标签。
+    #[serde(default)]
+    pub(crate) type_definitions: HashMap<String, LocalizedValue>,
     /// 专辑条目列表，每个条目包含 cid 与扁平化的 tag 字段。
     #[serde(default)]
     pub(crate) albums: Vec<AlbumEntry>,
@@ -75,7 +78,7 @@ pub struct TagRegistry {
 pub struct AlbumEntry {
     /// 专辑 CID（唯一标识）。
     pub(crate) cid: String,
-    /// 专辑类型（如 "OST"、"Character EP"）。
+    /// 专辑类型 key，引用 `TagRegistry.type_definitions` 中的定义。
     #[serde(default, rename = "type")]
     pub(crate) album_type: Option<String>,
     /// 专辑名称。
@@ -84,15 +87,12 @@ pub struct AlbumEntry {
     /// 发行日期（ISO 8601 日期字符串）。
     #[serde(default)]
     pub(crate) release_date: Option<String>,
-    /// 所属阵营。
+    /// 所属阵营，多语种。
     #[serde(default)]
-    pub(crate) faction: Option<String>,
-    /// 关联角色。
+    pub(crate) faction: Option<LocalizedValue>,
+    /// 关联角色，多语种。
     #[serde(default)]
-    pub(crate) character: Option<String>,
-    /// 艺术家列表。
-    #[serde(default)]
-    pub(crate) artistes: Option<Vec<String>>,
+    pub(crate) character: Option<LocalizedValue>,
 }
 
 /// 单个 tag 维度的定义。
@@ -177,7 +177,7 @@ impl TagRegistryService {
     pub(crate) fn new(app_data_dir: &Path) -> Self {
         let cache_path = app_data_dir.join(CACHE_FILE_NAME);
         let registry = load_from_cache(&cache_path).unwrap_or_default();
-        let album_index = build_album_index(&registry.albums);
+        let album_index = build_album_index(&registry.albums, &registry.type_definitions);
         Self {
             registry: Arc::new(RwLock::new(registry)),
             album_index: Arc::new(RwLock::new(album_index)),
@@ -331,7 +331,7 @@ impl TagRegistryService {
     ///
     /// 若创建临时文件、写入内容或原子重命名失败，返回 `Err`。
     pub(crate) fn update(&self, new_registry: TagRegistry) -> Result<()> {
-        let new_index = build_album_index(&new_registry.albums);
+        let new_index = build_album_index(&new_registry.albums, &new_registry.type_definitions);
         {
             let mut registry = self.registry.write().expect("tag registry RwLock poisoned");
             *registry = new_registry.clone();
@@ -361,11 +361,14 @@ impl TagRegistryService {
 /// 从 `AlbumEntry` 列表构建 cid → TagSet 的查询索引。
 ///
 /// 将扁平字段转换为 `LocalizedValue` 格式，跳过 `None` 字段。
-fn build_album_index(albums: &[AlbumEntry]) -> AlbumTagIndex {
+fn build_album_index(
+    albums: &[AlbumEntry],
+    type_defs: &HashMap<String, LocalizedValue>,
+) -> AlbumTagIndex {
     albums
         .iter()
         .filter_map(|entry| {
-            let tag_set = album_entry_to_tag_set(entry);
+            let tag_set = album_entry_to_tag_set(entry, type_defs);
             if tag_set.tags.is_empty() {
                 None
             } else {
@@ -376,45 +379,62 @@ fn build_album_index(albums: &[AlbumEntry]) -> AlbumTagIndex {
 }
 
 /// 将单个 `AlbumEntry` 的扁平字段转换为 `TagSet`。
-fn album_entry_to_tag_set(entry: &AlbumEntry) -> TagSet {
+fn album_entry_to_tag_set(
+    entry: &AlbumEntry,
+    type_defs: &HashMap<String, LocalizedValue>,
+) -> TagSet {
     let mut tags: HashMap<String, Vec<LocalizedValue>> = HashMap::new();
 
-    if let Some(ref v) = entry.album_type {
-        tags.insert("type".to_string(), vec![plain_localized_value(v)]);
+    if let Some(ref key) = entry.album_type {
+        if let Some(lv) = type_defs.get(key) {
+            tags.insert("type".to_string(), vec![lv.clone()]);
+        } else {
+            let fallback = LocalizedValue(HashMap::from([
+                ("zh-CN".to_string(), key.clone()),
+                ("en-US".to_string(), key.clone()),
+            ]));
+            tags.insert("type".to_string(), vec![fallback]);
+        }
     }
     if let Some(ref v) = entry.faction {
-        tags.insert("faction".to_string(), vec![plain_localized_value(v)]);
+        tags.insert("faction".to_string(), vec![v.clone()]);
     }
     if let Some(ref v) = entry.character {
-        tags.insert("character".to_string(), vec![plain_localized_value(v)]);
+        tags.insert("character".to_string(), vec![v.clone()]);
     }
 
     TagSet { tags }
 }
 
-/// 创建一个不区分语种的 `LocalizedValue`（zh-CN 和 en-US 使用相同值）。
-fn plain_localized_value(value: &str) -> LocalizedValue {
-    LocalizedValue(HashMap::from([
-        ("zh-CN".to_string(), value.to_string()),
-        ("en-US".to_string(), value.to_string()),
-    ]))
-}
-
 /// 将 `Vec<AlbumEntry>` 转换为 `HashMap<String, TagSet>`（供 tag editor 使用）。
-pub(crate) fn albums_to_tag_map(albums: &[AlbumEntry]) -> HashMap<String, TagSet> {
-    build_album_index(albums)
+pub(crate) fn albums_to_tag_map(
+    albums: &[AlbumEntry],
+    type_defs: &HashMap<String, LocalizedValue>,
+) -> HashMap<String, TagSet> {
+    build_album_index(albums, type_defs)
 }
 
 /// 将 `HashMap<String, TagSet>` 转换回 `Vec<AlbumEntry>`（供 tag editor 持久化使用）。
-pub(crate) fn tag_map_to_albums(map: &HashMap<String, TagSet>) -> Vec<AlbumEntry> {
+pub(crate) fn tag_map_to_albums(
+    map: &HashMap<String, TagSet>,
+    type_defs: &HashMap<String, LocalizedValue>,
+) -> Vec<AlbumEntry> {
     map.iter()
-        .map(|(cid, tag_set)| tag_set_to_album_entry(cid, tag_set))
+        .map(|(cid, tag_set)| tag_set_to_album_entry(cid, tag_set, type_defs))
         .collect()
 }
 
 /// 将单个 `TagSet` 转换回 `AlbumEntry`。
-fn tag_set_to_album_entry(cid: &str, tag_set: &TagSet) -> AlbumEntry {
-    let get_first = |key: &str| -> Option<String> {
+fn tag_set_to_album_entry(
+    cid: &str,
+    tag_set: &TagSet,
+    type_defs: &HashMap<String, LocalizedValue>,
+) -> AlbumEntry {
+    let get_first_lv = |key: &str| -> Option<LocalizedValue> {
+        tag_set.tags.get(key).and_then(|vals| vals.first().cloned())
+    };
+
+    let get_first_str = |key: &str| -> Option<String> {
         tag_set.tags.get(key).and_then(|vals| {
             vals.first().map(|lv| {
                 lv.0.get("zh-CN")
@@ -426,14 +446,29 @@ fn tag_set_to_album_entry(cid: &str, tag_set: &TagSet) -> AlbumEntry {
         })
     };
 
+    // Reverse-lookup type key from LocalizedValue
+    let album_type = tag_set.tags.get("type").and_then(|vals| {
+        vals.first().and_then(|lv| {
+            type_defs
+                .iter()
+                .find(|(_, def)| *def == lv)
+                .map(|(k, _)| k.clone())
+                .or_else(|| {
+                    lv.0.get("en-US")
+                        .or_else(|| lv.0.get("zh-CN"))
+                        .or_else(|| lv.0.values().next())
+                        .cloned()
+                })
+        })
+    });
+
     AlbumEntry {
         cid: cid.to_string(),
-        album_type: get_first("type"),
-        name: get_first("name"),
-        release_date: get_first("releaseDate"),
-        faction: get_first("faction"),
-        character: get_first("character"),
-        artistes: None,
+        album_type,
+        name: get_first_str("name"),
+        release_date: get_first_str("releaseDate"),
+        faction: get_first_lv("faction"),
+        character: get_first_lv("character"),
     }
 }
 
@@ -651,9 +686,13 @@ mod tests {
                     },
                 },
             ],
+            type_definitions: HashMap::new(),
             albums: vec![AlbumEntry {
                 cid: "ALBUM_CID".to_string(),
-                faction: Some("罗德岛".to_string()),
+                faction: Some(LocalizedValue(HashMap::from([(
+                    "zh-CN".to_string(),
+                    "罗德岛".to_string(),
+                )]))),
                 ..Default::default()
             }],
             songs,
@@ -661,7 +700,7 @@ mod tests {
     }
 
     fn make_service_with(registry: TagRegistry) -> TagRegistryService {
-        let album_index = build_album_index(&registry.albums);
+        let album_index = build_album_index(&registry.albums, &registry.type_definitions);
         TagRegistryService {
             registry: Arc::new(RwLock::new(registry)),
             album_index: Arc::new(RwLock::new(album_index)),

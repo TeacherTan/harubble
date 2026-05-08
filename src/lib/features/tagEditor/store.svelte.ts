@@ -80,14 +80,20 @@ export const tagEditorStore = {
     const entry = merged.albums.find((a) => a.cid === selectedCid);
     if (!entry) return {};
     const tags: Record<string, TagEditorLocalizedValue[]> = {};
-    if (entry.type)
-      tags['type'] = [{ 'zh-CN': entry.type, 'en-US': entry.type }];
-    if (entry.faction)
-      tags['faction'] = [{ 'zh-CN': entry.faction, 'en-US': entry.faction }];
-    if (entry.character)
-      tags['character'] = [
-        { 'zh-CN': entry.character, 'en-US': entry.character },
-      ];
+    if (entry.type) {
+      const typeDef: TagEditorLocalizedValue | undefined = (
+        merged.typeDefinitions as Partial<
+          Record<string, TagEditorLocalizedValue>
+        >
+      )[entry.type];
+      if (typeDef) {
+        tags['type'] = [typeDef];
+      } else {
+        tags['type'] = [{ 'zh-CN': entry.type, 'en-US': entry.type }];
+      }
+    }
+    if (entry.faction) tags['faction'] = [entry.faction];
+    if (entry.character) tags['character'] = [entry.character];
     return tags;
   },
   get editingAlbum() {
