@@ -32,7 +32,7 @@
 //! 通常应该优先检查 `siren_core` 的公开 API，再回到这里看宿主层如何接入。
 
 mod album_metadata_cache;
-pub(crate) mod collection;
+pub mod collection;
 mod app_state;
 mod audio_cache;
 pub mod commands;

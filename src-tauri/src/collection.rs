@@ -143,7 +143,7 @@ pub struct ExportedCollectionData {
 ///
 /// 实现 `Clone`，可在 Tauri 状态中共享。
 #[derive(Clone)]
-pub(crate) struct CollectionService {
+pub struct CollectionService {
     /// 官方合集列表（内存，只读）。
     official: Arc<Vec<OfficialCollectionEntry>>,
     /// SQLite 连接（用户合集持久化）。
@@ -165,7 +165,7 @@ impl CollectionService {
     /// # 副作用
     ///
     /// 调用 `initialize_schema()` 确保数据库表结构存在。
-    pub(crate) fn new(db_path: &Path, official_json: &[u8]) -> Result<Self, String> {
+    pub fn new(db_path: &Path, official_json: &[u8]) -> Result<Self, String> {
         let conn = Connection::open(db_path)
             .map_err(|e| format!("打开合集数据库失败: {e}"))?;
 
@@ -240,7 +240,7 @@ impl CollectionService {
     /// # 返回值
     ///
     /// 官方合集在前，用户合集在后，均包含歌曲数量。
-    pub(crate) fn list_all(&self, locale: &str) -> Result<Vec<CollectionSummary>, String> {
+    pub fn list_all(&self, locale: &str) -> Result<Vec<CollectionSummary>, String> {
         let mut result: Vec<CollectionSummary> = Vec::new();
 
         // 官方合集：从内存映射，歌曲数量直接取 song_ids.len()
@@ -306,7 +306,7 @@ impl CollectionService {
     /// # 返回值
     ///
     /// 成功返回 `Collection`，合集不存在时返回错误。
-    pub(crate) fn get(&self, id: &str, locale: &str) -> Result<Collection, String> {
+    pub fn get(&self, id: &str, locale: &str) -> Result<Collection, String> {
         if id.starts_with(OFFICIAL_PREFIX) {
             // 官方合集：从内存查找
             let entry = self
@@ -380,7 +380,7 @@ impl CollectionService {
     /// # 返回值
     ///
     /// 成功返回新建的 `Collection`（歌曲列表为空）。
-    pub(crate) fn create(
+    pub fn create(
         &self,
         name: &str,
         description: &str,
@@ -417,7 +417,7 @@ impl CollectionService {
     /// # 返回值
     ///
     /// 成功返回更新后的 `Collection`。
-    pub(crate) fn update(
+    pub fn update(
         &self,
         id: &str,
         name: Option<&str>,
@@ -471,7 +471,7 @@ impl CollectionService {
     /// # 返回值
     ///
     /// 成功返回 `()`，合集不存在时返回错误。
-    pub(crate) fn delete(&self, id: &str) -> Result<(), String> {
+    pub fn delete(&self, id: &str) -> Result<(), String> {
         guard_not_official(id)?;
 
         let conn = self
@@ -502,7 +502,7 @@ impl CollectionService {
     /// # 副作用
     ///
     /// 更新合集的 `updated_at` 时间戳。
-    pub(crate) fn add_songs(&self, id: &str, song_ids: &[String]) -> Result<(), String> {
+    pub fn add_songs(&self, id: &str, song_ids: &[String]) -> Result<(), String> {
         guard_not_official(id)?;
 
         let conn = self
@@ -549,7 +549,7 @@ impl CollectionService {
     /// # 副作用
     ///
     /// 更新合集的 `updated_at` 时间戳。
-    pub(crate) fn remove_songs(&self, id: &str, song_ids: &[String]) -> Result<(), String> {
+    pub fn remove_songs(&self, id: &str, song_ids: &[String]) -> Result<(), String> {
         guard_not_official(id)?;
 
         let conn = self
@@ -585,7 +585,7 @@ impl CollectionService {
     /// # 副作用
     ///
     /// 在事务中批量更新 position，并更新合集的 `updated_at` 时间戳。
-    pub(crate) fn reorder_songs(&self, id: &str, song_ids: &[String]) -> Result<(), String> {
+    pub fn reorder_songs(&self, id: &str, song_ids: &[String]) -> Result<(), String> {
         guard_not_official(id)?;
 
         let conn = self
@@ -631,7 +631,7 @@ impl CollectionService {
     /// # 返回值
     ///
     /// 成功返回格式化的 JSON 字符串（pretty-printed）。
-    pub(crate) fn export(&self, id: &str, locale: &str) -> Result<String, String> {
+    pub fn export(&self, id: &str, locale: &str) -> Result<String, String> {
         let collection = self.get(id, locale)?;
 
         let mut name_map = HashMap::new();
@@ -668,7 +668,7 @@ impl CollectionService {
     ///
     /// - JSON 格式不合法。
     /// - `schema_version` 大于 1（不兼容的未来版本）。
-    pub(crate) fn import(&self, json: &str) -> Result<Collection, String> {
+    pub fn import(&self, json: &str) -> Result<Collection, String> {
         let exported: ExportedCollection = serde_json::from_str(json)
             .map_err(|e| format!("解析导入 JSON 失败: {e}"))?;
 
