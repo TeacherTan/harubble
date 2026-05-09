@@ -37,9 +37,7 @@
   const title = $derived.by(() =>
     mode === 'create' ? '新建合集' : '编辑合集'
   );
-  const submitLabel = $derived.by(() =>
-    mode === 'create' ? '创建' : '保存'
-  );
+  const submitLabel = $derived.by(() => (mode === 'create' ? '创建' : '保存'));
 
   async function handleSubmit() {
     if (!isValid || submitting) return;
