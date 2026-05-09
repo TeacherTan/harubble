@@ -194,4 +194,163 @@ impl CollectionService {
 
         Ok(())
     }
+
+    // ─── 查询方法 ─────────────────────────────────────────────────────────────
+
+    /// 列出所有合集（官方 + 用户），按 locale 解析名称与描述。
+    ///
+    /// # 参数
+    ///
+    /// - `locale`：BCP 47 语言标签（如 `"zh-CN"`），用于本地化官方合集名称。
+    ///
+    /// # 返回值
+    ///
+    /// 官方合集在前，用户合集在后，均包含歌曲数量。
+    pub(crate) fn list_all(&self, locale: &str) -> Result<Vec<CollectionSummary>, String> {
+        let mut result: Vec<CollectionSummary> = Vec::new();
+
+        // 官方合集：从内存映射，歌曲数量直接取 song_ids.len()
+        for entry in self.official.iter() {
+            result.push(CollectionSummary {
+                id: entry.id.clone(),
+                name: resolve_locale(&entry.name, locale),
+                description: resolve_locale(&entry.description, locale),
+                cover: entry.cover.clone(),
+                song_count: entry.song_ids.len() as i64,
+                is_official: true,
+                updated_at: 0,
+            });
+        }
+
+        // 用户合集：从 SQLite 查询，LEFT JOIN 统计歌曲数量
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT c.id, c.name, c.description, c.cover, c.updated_at,
+                        COUNT(cs.song_id) AS song_count
+                 FROM collections c
+                 LEFT JOIN collection_songs cs ON cs.collection_id = c.id
+                 GROUP BY c.id
+                 ORDER BY c.updated_at DESC",
+            )
+            .map_err(|e| format!("准备合集查询语句失败: {e}"))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(CollectionSummary {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    description: row.get(2)?,
+                    cover: row.get(3)?,
+                    updated_at: row.get(4)?,
+                    song_count: row.get(5)?,
+                    is_official: false,
+                })
+            })
+            .map_err(|e| format!("查询合集列表失败: {e}"))?;
+
+        for row in rows {
+            result.push(row.map_err(|e| format!("读取合集行失败: {e}"))?);
+        }
+
+        Ok(result)
+    }
+
+    /// 查询单个合集详情，包含完整歌曲 ID 列表。
+    ///
+    /// # 参数
+    ///
+    /// - `id`：合集 ID（官方合集以 `"official:"` 为前缀）。
+    /// - `locale`：BCP 47 语言标签，用于本地化官方合集名称。
+    ///
+    /// # 返回值
+    ///
+    /// 成功返回 `Collection`，合集不存在时返回错误。
+    pub(crate) fn get(&self, id: &str, locale: &str) -> Result<Collection, String> {
+        if id.starts_with(OFFICIAL_PREFIX) {
+            // 官方合集：从内存查找
+            let entry = self
+                .official
+                .iter()
+                .find(|e| e.id == id)
+                .ok_or_else(|| format!("官方合集不存在: {id}"))?;
+
+            return Ok(Collection {
+                id: entry.id.clone(),
+                name: resolve_locale(&entry.name, locale),
+                description: resolve_locale(&entry.description, locale),
+                cover: entry.cover.clone(),
+                song_ids: entry.song_ids.clone(),
+                is_official: true,
+                updated_at: 0,
+            });
+        }
+
+        // 用户合集：从 SQLite 查询
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
+
+        let (name, description, cover, updated_at): (String, String, Option<String>, i64) = conn
+            .query_row(
+                "SELECT name, description, cover, updated_at FROM collections WHERE id = ?1",
+                params![id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .map_err(|e| format!("查询合集失败: {e}"))?;
+
+        let mut song_stmt = conn
+            .prepare(
+                "SELECT song_id FROM collection_songs
+                 WHERE collection_id = ?1
+                 ORDER BY position ASC",
+            )
+            .map_err(|e| format!("准备歌曲查询语句失败: {e}"))?;
+
+        let song_ids: Vec<String> = song_stmt
+            .query_map(params![id], |row| row.get(0))
+            .map_err(|e| format!("查询合集歌曲失败: {e}"))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("读取合集歌曲行失败: {e}"))?;
+
+        Ok(Collection {
+            id: id.to_string(),
+            name,
+            description,
+            cover,
+            song_ids,
+            is_official: false,
+            updated_at,
+        })
+    }
+}
+
+// ─── 辅助函数 ─────────────────────────────────────────────────────────────────
+
+/// 按 locale 解析本地化值，回退链：locale → zh-CN → en-US → 第一个可用项 → 空字符串。
+///
+/// # 参数
+///
+/// - `value`：多语种本地化值。
+/// - `locale`：目标语言标签（如 `"zh-CN"`）。
+fn resolve_locale(value: &LocalizedValue, locale: &str) -> String {
+    let map = &value.0;
+    if let Some(v) = map.get(locale) {
+        return v.clone();
+    }
+    if let Some(v) = map.get("zh-CN") {
+        return v.clone();
+    }
+    if let Some(v) = map.get("en-US") {
+        return v.clone();
+    }
+    if let Some(v) = map.values().next() {
+        return v.clone();
+    }
+    String::new()
 }
