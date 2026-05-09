@@ -141,6 +141,16 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::collection::list_collections,
+            commands::collection::get_collection,
+            commands::collection::create_collection,
+            commands::collection::update_collection,
+            commands::collection::delete_collection,
+            commands::collection::add_songs_to_collection,
+            commands::collection::remove_songs_from_collection,
+            commands::collection::reorder_collection_songs,
+            commands::collection::export_collection,
+            commands::collection::import_collection,
             commands::library::get_albums,
             commands::library::get_album_detail,
             commands::library::get_song_detail,
