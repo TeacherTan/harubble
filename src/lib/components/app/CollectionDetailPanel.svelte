@@ -4,7 +4,7 @@
   import type { Collection } from '$lib/types';
 
   interface Props {
-    collection: Collection;
+    collection: Collection | null;
     isLoading: boolean;
     reducedMotion: boolean;
     onEdit: () => void;
@@ -20,9 +20,9 @@
     return props.reducedMotion ? 0 : base;
   }
 
-  const isEditable = $derived.by(() => !props.collection.isOfficial);
+  const isEditable = $derived.by(() => !props.collection?.isOfficial);
   const songCountLabel = $derived.by(
-    () => `${props.collection.songIds.length} 首歌曲`
+    () => `${props.collection?.songIds.length ?? 0} 首歌曲`
   );
 
   let dragSourceIndex = $state<number | null>(null);
@@ -40,7 +40,11 @@
   }
 
   function handleDrop(_event: DragEvent, targetIndex: number) {
-    if (dragSourceIndex === null || dragSourceIndex === targetIndex) {
+    if (
+      dragSourceIndex === null ||
+      dragSourceIndex === targetIndex ||
+      !props.collection
+    ) {
       dragSourceIndex = null;
       return;
     }
@@ -58,7 +62,12 @@
   <div class="collection-detail-loading" in:fade={{ duration: dur(200) }}>
     <span>加载中…</span>
   </div>
+{:else if !props.collection}
+  <div class="collection-detail-loading" in:fade={{ duration: dur(200) }}>
+    <span>请从侧边栏选择一个合集</span>
+  </div>
 {:else}
+  {@const collection = props.collection}
   <div
     class="collection-detail-card"
     class:is-reduced-motion={props.reducedMotion}
@@ -71,13 +80,13 @@
         in:fly={{ y: 14, duration: dur(220), delay: dur(30) }}
         out:fly={{ y: 8, duration: dur(220) }}
       >
-        {#if props.collection.isOfficial}
+        {#if collection.isOfficial}
           <span class="collection-official-tag">★ 官方合集</span>
         {/if}
-        <h1 class="collection-hero-title">{props.collection.name}</h1>
-        {#if props.collection.description}
+        <h1 class="collection-hero-title">{collection.name}</h1>
+        {#if collection.description}
           <p class="collection-hero-description">
-            {props.collection.description}
+            {collection.description}
           </p>
         {/if}
         <div class="collection-hero-meta">
@@ -94,10 +103,10 @@
               onclick={() => {
                 if (
                   confirm(
-                    `确定要删除合集「${props.collection.name}」吗？此操作不可撤销。`
+                    `确定要删除合集「${collection.name}」吗？此操作不可撤销。`
                   )
                 ) {
-                  props.onDelete(props.collection.id);
+                  props.onDelete(collection.id);
                 }
               }}
             >
@@ -107,7 +116,7 @@
           <button
             type="button"
             class="btn"
-            onclick={() => props.onExport(props.collection.id)}
+            onclick={() => props.onExport(collection.id)}
           >
             导出
           </button>
@@ -121,7 +130,7 @@
       in:fly={{ y: 10, duration: dur(200), delay: dur(70) }}
       out:fade={{ duration: dur(200) }}
     >
-      {#each props.collection.songIds as songId, index (songId)}
+      {#each collection.songIds as songId, index (songId)}
         <CollectionSongRow
           {songId}
           {index}
@@ -132,11 +141,10 @@
             dragSourceIndex = null;
           }}
           onDrop={handleDrop}
-          onRemove={(sid) =>
-            props.onRemoveSongs(props.collection.id, [sid])}
+          onRemove={(sid) => props.onRemoveSongs(collection.id, [sid])}
         />
       {/each}
-      {#if props.collection.songIds.length === 0}
+      {#if collection.songIds.length === 0}
         <div class="empty-song-list">
           暂无歌曲，从专辑详情页将歌曲添加到此合集
         </div>

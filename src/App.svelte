@@ -10,6 +10,8 @@
   import AppSideSheets from '$lib/components/app/AppSideSheets.svelte';
   import HomeView from '$lib/components/app/HomeView.svelte';
   import TagEditorView from '$lib/components/app/TagEditorView.svelte';
+  import CollectionDetailPanel from '$lib/components/app/CollectionDetailPanel.svelte';
+  import CollectionFormDialog from '$lib/components/app/CollectionFormDialog.svelte';
 
   const runtime = createAppRuntime();
 </script>
@@ -42,6 +44,12 @@
     onSearchScopeChange={runtime.libraryController.setSearchScope}
     onSelect={runtime.handleSelectAlbum}
     onSelectSearchResult={runtime.handleSelectSearchResult}
+    collections={runtime.collectionController.collections}
+    selectedCollectionId={runtime.collectionController.selectedCollectionId}
+    collectionsLoading={runtime.collectionController.isLoading}
+    onCollectionSelect={runtime.collectionController.selectCollection}
+    onCollectionCreate={runtime.collectionController.openCreateDialog}
+    onCollectionImport={runtime.collectionController.handleImport}
   />
 
   <section class="main-region">
@@ -68,6 +76,17 @@
       <HomeView {runtime} />
     {:else if runtime.currentView === 'tagEditor'}
       <TagEditorView {runtime} />
+    {:else if runtime.currentView === 'collection'}
+      <CollectionDetailPanel
+        collection={runtime.collectionController.selectedCollection}
+        isLoading={runtime.collectionController.isDetailLoading}
+        reducedMotion={runtime.prefersReducedMotion}
+        onEdit={runtime.collectionController.openEditDialog}
+        onDelete={runtime.collectionController.handleDelete}
+        onExport={runtime.collectionController.handleExport}
+        onRemoveSongs={runtime.collectionController.handleRemoveSongs}
+        onReorderSongs={runtime.collectionController.handleReorderSongs}
+      />
     {:else}
       <AlbumWorkspace
         currentSong={runtime.currentSong}
@@ -239,3 +258,21 @@
     />
   </section>
 </div>
+
+<CollectionFormDialog
+  bind:open={runtime.collectionController.formDialogOpen}
+  mode={runtime.collectionController.formDialogMode}
+  initialName={runtime.collectionController.selectedCollection?.name ?? ''}
+  initialDescription={runtime.collectionController.selectedCollection
+    ?.description ?? ''}
+  onSubmit={(name, description) => {
+    if (runtime.collectionController.formDialogMode === 'create') {
+      return runtime.collectionController.handleCreate(name, description);
+    }
+    const id = runtime.collectionController.selectedCollectionId;
+    if (id) {
+      return runtime.collectionController.handleUpdate(id, name, description);
+    }
+  }}
+  onClose={runtime.collectionController.closeFormDialog}
+/>

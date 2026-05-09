@@ -1,8 +1,10 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
   import AlbumSidebar from '$lib/components/app/AlbumSidebar.svelte';
+  import CollectionSidebarSection from '$lib/components/app/CollectionSidebarSection.svelte';
   import type {
     Album,
+    CollectionSummary,
     LibrarySearchScope,
     SearchLibraryResponse,
     SearchLibraryResultItem,
@@ -28,6 +30,12 @@
     onSelectSearchResult: (
       item: SearchLibraryResultItem
     ) => void | Promise<void>;
+    collections: CollectionSummary[];
+    selectedCollectionId: string | null;
+    collectionsLoading: boolean;
+    onCollectionSelect: (id: string) => void;
+    onCollectionCreate: () => void;
+    onCollectionImport: () => void;
   }
 
   let props: Props = $props();
@@ -73,6 +81,14 @@
     onSearchScopeChange={props.onSearchScopeChange}
     onSelect={props.onSelect}
     onSelectSearchResult={props.onSelectSearchResult}
+  />
+  <CollectionSidebarSection
+    collections={props.collections}
+    selectedCollectionId={props.selectedCollectionId}
+    isLoading={props.collectionsLoading}
+    onSelect={props.onCollectionSelect}
+    onCreate={props.onCollectionCreate}
+    onImport={props.onCollectionImport}
   />
 </aside>
 
