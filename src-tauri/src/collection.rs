@@ -51,6 +51,8 @@ pub struct CollectionSummary {
     pub song_count: i64,
     /// 是否为官方合集。
     pub is_official: bool,
+    /// 创建时间戳（毫秒，Unix epoch）。
+    pub created_at: i64,
     /// 最后更新时间戳（毫秒，Unix epoch）。
     pub updated_at: i64,
 }
@@ -73,6 +75,8 @@ pub struct Collection {
     pub song_ids: Vec<String>,
     /// 是否为官方合集。
     pub is_official: bool,
+    /// 创建时间戳（毫秒，Unix epoch）。
+    pub created_at: i64,
     /// 最后更新时间戳（毫秒，Unix epoch）。
     pub updated_at: i64,
 }
@@ -205,6 +209,7 @@ impl CollectionService {
                 name        TEXT NOT NULL,
                 description TEXT NOT NULL DEFAULT '',
                 cover       TEXT,
+                created_at  INTEGER NOT NULL,
                 updated_at  INTEGER NOT NULL
             );
 
@@ -212,6 +217,7 @@ impl CollectionService {
                 collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
                 song_id       TEXT NOT NULL,
                 position      INTEGER NOT NULL DEFAULT 0,
+                added_at      INTEGER NOT NULL,
                 PRIMARY KEY (collection_id, song_id)
             );
 
@@ -246,6 +252,7 @@ impl CollectionService {
                 cover: entry.cover.clone(),
                 song_count: entry.song_ids.len() as i64,
                 is_official: true,
+                created_at: 0,
                 updated_at: 0,
             });
         }
@@ -258,7 +265,7 @@ impl CollectionService {
 
         let mut stmt = conn
             .prepare(
-                "SELECT c.id, c.name, c.description, c.cover, c.updated_at,
+                "SELECT c.id, c.name, c.description, c.cover, c.created_at, c.updated_at,
                         COUNT(cs.song_id) AS song_count
                  FROM collections c
                  LEFT JOIN collection_songs cs ON cs.collection_id = c.id
@@ -274,8 +281,9 @@ impl CollectionService {
                     name: row.get(1)?,
                     description: row.get(2)?,
                     cover: row.get(3)?,
-                    updated_at: row.get(4)?,
-                    song_count: row.get(5)?,
+                    created_at: row.get(4)?,
+                    updated_at: row.get(5)?,
+                    song_count: row.get(6)?,
                     is_official: false,
                 })
             })
@@ -314,6 +322,7 @@ impl CollectionService {
                 cover: entry.cover.clone(),
                 song_ids: entry.song_ids.clone(),
                 is_official: true,
+                created_at: 0,
                 updated_at: 0,
             });
         }
@@ -324,11 +333,11 @@ impl CollectionService {
             .lock()
             .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
 
-        let (name, description, cover, updated_at): (String, String, Option<String>, i64) = conn
+        let (name, description, cover, created_at, updated_at): (String, String, Option<String>, i64, i64) = conn
             .query_row(
-                "SELECT name, description, cover, updated_at FROM collections WHERE id = ?1",
+                "SELECT name, description, cover, created_at, updated_at FROM collections WHERE id = ?1",
                 params![id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
             )
             .map_err(|e| format!("查询合集失败: {e}"))?;
 
@@ -353,6 +362,7 @@ impl CollectionService {
             cover,
             song_ids,
             is_official: false,
+            created_at,
             updated_at,
         })
     }
@@ -385,9 +395,9 @@ impl CollectionService {
             .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
 
         conn.execute(
-            "INSERT INTO collections (id, name, description, cover, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![id, name, description, cover_path, now],
+            "INSERT INTO collections (id, name, description, cover, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![id, name, description, cover_path, now, now],
         )
         .map_err(|e| format!("创建合集失败: {e}"))?;
 
@@ -509,17 +519,17 @@ impl CollectionService {
             .map_err(|e| format!("查询最大 position 失败: {e}"))?;
 
         let mut pos = max_pos + 1;
+        let now = now_millis();
         for song_id in song_ids {
             conn.execute(
-                "INSERT OR IGNORE INTO collection_songs (collection_id, song_id, position)
-                 VALUES (?1, ?2, ?3)",
-                params![id, song_id, pos],
+                "INSERT OR IGNORE INTO collection_songs (collection_id, song_id, position, added_at)
+                 VALUES (?1, ?2, ?3, ?4)",
+                params![id, song_id, pos, now],
             )
             .map_err(|e| format!("添加歌曲失败: {e}"))?;
             pos += 1;
         }
 
-        let now = now_millis();
         conn.execute(
             "UPDATE collections SET updated_at = ?1 WHERE id = ?2",
             params![now, id],
