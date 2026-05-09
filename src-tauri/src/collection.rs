@@ -451,6 +451,135 @@ impl CollectionService {
 
         Ok(())
     }
+
+    // ─── 歌曲管理方法 ─────────────────────────────────────────────────────────
+
+    /// 向合集添加歌曲（已存在的歌曲忽略，不报错）。
+    ///
+    /// # 参数
+    ///
+    /// - `id`：合集 ID，不可为官方合集。
+    /// - `song_ids`：要添加的歌曲 ID 列表。
+    ///
+    /// # 副作用
+    ///
+    /// 更新合集的 `updated_at` 时间戳。
+    pub(crate) fn add_songs(&self, id: &str, song_ids: &[String]) -> Result<(), String> {
+        guard_not_official(id)?;
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
+
+        let max_pos: i64 = conn
+            .query_row(
+                "SELECT COALESCE(MAX(position), -1) FROM collection_songs WHERE collection_id = ?1",
+                params![id],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("查询最大 position 失败: {e}"))?;
+
+        let mut pos = max_pos + 1;
+        for song_id in song_ids {
+            conn.execute(
+                "INSERT OR IGNORE INTO collection_songs (collection_id, song_id, position)
+                 VALUES (?1, ?2, ?3)",
+                params![id, song_id, pos],
+            )
+            .map_err(|e| format!("添加歌曲失败: {e}"))?;
+            pos += 1;
+        }
+
+        let now = now_millis();
+        conn.execute(
+            "UPDATE collections SET updated_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )
+        .map_err(|e| format!("更新合集时间戳失败: {e}"))?;
+
+        Ok(())
+    }
+
+    /// 从合集移除歌曲。
+    ///
+    /// # 参数
+    ///
+    /// - `id`：合集 ID，不可为官方合集。
+    /// - `song_ids`：要移除的歌曲 ID 列表。
+    ///
+    /// # 副作用
+    ///
+    /// 更新合集的 `updated_at` 时间戳。
+    pub(crate) fn remove_songs(&self, id: &str, song_ids: &[String]) -> Result<(), String> {
+        guard_not_official(id)?;
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
+
+        for song_id in song_ids {
+            conn.execute(
+                "DELETE FROM collection_songs WHERE collection_id = ?1 AND song_id = ?2",
+                params![id, song_id],
+            )
+            .map_err(|e| format!("移除歌曲失败: {e}"))?;
+        }
+
+        let now = now_millis();
+        conn.execute(
+            "UPDATE collections SET updated_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )
+        .map_err(|e| format!("更新合集时间戳失败: {e}"))?;
+
+        Ok(())
+    }
+
+    /// 对合集中的歌曲重新排序。
+    ///
+    /// # 参数
+    ///
+    /// - `id`：合集 ID，不可为官方合集。
+    /// - `song_ids`：按新顺序排列的歌曲 ID 列表，列表中的 index 即为新 position。
+    ///
+    /// # 副作用
+    ///
+    /// 在事务中批量更新 position，并更新合集的 `updated_at` 时间戳。
+    pub(crate) fn reorder_songs(&self, id: &str, song_ids: &[String]) -> Result<(), String> {
+        guard_not_official(id)?;
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
+
+        // SAFETY: unchecked_transaction 在 Mutex 保护下安全使用
+        let tx = conn
+            .unchecked_transaction()
+            .map_err(|e| format!("开启事务失败: {e}"))?;
+
+        for (pos, song_id) in song_ids.iter().enumerate() {
+            tx.execute(
+                "UPDATE collection_songs SET position = ?1
+                 WHERE collection_id = ?2 AND song_id = ?3",
+                params![pos as i64, id, song_id],
+            )
+            .map_err(|e| format!("更新歌曲排序失败: {e}"))?;
+        }
+
+        let now = now_millis();
+        tx.execute(
+            "UPDATE collections SET updated_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )
+        .map_err(|e| format!("更新合集时间戳失败: {e}"))?;
+
+        tx.commit().map_err(|e| format!("提交排序事务失败: {e}"))?;
+
+        Ok(())
+    }
 }
 
 // ─── 辅助函数 ─────────────────────────────────────────────────────────────────
