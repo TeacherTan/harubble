@@ -72,6 +72,19 @@ import { createPlayerController } from '$lib/features/player/controller.svelte';
 import { createDownloadController } from '$lib/features/download/controller.svelte';
 import { createHomeController } from '$lib/features/home/controller.svelte';
 import { createTagEditorController } from '$lib/features/tagEditor/controller.svelte';
+import { createCollectionController } from '$lib/features/collection/controller.svelte';
+import {
+  listCollections,
+  getCollection,
+  createCollection,
+  updateCollection,
+  deleteCollection,
+  addSongsToCollection,
+  removeSongsFromCollection,
+  reorderCollectionSongs,
+  exportCollection,
+  importCollection,
+} from '$lib/collectionApi';
 import { preloadImage } from '$lib/features/library/helpers';
 import {
   buildAlbumPlaybackEntries,
@@ -196,6 +209,22 @@ export function createAppRuntime() {
     applyTagEditorRemoteUpdate,
     resolveTagEditorConflict,
     getAlbumDetail: (albumCid: string) => getAlbumDetail(albumCid),
+    notifyError,
+  });
+
+  const collectionController = createCollectionController({
+    listCollections,
+    getCollection,
+    createCollection,
+    updateCollection,
+    deleteCollection,
+    addSongsToCollection,
+    removeSongsFromCollection,
+    reorderCollectionSongs,
+    exportCollection,
+    importCollection,
+    navigateToCollection: shellStore.navigateToCollection,
+    notifyInfo,
     notifyError,
   });
 
@@ -941,6 +970,7 @@ export function createAppRuntime() {
     envStore.init();
     shellStore.init();
     homeController.init();
+    void collectionController.loadCollections();
 
     let disposed = false;
     let unsubscribe: (() => void) | null = null;
@@ -1191,6 +1221,7 @@ export function createAppRuntime() {
     downloadController,
     homeController,
     tagEditorController,
+    collectionController,
     notifyInfo,
     notifyError,
     handleSelectAlbum,
