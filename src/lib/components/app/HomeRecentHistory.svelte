@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import type { HistoryEntry } from '$lib/types';
 
   interface Props {
@@ -9,6 +10,15 @@
   }
 
   let { entries, onPlay, onClear }: Props = $props();
+
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      title: m.home_recent_history_title(),
+      clear: m.home_clear_history(),
+      empty: m.home_empty_history(),
+    };
+  });
 
   function formatRelativeTime(isoString: string): string {
     const date = new Date(isoString);
@@ -26,18 +36,18 @@
   }
 </script>
 
-<section class="recent-history" aria-label={m.home_recent_history_title()}>
+<section class="recent-history" aria-label={labels.title}>
   <div class="section-header">
-    <h2 class="section-title">{m.home_recent_history_title()}</h2>
+    <h2 class="section-title">{labels.title}</h2>
     {#if entries.length > 0}
       <button class="clear-btn" onclick={onClear} type="button">
-        {m.home_clear_history()}
+        {labels.clear}
       </button>
     {/if}
   </div>
 
   {#if entries.length === 0}
-    <p class="empty-hint">{m.home_empty_history()}</p>
+    <p class="empty-hint">{labels.empty}</p>
   {:else}
     <div class="history-list">
       {#each entries as entry (entry.id)}

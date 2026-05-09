@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import type { Album, TagDimension, TagGroup } from '$lib/types';
 
   interface Props {
@@ -17,11 +18,20 @@
     onSelectDimension,
     onSelectAlbum,
   }: Props = $props();
+
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      aria: m.home_tags_aria(),
+      title: m.home_tags_title(),
+      empty: m.home_empty_tags(),
+    };
+  });
 </script>
 
 {#if dimensions.length > 0}
-  <section class="tag-groups" aria-label={m.home_tags_aria()}>
-    <h2 class="section-title">{m.home_tags_title()}</h2>
+  <section class="tag-groups" aria-label={labels.aria}>
+    <h2 class="section-title">{labels.title}</h2>
 
     <div class="dimension-chips" role="tablist">
       {#each dimensions as dim (dim.key)}
@@ -39,7 +49,7 @@
     </div>
 
     {#if groups.length === 0}
-      <p class="empty-hint">{m.home_empty_tags()}</p>
+      <p class="empty-hint">{labels.empty}</p>
     {:else}
       <ul class="group-list" role="list">
         {#each groups as group (group.value)}

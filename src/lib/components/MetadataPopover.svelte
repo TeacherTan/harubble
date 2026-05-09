@@ -194,7 +194,6 @@
       align="start"
       sideOffset={6}
     >
-      <Popover.Arrow class="meta-popover-arrow" />
       <div class="meta-popover-header">{title}</div>
       <div class="meta-popover-rows">
         {#each infoRows as row (row.label)}
@@ -280,11 +279,6 @@
       0 8px 32px rgba(15, 23, 42, 0.12),
       0 2px 8px rgba(15, 23, 42, 0.06);
     animation: meta-popover-in 0.15s ease-out;
-  }
-  :global(.meta-popover-arrow) {
-    fill: var(--bg-primary);
-    stroke: rgba(var(--accent-rgb), 0.1);
-    stroke-width: 1px;
   }
   @keyframes meta-popover-in {
     from {

@@ -74,12 +74,9 @@ pub fn update_collection(
         Some(None) => Some(None),
         Some(Some(s)) => Some(Some(s.as_str())),
     };
-    state.collection.update(
-        &id,
-        name.as_deref(),
-        description.as_deref(),
-        cover_ref,
-    )
+    state
+        .collection
+        .update(&id, name.as_deref(), description.as_deref(), cover_ref)
 }
 
 /// 删除用户合集（级联删除关联歌曲记录）。

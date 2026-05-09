@@ -140,14 +140,14 @@ cargo doc -p siren-music-download --bin siren-music-download --no-deps --documen
 
 **JSON 结构概览：**
 
-| 字段 | 说明 |
-|------|------|
-| `schemaVersion` | Schema 版本号，当前为 2 |
-| `updatedAt` | 最后更新时间，用于增量拉取比对 |
-| `tagDimensions` | 标签维度定义（key + 多语种 label），可选 `scope: "song"` 限定仅适用于单曲 |
-| `typeDefinitions` | 专辑类型枚举（如 ost、characterEp）的多语种映射 |
-| `albums` | 专辑标签条目列表，每条包含 `cid` 及各维度的标签值 |
-| `songs` | 单曲标签条目列表，单曲标签会继承所属专辑的同维度标签 |
+| 字段              | 说明                                                                      |
+| ----------------- | ------------------------------------------------------------------------- |
+| `schemaVersion`   | Schema 版本号，当前为 2                                                   |
+| `updatedAt`       | 最后更新时间，用于增量拉取比对                                            |
+| `tagDimensions`   | 标签维度定义（key + 多语种 label），可选 `scope: "song"` 限定仅适用于单曲 |
+| `typeDefinitions` | 专辑类型枚举（如 ost、characterEp）的多语种映射                           |
+| `albums`          | 专辑标签条目列表，每条包含 `cid` 及各维度的标签值                         |
+| `songs`           | 单曲标签条目列表，单曲标签会继承所属专辑的同维度标签                      |
 
 ## 说明
 

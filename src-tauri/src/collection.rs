@@ -166,8 +166,7 @@ impl CollectionService {
     ///
     /// 调用 `initialize_schema()` 确保数据库表结构存在。
     pub fn new(db_path: &Path, official_json: &[u8]) -> Result<Self, String> {
-        let conn = Connection::open(db_path)
-            .map_err(|e| format!("打开合集数据库失败: {e}"))?;
+        let conn = Connection::open(db_path).map_err(|e| format!("打开合集数据库失败: {e}"))?;
 
         let file: OfficialCollectionsFile = serde_json::from_slice(official_json)
             .map_err(|e| format!("解析官方合集 JSON 失败: {e}"))?;
@@ -650,8 +649,7 @@ impl CollectionService {
             },
         };
 
-        serde_json::to_string_pretty(&exported)
-            .map_err(|e| format!("序列化合集失败: {e}"))
+        serde_json::to_string_pretty(&exported).map_err(|e| format!("序列化合集失败: {e}"))
     }
 
     /// 从 JSON 字符串导入合集，创建新的用户合集。
@@ -669,8 +667,8 @@ impl CollectionService {
     /// - JSON 格式不合法。
     /// - `schema_version` 大于 1（不兼容的未来版本）。
     pub fn import(&self, json: &str) -> Result<Collection, String> {
-        let exported: ExportedCollection = serde_json::from_str(json)
-            .map_err(|e| format!("解析导入 JSON 失败: {e}"))?;
+        let exported: ExportedCollection =
+            serde_json::from_str(json).map_err(|e| format!("解析导入 JSON 失败: {e}"))?;
 
         if exported.schema_version > 1 {
             return Err(format!(

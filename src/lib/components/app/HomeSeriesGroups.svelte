@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import type { SeriesGroup } from '$lib/types';
 
   interface Props {
@@ -9,10 +10,19 @@
   }
 
   let { groups, belongReady, onSelectSeries }: Props = $props();
+
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      aria: m.home_series_aria(),
+      title: m.home_series_title(),
+      empty: m.home_empty_series(),
+    };
+  });
 </script>
 
-<section class="series-groups" aria-label={m.home_series_aria()}>
-  <h2 class="section-title">{m.home_series_title()}</h2>
+<section class="series-groups" aria-label={labels.aria}>
+  <h2 class="section-title">{labels.title}</h2>
 
   {#if !belongReady}
     <div class="skeleton-list">
@@ -21,7 +31,7 @@
       {/each}
     </div>
   {:else if groups.length === 0}
-    <p class="empty-hint">{m.home_empty_series()}</p>
+    <p class="empty-hint">{labels.empty}</p>
   {:else}
     <ul class="group-list" role="list">
       {#each groups as group (group.series)}
