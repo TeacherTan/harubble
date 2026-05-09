@@ -138,6 +138,9 @@
           isCurrentSelectionCreating={runtime.downloadController
             .isCurrentSelectionCreating}
           hasCurrentSelectionJob={runtime.hasCurrentSelectionJob}
+          collections={runtime.collectionController.collections}
+          onAddToCollection={(colId, songCid) =>
+            runtime.collectionController.handleAddSongs(colId, [songCid])}
         />
       </AlbumWorkspace>
     {/if}

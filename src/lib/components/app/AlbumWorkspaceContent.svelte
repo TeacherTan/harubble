@@ -4,7 +4,7 @@
   import { fade } from 'svelte/transition';
   import { OverlayScrollbarsComponent } from 'overlayscrollbars-svelte';
   import type { EventListeners, PartialOptions } from 'overlayscrollbars';
-  import type { AlbumDetail, SongEntry } from '$lib/types';
+  import type { AlbumDetail, CollectionSummary, SongEntry } from '$lib/types';
   import MotionSpinner from '$lib/components/MotionSpinner.svelte';
   import AlbumStage from '$lib/components/app/AlbumStage.svelte';
   import AlbumDetailSkeleton from '$lib/components/app/AlbumDetailSkeleton.svelte';
@@ -52,6 +52,8 @@
     isSelectionDownloadDisabled: (songCids: string[]) => boolean;
     isCurrentSelectionCreating: (songCids: string[]) => boolean;
     hasCurrentSelectionJob: (songCids: string[]) => boolean;
+    collections?: CollectionSummary[];
+    onAddToCollection?: (collectionId: string, songCid: string) => void;
   }
 
   let {
@@ -94,6 +96,8 @@
     isSelectionDownloadDisabled,
     isCurrentSelectionCreating,
     hasCurrentSelectionJob,
+    collections,
+    onAddToCollection,
   }: Props = $props();
 
   function dur(base: number): number {
@@ -180,6 +184,8 @@
           {isSelectionDownloadDisabled}
           {isCurrentSelectionCreating}
           {hasCurrentSelectionJob}
+          {collections}
+          {onAddToCollection}
         />
       </section>
     {/key}

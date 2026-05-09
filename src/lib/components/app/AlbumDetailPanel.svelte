@@ -8,7 +8,7 @@
   } from '$lib/downloadBadge';
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
-  import type { AlbumDetail, SongEntry } from '$lib/types';
+  import type { AlbumDetail, CollectionSummary, SongEntry } from '$lib/types';
 
   type SongDownloadState = 'idle' | 'creating' | 'queued' | 'running';
 
@@ -38,6 +38,8 @@
     isSelectionDownloadDisabled: (songCids: string[]) => boolean;
     isCurrentSelectionCreating: (songCids: string[]) => boolean;
     hasCurrentSelectionJob: (songCids: string[]) => boolean;
+    collections?: CollectionSummary[];
+    onAddToCollection?: (collectionId: string, songCid: string) => void;
   }
 
   let props: Props = $props();
@@ -233,6 +235,8 @@
         isSelected={props.isSongSelected(song.cid)}
         selectionDisabled={isSelectionCreating}
         reducedMotion={props.reducedMotion}
+        collections={props.collections}
+        onAddToCollection={props.onAddToCollection}
         onclick={() => props.onPlaySong(song)}
         onTogglePlay={() => props.onTogglePlay()}
         onDownload={() => props.onDownloadSong(song.cid)}

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { SongEntry, TagEntry } from '$lib/types';
+  import type { SongEntry, TagEntry, CollectionSummary } from '$lib/types';
   import MetadataPopover from '$lib/components/MetadataPopover.svelte';
+  import AddToCollectionMenu from '$lib/components/app/AddToCollectionMenu.svelte';
   import {
     getDownloadBadgeLabel,
     shouldShowDownloadBadge,
@@ -23,6 +24,8 @@
     selectionDisabled?: boolean;
     reducedMotion?: boolean;
     albumTags?: TagEntry[];
+    collections?: CollectionSummary[];
+    onAddToCollection?: (collectionId: string, songCid: string) => void;
     onclick?: () => void;
     onTogglePlay?: () => void;
     onDownload?: () => void;
@@ -42,6 +45,8 @@
     selectionDisabled = false,
     reducedMotion = false,
     albumTags = [],
+    collections = [],
+    onAddToCollection,
     onclick,
     onTogglePlay,
     onDownload,
@@ -248,6 +253,12 @@
     <span class="song-meta-wrapper">
       <MetadataPopover target={{ kind: 'song', song, albumCid, albumName }} />
     </span>
+    {#if collections.length > 0 && onAddToCollection}
+      <AddToCollectionMenu
+        {collections}
+        onAdd={(colId) => onAddToCollection(colId, song.cid)}
+      />
+    {/if}
     <button
       type="button"
       class="song-download-button"
