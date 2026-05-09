@@ -1,5 +1,6 @@
 use crate::album_metadata_cache::AlbumMetadataCacheService;
 use crate::audio_cache;
+use crate::collection::CollectionService;
 use crate::download_session::DownloadSessionStore;
 use crate::i18n;
 use crate::listening_history::ListeningHistoryService;
@@ -42,6 +43,7 @@ pub struct AppState {
     pub(crate) album_metadata_cache: AlbumMetadataCacheService,
     pub(crate) tag_registry: TagRegistryService,
     pub(crate) tag_editor: TagEditorService,
+    pub(crate) collection: CollectionService,
 }
 
 struct PreparedPlaybackInput {
@@ -87,6 +89,9 @@ impl AppState {
             .map_err(|e| format!("初始化元数据缓存服务失败: {e}"))?;
         let tag_registry = TagRegistryService::new(&app_data_dir);
         let tag_editor = TagEditorService::new(&app_data_dir);
+        let official_collections_bytes = include_bytes!("../../data/official_collections.json");
+        let collection = CollectionService::new(&db_path, official_collections_bytes)
+            .map_err(|e| format!("初始化合集服务失败: {e}"))?;
         let state = Self {
             player: Arc::new(player),
             api: Arc::new(api),
@@ -102,6 +107,7 @@ impl AppState {
             album_metadata_cache,
             tag_registry,
             tag_editor,
+            collection,
         };
         if loaded_download_session.should_persist {
             state.persist_download_snapshot(&loaded_download_session.snapshot);
