@@ -438,3 +438,20 @@ export interface TagEditorMergeResult {
 }
 
 export type ConflictResolution = 'keepLocal' | 'keepRemote';
+
+// ─── Collections ─────────────────────────────────────────────────────────────
+
+export interface CollectionSummary {
+  id: string;
+  name: string;
+  description: string;
+  cover: string | null;
+  songCount: number;
+  isOfficial: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Collection extends CollectionSummary {
+  songIds: string[];
+}
