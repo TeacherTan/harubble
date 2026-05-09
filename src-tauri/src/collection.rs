@@ -328,6 +328,129 @@ impl CollectionService {
             updated_at,
         })
     }
+
+    // ─── 写入方法 ─────────────────────────────────────────────────────────────
+
+    /// 创建用户合集。
+    ///
+    /// # 参数
+    ///
+    /// - `name`：合集名称。
+    /// - `description`：合集描述。
+    /// - `cover_path`：封面图路径或 URL，可为 `None`。
+    ///
+    /// # 返回值
+    ///
+    /// 成功返回新建的 `Collection`（歌曲列表为空）。
+    pub(crate) fn create(
+        &self,
+        name: &str,
+        description: &str,
+        cover_path: Option<&str>,
+    ) -> Result<Collection, String> {
+        let id = Uuid::new_v4().to_string();
+        let now = now_millis();
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
+
+        conn.execute(
+            "INSERT INTO collections (id, name, description, cover, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id, name, description, cover_path, now],
+        )
+        .map_err(|e| format!("创建合集失败: {e}"))?;
+
+        drop(conn);
+        self.get(&id, "zh-CN")
+    }
+
+    /// 更新用户合集的名称、描述或封面（部分更新）。
+    ///
+    /// # 参数
+    ///
+    /// - `id`：合集 ID，不可为官方合集。
+    /// - `name`：新名称，`None` 表示不修改。
+    /// - `description`：新描述，`None` 表示不修改。
+    /// - `cover_path`：新封面，`None` 表示不修改；`Some(None)` 表示清除封面。
+    ///
+    /// # 返回值
+    ///
+    /// 成功返回更新后的 `Collection`。
+    pub(crate) fn update(
+        &self,
+        id: &str,
+        name: Option<&str>,
+        description: Option<&str>,
+        cover_path: Option<Option<&str>>,
+    ) -> Result<Collection, String> {
+        guard_not_official(id)?;
+
+        let now = now_millis();
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
+
+        if let Some(n) = name {
+            conn.execute(
+                "UPDATE collections SET name = ?1, updated_at = ?2 WHERE id = ?3",
+                params![n, now, id],
+            )
+            .map_err(|e| format!("更新合集名称失败: {e}"))?;
+        }
+
+        if let Some(d) = description {
+            conn.execute(
+                "UPDATE collections SET description = ?1, updated_at = ?2 WHERE id = ?3",
+                params![d, now, id],
+            )
+            .map_err(|e| format!("更新合集描述失败: {e}"))?;
+        }
+
+        if let Some(c) = cover_path {
+            conn.execute(
+                "UPDATE collections SET cover = ?1, updated_at = ?2 WHERE id = ?3",
+                params![c, now, id],
+            )
+            .map_err(|e| format!("更新合集封面失败: {e}"))?;
+        }
+
+        // 必须 drop conn，避免 Mutex 死锁（Mutex 不可重入）
+        drop(conn);
+        self.get(id, "zh-CN")
+    }
+
+    /// 删除用户合集（级联删除关联歌曲记录）。
+    ///
+    /// # 参数
+    ///
+    /// - `id`：合集 ID，不可为官方合集。
+    ///
+    /// # 返回值
+    ///
+    /// 成功返回 `()`，合集不存在时返回错误。
+    pub(crate) fn delete(&self, id: &str) -> Result<(), String> {
+        guard_not_official(id)?;
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| format!("获取合集数据库锁失败: {e}"))?;
+
+        let affected = conn
+            .execute("DELETE FROM collections WHERE id = ?1", params![id])
+            .map_err(|e| format!("删除合集失败: {e}"))?;
+
+        if affected == 0 {
+            return Err(format!("合集不存在: {id}"));
+        }
+
+        Ok(())
+    }
 }
 
 // ─── 辅助函数 ─────────────────────────────────────────────────────────────────
@@ -353,4 +476,28 @@ fn resolve_locale(value: &LocalizedValue, locale: &str) -> String {
         return v.clone();
     }
     String::new()
+}
+
+/// 防止对官方合集执行写操作。
+///
+/// # 参数
+///
+/// - `id`：合集 ID。
+///
+/// # 返回值
+///
+/// 若 ID 以 `OFFICIAL_PREFIX` 开头，返回错误；否则返回 `Ok(())`。
+fn guard_not_official(id: &str) -> Result<(), String> {
+    if id.starts_with(OFFICIAL_PREFIX) {
+        return Err("官方合集不可修改".to_string());
+    }
+    Ok(())
+}
+
+/// 获取当前时间戳（毫秒，Unix epoch）。
+fn now_millis() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as i64
 }
