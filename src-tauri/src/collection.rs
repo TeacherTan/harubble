@@ -107,6 +107,34 @@ pub struct OfficialCollectionsFile {
     pub collections: Vec<OfficialCollectionEntry>,
 }
 
+/// 导出合集的根结构。
+///
+/// 用于将合集序列化为可移植的 JSON 字符串，或从 JSON 字符串恢复合集。
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportedCollection {
+    /// 导出格式 schema 版本，当前为 1。
+    pub schema_version: u32,
+    /// 导出的合集数据。
+    pub collection: ExportedCollectionData,
+}
+
+/// 导出合集的数据体。
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportedCollectionData {
+    /// 合集 ID（导入时忽略，重新生成）。
+    pub id: String,
+    /// 合集名称，多语种。
+    pub name: LocalizedValue,
+    /// 合集描述，多语种。
+    pub description: LocalizedValue,
+    /// 封面图路径或 URL，可为空。
+    pub cover: Option<String>,
+    /// 合集中的歌曲 ID 列表，按顺序排列。
+    pub song_ids: Vec<String>,
+}
+
 /// 合集服务，管理官方合集（内存）与用户合集（SQLite）。
 ///
 /// 实现 `Clone`，可在 Tauri 状态中共享。
@@ -579,6 +607,79 @@ impl CollectionService {
         tx.commit().map_err(|e| format!("提交排序事务失败: {e}"))?;
 
         Ok(())
+    }
+
+    // ─── 导出 / 导入方法 ──────────────────────────────────────────────────────
+
+    /// 将合集导出为 JSON 字符串。
+    ///
+    /// # 参数
+    ///
+    /// - `id`：合集 ID（官方或用户均可导出）。
+    /// - `locale`：BCP 47 语言标签，用于解析官方合集名称（用户合集名称直接存储）。
+    ///
+    /// # 返回值
+    ///
+    /// 成功返回格式化的 JSON 字符串（pretty-printed）。
+    pub(crate) fn export(&self, id: &str, locale: &str) -> Result<String, String> {
+        let collection = self.get(id, locale)?;
+
+        let mut name_map = HashMap::new();
+        name_map.insert("zh-CN".to_string(), collection.name.clone());
+        let mut desc_map = HashMap::new();
+        desc_map.insert("zh-CN".to_string(), collection.description.clone());
+
+        let exported = ExportedCollection {
+            schema_version: 1,
+            collection: ExportedCollectionData {
+                id: collection.id,
+                name: LocalizedValue(name_map),
+                description: LocalizedValue(desc_map),
+                cover: collection.cover,
+                song_ids: collection.song_ids,
+            },
+        };
+
+        serde_json::to_string_pretty(&exported)
+            .map_err(|e| format!("序列化合集失败: {e}"))
+    }
+
+    /// 从 JSON 字符串导入合集，创建新的用户合集。
+    ///
+    /// # 参数
+    ///
+    /// - `json`：由 `export()` 生成的 JSON 字符串。
+    ///
+    /// # 返回值
+    ///
+    /// 成功返回新建的 `Collection`（ID 为新生成的 UUID v4）。
+    ///
+    /// # 错误场景
+    ///
+    /// - JSON 格式不合法。
+    /// - `schema_version` 大于 1（不兼容的未来版本）。
+    pub(crate) fn import(&self, json: &str) -> Result<Collection, String> {
+        let exported: ExportedCollection = serde_json::from_str(json)
+            .map_err(|e| format!("解析导入 JSON 失败: {e}"))?;
+
+        if exported.schema_version > 1 {
+            return Err(format!(
+                "不支持的导入格式版本: {}，当前最高支持版本为 1",
+                exported.schema_version
+            ));
+        }
+
+        let data = exported.collection;
+        let name = resolve_locale(&data.name, "zh-CN");
+        let description = resolve_locale(&data.description, "zh-CN");
+
+        let new_collection = self.create(&name, &description, data.cover.as_deref())?;
+
+        if !data.song_ids.is_empty() {
+            self.add_songs(&new_collection.id, &data.song_ids)?;
+        }
+
+        self.get(&new_collection.id, "zh-CN")
     }
 }
 
