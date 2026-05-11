@@ -1,8 +1,15 @@
 <script lang="ts">
   import BrandLogo from '$lib/components/app/BrandLogo.svelte';
   import SidebarNav from '$lib/components/app/SidebarNav.svelte';
+  import AlbumSidebarSection from '$lib/components/app/AlbumSidebarSection.svelte';
   import CollectionSidebarSection from '$lib/components/app/CollectionSidebarSection.svelte';
-  import type { CollectionSummary } from '$lib/types';
+  import type {
+    Album,
+    CollectionSummary,
+    LibrarySearchScope,
+    SearchLibraryResponse,
+    SearchLibraryResultItem,
+  } from '$lib/types';
   import type { AppView } from '$lib/features/shell/store.svelte';
 
   interface Props {
@@ -11,6 +18,19 @@
     searchQuery: string;
     onNavigate: (view: AppView) => void;
     onSearchQueryChange: (query: string) => void;
+
+    albums: Album[];
+    selectedAlbumCid: string | null;
+    reducedMotion: boolean;
+    loadingAlbums: boolean;
+    errorMsg: string;
+    searchScope: LibrarySearchScope;
+    searchLoading: boolean;
+    searchResponse: SearchLibraryResponse | null;
+    onSearchScopeChange: (scope: LibrarySearchScope) => void;
+    onSelectAlbum: (album: Album) => void;
+    onSelectSearchResult: (item: SearchLibraryResultItem) => void;
+
     collections: CollectionSummary[];
     selectedCollectionId: string | null;
     collectionsLoading: boolean;
@@ -25,6 +45,17 @@
     searchQuery,
     onNavigate,
     onSearchQueryChange,
+    albums,
+    selectedAlbumCid,
+    reducedMotion,
+    loadingAlbums,
+    errorMsg,
+    searchScope,
+    searchLoading,
+    searchResponse,
+    onSearchScopeChange,
+    onSelectAlbum,
+    onSelectSearchResult,
     collections,
     selectedCollectionId,
     collectionsLoading,
@@ -54,6 +85,24 @@
     />
   </div>
 
+  <div class="sidebar-library-region">
+    <AlbumSidebarSection
+      {albums}
+      {selectedAlbumCid}
+      {reducedMotion}
+      {loadingAlbums}
+      {errorMsg}
+      {searchQuery}
+      {searchScope}
+      {searchLoading}
+      {searchResponse}
+      {onSearchQueryChange}
+      {onSearchScopeChange}
+      onSelect={onSelectAlbum}
+      {onSelectSearchResult}
+    />
+  </div>
+
   <div class="sidebar-collections-region">
     <CollectionSidebarSection
       {collections}
@@ -72,11 +121,21 @@
     padding: 16px 8px 0;
   }
 
-  .sidebar-collections-region {
+  .sidebar-library-region {
     flex: 1;
     min-height: 0;
+    padding: 24px 16px 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-collections-region {
+    flex-shrink: 0;
+    max-height: 35%;
     overflow-y: auto;
-    padding: 12px 16px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--border);
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
   }
