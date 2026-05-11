@@ -34,6 +34,17 @@
       runtime.shellStore.currentView = view;
     }}
     onSearchQueryChange={runtime.libraryController.setSearchQuery}
+    albums={runtime.albums}
+    selectedAlbumCid={runtime.selectedAlbumCid}
+    reducedMotion={runtime.prefersReducedMotion}
+    loadingAlbums={runtime.loadingAlbums}
+    errorMsg={runtime.errorMsg}
+    searchScope={runtime.librarySearchScope}
+    searchLoading={runtime.librarySearchLoading}
+    searchResponse={runtime.librarySearchResponse}
+    onSearchScopeChange={runtime.libraryController.setSearchScope}
+    onSelectAlbum={runtime.handleSelectAlbum}
+    onSelectSearchResult={runtime.handleSelectSearchResult}
     collections={runtime.collectionController.collections}
     selectedCollectionId={runtime.collectionController.selectedCollectionId}
     collectionsLoading={runtime.collectionController.isLoading}
