@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BrandLogo from '$lib/components/app/BrandLogo.svelte';
   import SidebarNav from '$lib/components/app/SidebarNav.svelte';
   import CollectionSidebarSection from '$lib/components/app/CollectionSidebarSection.svelte';
   import type { CollectionSummary } from '$lib/types';
@@ -41,6 +42,8 @@
       aria-hidden="true"
     ></div>
   {/if}
+
+  <BrandLogo {isMacOS} />
 
   <div class="sidebar-nav-region">
     <SidebarNav
