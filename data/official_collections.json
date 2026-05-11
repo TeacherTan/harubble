@@ -1,4 +1,307 @@
 {
-  "schemaVersion": 1,
-  "collections": []
+  "schemaVersion": 2,
+  "collections": [
+    {
+      "id": "ambience-synesthesia-2021",
+      "name": {
+        "zh-CN": "2021 音律联觉",
+        "en-US": "Ambience Synesthesia 2021"
+      },
+      "description": {
+        "zh-CN": "明日方舟首届音律联觉专场演出曲目",
+        "en-US": "Arknights 1st Ambience Synesthesia Concert Setlist"
+      },
+      "cover": null,
+      "sections": [
+        {
+          "name": { "zh-CN": "Part 1", "en-US": "Part 1" },
+          "songIds": [
+            "953951",
+            "514585",
+            "ext-soaring-high",
+            "880370",
+            "125016",
+            "125018",
+            "125014",
+            "880360",
+            "232200",
+            "880376",
+            "232293",
+            "514506",
+            "880373",
+            "461192",
+            "953921"
+          ]
+        },
+        {
+          "name": { "zh-CN": "Part 2", "en-US": "Part 2" },
+          "songIds": [
+            "125019",
+            "779453",
+            "461190",
+            "880374",
+            "514575",
+            "ext-disaster",
+            "048747",
+            "880378",
+            "306858",
+            "514584",
+            "779421"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ambience-synesthesia-2022",
+      "name": {
+        "zh-CN": "2022 音律联觉：灯下定影",
+        "en-US": "Ambience Synesthesia 2022: Spotlight Cinematic"
+      },
+      "description": {
+        "zh-CN": "明日方舟第二届音律联觉专场演出「灯下定影」曲目",
+        "en-US": "Arknights 2nd Ambience Synesthesia Concert Setlist"
+      },
+      "cover": null,
+      "sections": [
+        {
+          "name": { "zh-CN": "Set 1", "en-US": "Set 1" },
+          "songIds": ["ext-untitled-world"]
+        },
+        {
+          "name": { "zh-CN": "Set 2", "en-US": "Set 2" },
+          "songIds": ["779416", "880349", "779439", "461182", "306844"]
+        },
+        {
+          "name": { "zh-CN": "Set 3", "en-US": "Set 3" },
+          "songIds": ["048742", "461185", "461199", "048736"]
+        },
+        {
+          "name": { "zh-CN": "Set 4", "en-US": "Set 4" },
+          "songIds": ["125000", "125001"]
+        },
+        {
+          "name": { "zh-CN": "Set 5", "en-US": "Set 5" },
+          "songIds": [
+            "048746",
+            "953910",
+            "779415",
+            "697659",
+            "048738",
+            "953928",
+            "880365"
+          ]
+        },
+        {
+          "name": { "zh-CN": "终章", "en-US": "Finale" },
+          "songIds": ["306852", "232281"]
+        },
+        {
+          "name": { "zh-CN": "安可", "en-US": "Encore" },
+          "songIds": ["048747"]
+        }
+      ]
+    },
+    {
+      "id": "ambience-synesthesia-2023",
+      "name": {
+        "zh-CN": "2023 音律联觉：愚夜密函",
+        "en-US": "Ambience Synesthesia 2023: Wanted"
+      },
+      "description": {
+        "zh-CN": "明日方舟第三届音律联觉专场演出「愚夜密函」曲目",
+        "en-US": "Arknights 3rd Ambience Synesthesia Concert Setlist"
+      },
+      "cover": null,
+      "sections": [
+        {
+          "name": { "zh-CN": "开场", "en-US": "Opening" },
+          "songIds": ["880338", "ext-ji-yu-ru-zhou", "048702"]
+        },
+        {
+          "name": { "zh-CN": "第二幕", "en-US": "Act II" },
+          "songIds": ["779423", "306810", "306845", "953915", "306839"]
+        },
+        {
+          "name": { "zh-CN": "第三幕", "en-US": "Act III" },
+          "songIds": [
+            "697657",
+            "461159",
+            "125009",
+            "306847",
+            "306837",
+            "461171",
+            "697635"
+          ]
+        },
+        {
+          "name": { "zh-CN": "第四幕", "en-US": "Act IV" },
+          "songIds": [
+            "514544",
+            "048735",
+            "779427",
+            "306846",
+            "880368",
+            "779428",
+            "ext-running-in-the-dark",
+            "779418"
+          ]
+        },
+        {
+          "name": { "zh-CN": "终章", "en-US": "Finale" },
+          "songIds": ["232267"]
+        },
+        {
+          "name": { "zh-CN": "安可", "en-US": "Encore" },
+          "songIds": ["514584"]
+        }
+      ]
+    },
+    {
+      "id": "ambience-synesthesia-2024",
+      "name": {
+        "zh-CN": "2024 音律联觉：不觅浪尘",
+        "en-US": "Ambience Synesthesia 2024: RES:Souvenance"
+      },
+      "description": {
+        "zh-CN": "明日方舟第四届音律联觉专场演出「不觅浪尘」曲目",
+        "en-US": "Arknights 4th Ambience Synesthesia Concert Setlist"
+      },
+      "cover": null,
+      "sections": [
+        {
+          "name": { "zh-CN": "造梦者", "en-US": "The Dreamer" },
+          "songIds": [
+            "125068",
+            "048705",
+            "779496",
+            "514579",
+            "125074",
+            "880337",
+            "461198",
+            "953976",
+            "697615"
+          ]
+        },
+        {
+          "name": { "zh-CN": "朝圣者", "en-US": "The Pilgrim" },
+          "songIds": [
+            "880350",
+            "953918",
+            "514538",
+            "514537",
+            "953992",
+            "953974",
+            "125007",
+            "306827",
+            "306893",
+            "779412"
+          ]
+        },
+        {
+          "name": { "zh-CN": "王座", "en-US": "The Throne" },
+          "songIds": [
+            "514562",
+            "514563",
+            "125091",
+            "048738",
+            "514521",
+            "779475"
+          ]
+        },
+        {
+          "name": { "zh-CN": "Nova FIVE ☆ Ultra live!", "en-US": "Nova FIVE ☆ Ultra live!" },
+          "songIds": ["125083", "880359", "048708", "461174"]
+        },
+        {
+          "name": { "zh-CN": "安可", "en-US": "Encore" },
+          "songIds": [
+            "ext-starset-monster",
+            "ext-starset-telescope",
+            "ext-starset-infected"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ambience-synesthesia-2025",
+      "name": {
+        "zh-CN": "2025 音律联觉：熠曲丰碑",
+        "en-US": "Ambience Synesthesia 2025: Echoes of the Legends"
+      },
+      "description": {
+        "zh-CN": "明日方舟第五届音律联觉专场演出「熠曲丰碑」曲目",
+        "en-US": "Arknights 5th Ambience Synesthesia Concert Setlist"
+      },
+      "cover": null,
+      "sections": [
+        {
+          "name": { "zh-CN": "缪斯", "en-US": "Muse" },
+          "songIds": [
+            "779462",
+            "779480",
+            "514530",
+            "048796",
+            "232251",
+            "779488"
+          ]
+        },
+        {
+          "name": { "zh-CN": "月下幻影", "en-US": "Moonlit Mirage" },
+          "songIds": [
+            "953915",
+            "514533",
+            "125062",
+            "048770",
+            "048799",
+            "125049"
+          ]
+        },
+        {
+          "name": { "zh-CN": "狂野年代", "en-US": "The Wild Era" },
+          "songIds": ["048747", "ext-all", "232242", "779472", "953954"]
+        },
+        {
+          "name": { "zh-CN": "花开时节", "en-US": "Blooms of Time" },
+          "songIds": ["306815", "779485", "232243", "880310", "461190"]
+        },
+        {
+          "name": { "zh-CN": "传奇回响", "en-US": "Echoes of Legends" },
+          "songIds": [
+            "880307",
+            "232200",
+            "ext-untitled-world",
+            "880374"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ambience-synesthesia-2026",
+      "name": {
+        "zh-CN": "2026 音律联觉：昔时我见",
+        "en-US": "Ambience Synesthesia 2026: I Witnessed"
+      },
+      "description": {
+        "zh-CN": "明日方舟第六届音律联觉专场演出「昔时我见」精选曲目",
+        "en-US": "Arknights 6th Ambience Synesthesia Concert Setlist"
+      },
+      "cover": null,
+      "sections": [
+        {
+          "songIds": [
+            "880309",
+            "125051",
+            "880312",
+            "514525",
+            "953962",
+            "461133",
+            "697691",
+            "232220",
+            "514517",
+            "125004"
+          ]
+        }
+      ]
+    }
+  ]
 }

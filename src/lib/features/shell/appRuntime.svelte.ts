@@ -505,6 +505,31 @@ export function createAppRuntime() {
     );
   }
 
+  async function handlePlayCollectionSong(
+    song: SongEntry,
+    queue: PlaybackQueueEntry[]
+  ) {
+    const entries = queue.length
+      ? queue
+      : [
+          {
+            cid: song.cid,
+            name: song.name,
+            artists: song.artists,
+            coverUrl: null,
+          },
+        ];
+    playerController.applyPlaybackQueue(entries, song.cid);
+    const nextOrder = shuffleEnabled ? [...playbackOrder] : [...entries];
+    const nextIndex = nextOrder.findIndex((entry) => entry.cid === song.cid);
+    if (nextIndex < 0) return;
+    await playerController.playQueueEntry(
+      nextOrder[nextIndex],
+      nextOrder,
+      nextIndex
+    );
+  }
+
   async function handleRefresh() {
     if (isRefreshing) return;
     isRefreshing = true;
@@ -1227,6 +1252,7 @@ export function createAppRuntime() {
     handleSelectAlbum,
     handleSelectSearchResult,
     handlePlay,
+    handlePlayCollectionSong,
     handleRefresh,
     handleContentWheel,
     handleToggleDownloads,

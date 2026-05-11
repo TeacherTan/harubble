@@ -57,9 +57,19 @@ pub struct CollectionSummary {
     pub updated_at: i64,
 }
 
-/// 合集详情，包含完整歌曲 ID 列表。
+/// 合集分段（已按 locale 解析名称），用于前端展示。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionSection {
+    /// 分段名称（已按 locale 解析），为空时前端不渲染标题行。
+    pub name: Option<String>,
+    /// 该分段包含的歌曲 ID 列表。
+    pub song_ids: Vec<String>,
+}
+
+/// 合集详情，用于合集详情页展示。
 ///
-/// 用于合集详情页展示，歌曲 ID 按 position 升序排列。
+/// 歌曲通过 `sections` 组织；前端从 sections 中提取完整播放队列。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Collection {
@@ -71,8 +81,8 @@ pub struct Collection {
     pub description: String,
     /// 封面图路径或 URL，可为空。
     pub cover: Option<String>,
-    /// 合集中的歌曲 ID 列表，按 position 升序排列。
-    pub song_ids: Vec<String>,
+    /// 分段列表，歌曲 ID 挂载在各分段下。
+    pub sections: Vec<CollectionSection>,
     /// 是否为官方合集。
     pub is_official: bool,
     /// 创建时间戳（毫秒，Unix epoch）。
@@ -84,6 +94,16 @@ pub struct Collection {
 /// 多语种本地化值，key 为 BCP 47 语言标签（如 `"zh-CN"`、`"en-US"`）。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocalizedValue(pub HashMap<String, String>);
+
+/// 官方合集分段条目（JSON 侧，可选多语种名称 + 歌曲列表）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OfficialCollectionSection {
+    /// 分段名称，多语种。无名分段不显示标题行。
+    pub name: Option<LocalizedValue>,
+    /// 该分段包含的歌曲 ID 列表。
+    pub song_ids: Vec<String>,
+}
 
 /// 官方合集 JSON 文件中的单个合集条目。
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,8 +117,8 @@ pub struct OfficialCollectionEntry {
     pub description: LocalizedValue,
     /// 封面图路径或 URL，可为空。
     pub cover: Option<String>,
-    /// 合集中的歌曲 ID 列表，按顺序排列。
-    pub song_ids: Vec<String>,
+    /// 分段列表，每个分段自带歌曲 ID。
+    pub sections: Vec<OfficialCollectionSection>,
 }
 
 /// 官方合集 JSON 文件根结构。
@@ -242,14 +262,15 @@ impl CollectionService {
     pub fn list_all(&self, locale: &str) -> Result<Vec<CollectionSummary>, String> {
         let mut result: Vec<CollectionSummary> = Vec::new();
 
-        // 官方合集：从内存映射，歌曲数量直接取 song_ids.len()
+        // 官方合集：从内存映射，歌曲数量从 sections 计算
         for entry in self.official.iter() {
+            let song_count: usize = entry.sections.iter().map(|s| s.song_ids.len()).sum();
             result.push(CollectionSummary {
                 id: entry.id.clone(),
                 name: resolve_locale(&entry.name, locale),
                 description: resolve_locale(&entry.description, locale),
                 cover: entry.cover.clone(),
-                song_count: entry.song_ids.len() as i64,
+                song_count: song_count as i64,
                 is_official: true,
                 created_at: 0,
                 updated_at: 0,
@@ -314,12 +335,21 @@ impl CollectionService {
                 .find(|e| e.id == id)
                 .ok_or_else(|| format!("官方合集不存在: {id}"))?;
 
+            let sections: Vec<CollectionSection> = entry
+                .sections
+                .iter()
+                .map(|s| CollectionSection {
+                    name: s.name.as_ref().map(|n| resolve_locale(n, locale)),
+                    song_ids: s.song_ids.clone(),
+                })
+                .collect();
+
             return Ok(Collection {
                 id: entry.id.clone(),
                 name: resolve_locale(&entry.name, locale),
                 description: resolve_locale(&entry.description, locale),
                 cover: entry.cover.clone(),
-                song_ids: entry.song_ids.clone(),
+                sections,
                 is_official: true,
                 created_at: 0,
                 updated_at: 0,
@@ -359,7 +389,10 @@ impl CollectionService {
             name,
             description,
             cover,
-            song_ids,
+            sections: vec![CollectionSection {
+                name: None,
+                song_ids,
+            }],
             is_official: false,
             created_at,
             updated_at,
@@ -645,7 +678,11 @@ impl CollectionService {
                 name: LocalizedValue(name_map),
                 description: LocalizedValue(desc_map),
                 cover: collection.cover,
-                song_ids: collection.song_ids,
+                song_ids: collection
+                    .sections
+                    .into_iter()
+                    .flat_map(|s| s.song_ids)
+                    .collect(),
             },
         };
 

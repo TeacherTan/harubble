@@ -81,11 +81,25 @@
         collection={runtime.collectionController.selectedCollection}
         isLoading={runtime.collectionController.isDetailLoading}
         reducedMotion={runtime.prefersReducedMotion}
+        currentSongCid={runtime.currentSong?.cid ?? null}
+        isPlaybackActive={runtime.isPlaying || runtime.isPaused}
+        isPlaybackPaused={runtime.isPaused}
         onEdit={runtime.collectionController.openEditDialog}
         onDelete={runtime.collectionController.handleDelete}
         onExport={runtime.collectionController.handleExport}
         onRemoveSongs={runtime.collectionController.handleRemoveSongs}
         onReorderSongs={runtime.collectionController.handleReorderSongs}
+        onPlaySong={runtime.handlePlayCollectionSong}
+        onTogglePlay={runtime.isPlaying
+          ? runtime.playerController.pause
+          : runtime.playerController.resume}
+        onDownloadSong={runtime.downloadController.handleSongDownload}
+        getSongDownloadState={runtime.downloadController.getSongDownloadState}
+        isSongDownloadInteractionBlocked={runtime.downloadController
+          .isSongDownloadInteractionBlocked}
+        collections={runtime.collectionController.collections}
+        onAddToCollection={(colId, songCid) =>
+          runtime.collectionController.handleAddSongs(colId, [songCid])}
       />
     {:else}
       <AlbumWorkspace

@@ -15,6 +15,7 @@
     index: number;
     albumCid: string;
     albumName: string;
+    coverUrl?: string | null;
     isPlaying?: boolean;
     isPaused?: boolean;
     downloadState?: SongDownloadState;
@@ -36,6 +37,7 @@
     index,
     albumCid,
     albumName,
+    coverUrl = null,
     isPlaying = false,
     isPaused = false,
     downloadState = 'idle',
@@ -201,6 +203,9 @@
     >
   {/if}
   <div class="song-number" class:is-emphasis={showEmphasis}>{index + 1}</div>
+  {#if coverUrl}
+    <img class="song-cover-thumb" src={coverUrl} alt="" aria-hidden="true" />
+  {/if}
   <div class="song-info">
     <div class="song-name" class:is-emphasis={showEmphasis}>{song.name}</div>
     <div class="song-artists">{song.artists.join(' · ')}</div>
@@ -340,6 +345,13 @@
   }
   .song-row.is-reduced-motion .song-number {
     transition: none;
+  }
+  .song-cover-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
   }
   .song-info {
     flex: 1;

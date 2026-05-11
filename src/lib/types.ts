@@ -452,6 +452,11 @@ export interface CollectionSummary {
   updatedAt: number;
 }
 
-export interface Collection extends CollectionSummary {
+export interface CollectionSection {
+  name?: string;
   songIds: string[];
+}
+
+export interface Collection extends CollectionSummary {
+  sections: CollectionSection[];
 }
