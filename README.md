@@ -10,12 +10,15 @@
   <img alt="stars" src="https://img.shields.io/github/stars/Anselyuki/harubble?style=social">
 </div>
 
-名字取自《明日方舟》角色 **遥**（Haru）与她的源石技艺——漂浮在空中的透明泡泡（Bubble）。
+> 名字取自《明日方舟》角色 **遥**（Haruka）与她的源石技艺——漂浮在空中的透明泡泡（Bubble）。Haru 是 Haruka 的简写。
+>
+> 胆小、总是害怕、常常会哭——但即便哭得一塌糊涂，还是在做着最勇敢的事情。她随身带着泡泡水，源石技艺只有以浮泡为表现形式时才能发挥最佳效果；那些漂浮在空中的泡泡，是她给所有人的庇护。
+>
+> 「横竖都是死，我和你们拼了！」
 
-面向 [塞壬唱片](https://monster-siren.hypergryph.com/) 的桌面音乐播放器与下载器。  
-把专辑浏览、标签分类、库内搜索、在线播放、整专下载、歌词和下载管理整合进同一个桌面应用里。
+面向 [塞壬唱片](https://monster-siren.hypergryph.com/) 的桌面音乐播放器与下载器。
 
-[下载发布版](https://github.com/Anselyuki/harubble/releases) | [功能亮点](#功能亮点) | [使用方式](#使用方式) | [本地开发](#本地开发) | [Rust 文档](#rustdoc-guide) | [开发文档](./doc/guides/frontend-guide.md) | [后端契约](./doc/reference/backend-api-contract.md) | [Release 流程](./doc/process/release-process.md)
+[下载发布版](https://github.com/Anselyuki/harubble/releases) | [本地开发](#本地开发) | [Rust 文档](#rustdoc-guide) | [开发文档](./docs/guides/frontend-guide.md) | [后端契约](./docs/reference/backend-api-contract.md) | [Release 流程](./docs/process/release-process.md)
 
 </div>
 
@@ -25,34 +28,8 @@
 
 - 推荐直接从 [GitHub Releases](https://github.com/Anselyuki/harubble/releases) 下载对应系统的发布文件。
 - 应用目前面向 `macOS` 和 `Windows` 提供桌面端体验。
-- Release 文件名中，`macos_intel` 对应 Intel Mac，`macos_apple_silicon` 对应 Apple Silicon Mac。
 - Windows 发布版为依赖系统 `WebView2` 运行时的精简 `.exe`，不会额外提供安装型打包。
 - 首次启动需要联网拉取专辑、歌词和音频资源。
-
-## 功能亮点
-
-- 专辑浏览与在线播放：启动后即可加载专辑列表，点选曲目直接播放。
-- 库内搜索与定位：支持按专辑 / 歌曲 / 艺术家 / 标签搜索，并从结果直接定位到对应专辑或曲目。
-- 自定义标签分类：通过远程 Tag Registry 为专辑和歌曲附加流派、阵营、时代等元数据标签，支持按维度分组浏览。
-- 单曲与整专下载：既可以下载当前歌曲，也可以一键创建整张专辑的下载任务。
-- 完整播放器控制：支持暂停、继续、拖动进度、上一首、下一首、乱序和循环模式切换。
-- 歌词与播放队列：底部播放器可展开歌词面板和当前播放列表。
-- 独立下载面板：可以查看任务进度，并支持关键字搜索、状态/类型筛选、活跃/历史范围筛选、取消、重试和清理历史。
-- 下载结果更完整：支持 `WAV`、`FLAC`、`MP3`，可选保存同名 `.lrc` 歌词，`FLAC` 会写入封面和基础元数据。
-- 更贴近桌面应用体验：支持系统通知，并会根据专辑封面生成动态主题色。
-- 本地下载标记：专辑列表、专辑详情和歌曲详情会基于当前下载目录显示已下载状态，并区分“已检测到 / 已校验 / 部分下载 / 不可校验 / 校验异常”。
-- 日志与诊断：设置面板可查看本次运行日志与持久化日志，并通过日志等级控制退出时的持久化阈值。
-
-## 使用方式
-
-1. 启动应用后等待专辑列表加载完成。
-2. 在左侧选择专辑，在主区域查看曲目和简介。
-3. 点击曲目即可开始播放，也可以在曲目行直接触发下载。
-4. 在专辑页使用下载入口创建整专下载任务。
-5. 通过右上角设置面板调整下载目录、输出格式、歌词保存、通知开关和持久化日志等级。
-6. 如需排查运行时问题，可在设置面板的“日志与诊断”区域查看本次运行日志或持久化日志。
-7. 下载完成或切换下载目录后，应用会自动重扫当前下载目录并刷新本地下载标记。
-8. 通过下载任务面板查看进度，并按需搜索、筛选、取消、重试或清理历史记录。
 
 ## 本地开发
 

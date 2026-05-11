@@ -55,6 +55,12 @@
 - `SeriesGroup`
 - `HistoryEntry`
 - `HomepageStatus`
+- `AudioFileMetadata`
+- `CollectionSummary`
+- `CollectionSection`
+- `Collection`
+- `EntityType`
+- `ConflictResolution`
 
 ## 类型字段定义
 
@@ -524,15 +530,6 @@
 - `code: string`
 - `message: string`
 
-### `NotificationPermissionState`
-
-枚举值（已存在，保持不变）：
-
-- `granted`
-- `denied`
-- `prompt`
-- `prompt-with-rationale`
-
 ### 权限分级与路径边界
 
 后端命令按权限面分为三类：
@@ -583,7 +580,9 @@
 6. `get_image_data_url(imageUrl: string) -> string`
 7. `get_default_output_dir() -> string`
 8. `clear_response_cache() -> void`
-9. `search_library(request: SearchLibraryRequest) -> SearchLibraryResponse`
+9. `clear_audio_cache() -> number`
+10. `get_audio_metadata(albumName: string, songName: string) -> AudioFileMetadata | null`
+11. `search_library(request: SearchLibraryRequest) -> SearchLibraryResponse`
 
 返回约束：
 
@@ -769,13 +768,13 @@
 
 #### 首页命令
 
-| Command                      | 参数         | 返回值              | 说明                           |
-| ---------------------------- | ------------ | ------------------- | ------------------------------ |
-| `get_latest_albums`          | `limit: u32` | `Vec<Album>`        | 获取最新专辑列表（前 N 条）    |
-| `get_albums_by_series_group` | 无           | `Vec<SeriesGroup>`  | 按系列分组的专辑列表           |
-| `get_recent_history`         | `limit: u32` | `Vec<HistoryEntry>` | 获取最近收听历史               |
-| `clear_listening_history`    | 无           | `u32`               | 清除所有收听历史，返回删除条数 |
-| `get_homepage_status`        | 无           | `HomepageStatus`    | 获取首页状态仪表盘数据         |
+| Command                   | 参数         | 返回值              | 说明                           |
+| ------------------------- | ------------ | ------------------- | ------------------------------ |
+| `get_latest_albums`       | `limit: u32` | `Vec<Album>`        | 获取最新专辑列表（前 N 条）    |
+| `get_albums_by_series`    | 无           | `Vec<SeriesGroup>`  | 按系列分组的专辑列表           |
+| `get_recent_history`      | `limit: u32` | `Vec<HistoryEntry>` | 获取最近收听历史               |
+| `clear_listening_history` | 无           | `u32`               | 清除所有收听历史，返回删除条数 |
+| `get_homepage_status`     | 无           | `HomepageStatus`    | 获取首页状态仪表盘数据         |
 
 ### Tag Registry 命令
 
@@ -802,6 +801,95 @@ Tag 注入说明：
 - 搜索索引新增 `tag_values`、`tag_values_pinyin_full`、`tag_values_pinyin_initials` 字段
 - tag 值索引包含所有 locale 的值，搜索不受当前 locale 限制
 - tag 命中通过 `matchedFields` 中的 `tagValues` 枚举值表达
+
+### 合集命令
+
+| Command                        | 参数                                                                          | 返回值                   | 说明                             |
+| ------------------------------ | ----------------------------------------------------------------------------- | ------------------------ | -------------------------------- |
+| `list_collections`             | 无                                                                            | `Vec<CollectionSummary>` | 列出所有合集（官方 + 用户）      |
+| `get_collection`               | `id: string`                                                                  | `Collection`             | 查询单个合集详情                 |
+| `create_collection`            | `name: string, description: string, coverPath: string \| null`                | `Collection`             | 创建用户合集                     |
+| `update_collection`            | `id: string, name?: string, description?: string, coverPath?: string \| null` | `Collection`             | 更新用户合集（部分更新）         |
+| `delete_collection`            | `id: string`                                                                  | `void`                   | 删除用户合集（级联删除关联歌曲） |
+| `add_songs_to_collection`      | `id: string, songIds: string[]`                                               | `void`                   | 向合集添加歌曲（已存在则忽略）   |
+| `remove_songs_from_collection` | `id: string, songIds: string[]`                                               | `void`                   | 从合集移除歌曲                   |
+| `reorder_collection_songs`     | `id: string, songIds: string[]`                                               | `void`                   | 对合集中的歌曲重新排序           |
+| `export_collection`            | `id: string`                                                                  | `string`                 | 将合集导出为 JSON 字符串         |
+| `import_collection`            | `json: string`                                                                | `Collection`             | 从 JSON 字符串导入合集           |
+
+行为说明：
+
+- 官方合集以 `"official:"` 为 ID 前缀，只读不可修改
+- 用户合集支持完整 CRUD 和歌曲管理
+- `update_collection` 中 `coverPath` 为 `null` 时表示清除封面
+- `export_collection` 返回 pretty-printed JSON，可直接用于 `import_collection`
+- `import_collection` 创建新合集（新 UUID），不覆盖已有合集
+
+### `CollectionSummary`
+
+- `id: string`
+- `name: string`
+- `description: string`
+- `cover: string | null`
+- `songCount: number`
+- `isOfficial: boolean`
+- `createdAt: number`
+- `updatedAt: number`
+
+### `CollectionSection`
+
+- `name?: string`
+- `songIds: string[]`
+
+### `Collection`
+
+继承 `CollectionSummary` 的所有字段，额外包含：
+
+- `sections: CollectionSection[]`
+
+### Tag Editor 命令
+
+| Command                          | 参数                                                                                  | 返回值        | 说明                           |
+| -------------------------------- | ------------------------------------------------------------------------------------- | ------------- | ------------------------------ |
+| `get_tag_editor_merged`          | 无                                                                                    | `TagRegistry` | 返回合并后的完整 tag 注册表    |
+| `get_tag_editor_local_overlay`   | 无                                                                                    | `TagRegistry` | 返回本地 overlay 层原始内容    |
+| `set_tag_editor_entity_tag`      | `entityType: EntityType, cid: string, dimensionKey: string, values: LocalizedValue[]` | `void`        | 设置实体在指定维度上的 tag 值  |
+| `remove_tag_editor_entity_tag`   | `entityType: EntityType, cid: string, dimensionKey: string`                           | `void`        | 删除实体在指定维度上的本地 tag |
+| `add_tag_editor_dimension`       | `key: string, labelZh: string, labelEn: string`                                       | `void`        | 新增本地维度定义               |
+| `remove_tag_editor_dimension`    | `key: string`                                                                         | `void`        | 删除本地维度及其关联 tag 数据  |
+| `apply_tag_editor_remote_update` | `newRemote: TagRegistry`                                                              | `MergeResult` | 接收远端快照并执行三路合并     |
+| `resolve_tag_editor_conflict`    | `entityType: EntityType, cid: string, dimensionKey: string, keep: ConflictResolution` | `void`        | 解决单个三路合并冲突           |
+
+行为说明：
+
+- Tag Editor 采用双层存储：remote（来自 GitHub 远端 JSON）+ local overlay（用户本地编辑）
+- `get_tag_editor_merged` 返回两层合并后的最终结果
+- `apply_tag_editor_remote_update` 执行三路合并（old remote / new remote / local），返回冲突列表
+- `resolve_tag_editor_conflict` 按 `keepLocal` 或 `keepRemote` 策略解决单个冲突
+
+### `EntityType`
+
+枚举值：
+
+- `album`
+- `song`
+
+### `ConflictResolution`
+
+枚举值：
+
+- `keepLocal`
+- `keepRemote`
+
+### `AudioFileMetadata`
+
+- `format: string`
+- `sampleRate: number`
+- `channels: number`
+- `bitsPerSample: number | null`
+- `durationSecs: number`
+- `bitrateKbps: number | null`
+- `fileSize: number`
 
 ## Events
 
