@@ -2,9 +2,8 @@
   import { createAppRuntime } from '$lib/features/shell/appRuntime.svelte';
   import TopToolbar from '$lib/components/app/TopToolbar.svelte';
   import StatusToastHost from '$lib/components/app/StatusToastHost.svelte';
-  import AlbumSidebarContainer from '$lib/components/app/AlbumSidebarContainer.svelte';
-  import AlbumWorkspace from '$lib/components/app/AlbumWorkspace.svelte';
-  import AlbumWorkspaceContent from '$lib/components/app/AlbumWorkspaceContent.svelte';
+  import AppSidebar from '$lib/components/app/AppSidebar.svelte';
+  import LibraryView from '$lib/components/app/LibraryView.svelte';
   import PlayerFlyoutStack from '$lib/components/app/PlayerFlyoutStack.svelte';
   import FullscreenPlayer from '$lib/components/app/FullscreenPlayer.svelte';
   import AppSideSheets from '$lib/components/app/AppSideSheets.svelte';
@@ -27,23 +26,14 @@
 <StatusToastHost />
 
 <div class="app-shell" class:macos-overlay={runtime.isMacOS}>
-  <AlbumSidebarContainer
+  <AppSidebar
     isMacOS={runtime.isMacOS}
     currentView={runtime.currentView}
-    albums={runtime.albums}
-    selectedAlbumCid={runtime.selectedAlbumCid}
-    reducedMotion={runtime.prefersReducedMotion}
-    loadingAlbums={runtime.loadingAlbums}
-    errorMsg={runtime.errorMsg}
     searchQuery={runtime.librarySearchQuery}
-    searchScope={runtime.librarySearchScope}
-    searchLoading={runtime.librarySearchLoading}
-    searchResponse={runtime.librarySearchResponse}
-    onNavigateHome={runtime.shellStore.navigateToHome}
+    onNavigate={(view) => {
+      runtime.shellStore.currentView = view;
+    }}
     onSearchQueryChange={runtime.libraryController.setSearchQuery}
-    onSearchScopeChange={runtime.libraryController.setSearchScope}
-    onSelect={runtime.handleSelectAlbum}
-    onSelectSearchResult={runtime.handleSelectSearchResult}
     collections={runtime.collectionController.collections}
     selectedCollectionId={runtime.collectionController.selectedCollectionId}
     collectionsLoading={runtime.collectionController.isLoading}
@@ -69,7 +59,6 @@
       onRefresh={runtime.handleRefresh}
       onOpenDownloads={runtime.handleToggleDownloads}
       onOpenSettings={runtime.handleToggleSettings}
-      onOpenTagEditor={runtime.shellStore.navigateToTagEditor}
     />
 
     {#if runtime.currentView === 'home'}
@@ -102,61 +91,7 @@
           runtime.collectionController.handleAddSongs(colId, [songCid])}
       />
     {:else}
-      <AlbumWorkspace
-        currentSong={runtime.currentSong}
-        loadingDetail={runtime.loadingDetail}
-        selectedAlbum={runtime.selectedAlbum}
-      >
-        <AlbumWorkspaceContent
-          loadingDetail={runtime.loadingDetail}
-          showDetailSkeleton={runtime.showDetailSkeleton}
-          albumRequestSeq={runtime.albumRequestSeq}
-          selectedAlbum={runtime.selectedAlbum}
-          selectedAlbumArtworkUrl={runtime.selectedAlbumArtworkUrl}
-          currentSongCid={runtime.currentSong?.cid ?? null}
-          isPlaybackActive={runtime.isPlaying || runtime.isPaused}
-          isPlaybackPaused={runtime.isPaused}
-          downloadingAlbumCid={runtime.downloadingAlbumCid}
-          selectionModeEnabled={runtime.selectionModeEnabled}
-          selectedSongCids={runtime.selectedSongCids}
-          reducedMotion={runtime.prefersReducedMotion}
-          overlayScrollbarOptions={runtime.overlayScrollbarOptions}
-          contentScrollbarEvents={runtime.contentScrollbarEvents}
-          onContentWheel={runtime.handleContentWheel}
-          albumStageStyle={runtime.albumStageStyle}
-          albumStageMediaHeight={runtime.albumStageMediaHeight}
-          albumStageScrimOpacity={runtime.albumStageScrimOpacity}
-          albumStageImageOpacity={runtime.albumStageImageOpacity}
-          albumStageImageTransform={runtime.albumStageImageTransform}
-          albumStageSolidifyOpacity={runtime.albumStageSolidifyOpacity}
-          bind:albumStageElement={runtime.albumStageElement}
-          onToggleSelectionMode={runtime.toggleSelectionMode}
-          onSelectAllSongs={runtime.selectAllSongs}
-          onDeselectAllSongs={runtime.deselectAllSongs}
-          onInvertSongSelection={runtime.invertSongSelection}
-          onDownloadAlbum={runtime.downloadController.handleAlbumDownload}
-          onDownloadSelection={runtime.handleDownloadSelection}
-          onPlaySong={runtime.handlePlay}
-          onTogglePlay={runtime.isPlaying
-            ? runtime.playerController.pause
-            : runtime.playerController.resume}
-          onDownloadSong={runtime.downloadController.handleSongDownload}
-          onToggleSongSelection={runtime.toggleSongSelection}
-          isSongSelected={runtime.isSongSelected}
-          getSongDownloadState={runtime.downloadController.getSongDownloadState}
-          isSongDownloadInteractionBlocked={runtime.downloadController
-            .isSongDownloadInteractionBlocked}
-          hasAlbumDownloadJob={runtime.hasAlbumDownloadJob}
-          isSelectionDownloadDisabled={runtime.downloadController
-            .isSelectionDownloadActionDisabled}
-          isCurrentSelectionCreating={runtime.downloadController
-            .isCurrentSelectionCreating}
-          hasCurrentSelectionJob={runtime.hasCurrentSelectionJob}
-          collections={runtime.collectionController.collections}
-          onAddToCollection={(colId, songCid) =>
-            runtime.collectionController.handleAddSongs(colId, [songCid])}
-        />
-      </AlbumWorkspace>
+      <LibraryView {runtime} />
     {/if}
 
     <PlayerFlyoutStack
