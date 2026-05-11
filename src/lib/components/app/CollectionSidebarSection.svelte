@@ -1,4 +1,6 @@
 <script lang="ts">
+  import * as m from '$lib/paraglide/messages.js';
+  import { localeState } from '$lib/i18n';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import ImportIcon from '@lucide/svelte/icons/download';
   import type { CollectionSummary } from '$lib/types';
@@ -27,17 +29,28 @@
   const userCollections = $derived.by(() =>
     collections.filter((c) => !c.isOfficial)
   );
+
+  const labels = $derived.by(() => {
+    void localeState.current;
+    return {
+      title: m.sidebar_collections_title(),
+      import: m.sidebar_collections_import(),
+      create: m.sidebar_collections_create(),
+      loading: m.sidebar_collections_loading(),
+      empty: m.sidebar_collections_empty(),
+    };
+  });
 </script>
 
 <div class="collection-sidebar-section">
   <div class="section-header">
-    <span class="section-title">合集</span>
+    <span class="section-title">{labels.title}</span>
     <div class="section-actions">
       <button
         type="button"
         class="section-action-btn"
-        title="导入合集"
-        aria-label="导入合集"
+        title={labels.import}
+        aria-label={labels.import}
         onclick={onImport}
       >
         <ImportIcon size={14} />
@@ -45,8 +58,8 @@
       <button
         type="button"
         class="section-action-btn"
-        title="新建合集"
-        aria-label="新建合集"
+        title={labels.create}
+        aria-label={labels.create}
         onclick={onCreate}
       >
         <PlusIcon size={14} />
@@ -55,9 +68,9 @@
   </div>
 
   {#if isLoading}
-    <div class="collection-loading">加载中…</div>
+    <div class="collection-loading">{labels.loading}</div>
   {:else if collections.length === 0}
-    <div class="collection-empty">暂无合集</div>
+    <div class="collection-empty">{labels.empty}</div>
   {:else}
     <div class="collection-list">
       {#each officialCollections as collection (collection.id)}

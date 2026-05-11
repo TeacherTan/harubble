@@ -1270,3 +1270,5 @@ export function createAppRuntime() {
     isSongSelected,
   };
 }
+
+export type AppRuntime = ReturnType<typeof createAppRuntime>;
