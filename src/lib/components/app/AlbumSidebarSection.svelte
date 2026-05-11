@@ -1,7 +1,4 @@
 <script lang="ts">
-  import { Input } from '$lib/components/ui/input/index.js';
-  import { Button } from '$lib/components/ui/button/index.js';
-  import SearchIcon from '@lucide/svelte/icons/search';
   import AlbumCard from '$lib/components/AlbumCard.svelte';
   import MotionSpinner from '$lib/components/MotionSpinner.svelte';
   import * as m from '$lib/paraglide/messages.js';
@@ -11,7 +8,6 @@
     LibraryIndexState,
     SearchLibraryResponse,
     SearchLibraryResultItem,
-    LibrarySearchScope,
   } from '$lib/types';
 
   interface Props {
@@ -21,11 +17,8 @@
     loadingAlbums?: boolean;
     errorMsg?: string;
     searchQuery?: string;
-    searchScope?: LibrarySearchScope;
     searchLoading?: boolean;
     searchResponse?: SearchLibraryResponse | null;
-    onSearchQueryChange: (query: string) => void;
-    onSearchScopeChange: (scope: LibrarySearchScope) => void;
     onSelect: (album: Album) => void;
     onSelectSearchResult: (item: SearchLibraryResultItem) => void;
   }
@@ -37,33 +30,11 @@
     loadingAlbums = false,
     errorMsg = '',
     searchQuery = '',
-    searchScope = 'all',
     searchLoading = false,
     searchResponse = null,
-    onSearchQueryChange,
-    onSearchScopeChange,
     onSelect,
     onSelectSearchResult,
   }: Props = $props();
-
-  const scopeOptions = $derived.by(() => {
-    void localeState.current;
-    return [
-      {
-        value: 'all' as LibrarySearchScope,
-        // "ALL" 是固定品牌文案，不走 i18n
-        label: 'ALL',
-      },
-      {
-        value: 'albums' as LibrarySearchScope,
-        label: m.library_search_scope_albums(),
-      },
-      {
-        value: 'songs' as LibrarySearchScope,
-        label: m.library_search_scope_songs(),
-      },
-    ];
-  });
 
   const trimmedSearchQuery = $derived.by(() => searchQuery.trim());
   const isSearchMode = $derived.by(() => trimmedSearchQuery.length > 0);
@@ -77,7 +48,6 @@
   const labels = $derived.by(() => {
     void localeState.current;
     return {
-      searchAria: m.library_search_aria(),
       loadingAlbums: m.library_loading_albums(),
       loadFailed: m.library_load_failed(),
       indexBuildingTitle: m.library_search_index_building_title(),
@@ -104,20 +74,6 @@
     }
   });
 
-  const activeScopeLabel = $derived.by(
-    () =>
-      scopeOptions.find((option) => option.value === searchScope)?.label ??
-      'ALL'
-  );
-
-  function cycleSearchScope() {
-    const currentIndex = scopeOptions.findIndex(
-      (option) => option.value === searchScope
-    );
-    const nextIndex = (currentIndex + 1) % scopeOptions.length;
-    onSearchScopeChange(scopeOptions[nextIndex]?.value ?? 'all');
-  }
-
   let scrollAreaEl: HTMLElement | undefined = $state();
   let scrollTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -131,34 +87,6 @@
 </script>
 
 <div class="album-sidebar-section">
-  <div class="sidebar-header">
-    <div class="search-control-row">
-      <SearchIcon class="library-search-icon" aria-hidden="true" />
-      <Input
-        value={searchQuery}
-        placeholder=""
-        aria-label={labels.searchAria}
-        class="library-search-input"
-        oninput={(event) => {
-          const target = event.currentTarget as HTMLInputElement;
-          onSearchQueryChange(target.value);
-        }}
-      />
-      <Button
-        variant="outline"
-        size="icon"
-        class="library-search-scope-button active:!translate-y-0"
-        data-scope={searchScope}
-        aria-label={m.library_search_scope_aria({ scope: activeScopeLabel })}
-        title={m.library_search_scope_title({ scope: activeScopeLabel })}
-        onclick={cycleSearchScope}
-      >
-        {activeScopeLabel}
-      </Button>
-    </div>
-    <div class="library-search-divider" aria-hidden="true"></div>
-  </div>
-
   <div
     class="sidebar-scroll-area"
     bind:this={scrollAreaEl}
@@ -267,11 +195,6 @@
     height: 100%;
   }
 
-  .sidebar-header {
-    flex-shrink: 0;
-    min-width: 0;
-  }
-
   .sidebar-scroll-area {
     flex: 1;
     width: 100%;
@@ -312,12 +235,6 @@
     background: rgba(255, 255, 255, 0.42);
   }
 
-  .search-control-row {
-    position: relative;
-    width: 100%;
-    min-width: 0;
-  }
-
   .album-sidebar-section :global(.album-list) {
     width: 100%;
     min-width: 0;
@@ -328,180 +245,6 @@
   .album-sidebar-section :global(.album-card) {
     width: 100%;
     min-width: 0;
-  }
-
-  .library-search-divider {
-    height: 1px;
-    margin: 14px 4px 16px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(var(--accent-rgb), 0.34) 18%,
-      rgba(var(--accent-rgb), 0.52) 50%,
-      rgba(var(--accent-rgb), 0.34) 82%,
-      transparent
-    );
-  }
-
-  :global(.library-search-input) {
-    height: 40px;
-    padding-left: 34px;
-    padding-right: 46px;
-    border: 1px solid rgba(255, 255, 255, 0.48);
-    border-radius: 12px;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.36),
-        rgba(255, 255, 255, 0.2)
-      ),
-      rgba(255, 255, 255, 0.18);
-    color: var(--text-primary);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.52),
-      0 8px 18px rgba(15, 23, 42, 0.08);
-  }
-
-  :global(.library-search-icon) {
-    position: absolute;
-    top: 50%;
-    left: 12px;
-    z-index: 1;
-    width: 16px;
-    height: 16px;
-    color: var(--text-tertiary);
-    pointer-events: none;
-    transform: translateY(-50%);
-  }
-
-  :global(.library-search-input:focus-visible) {
-    border-color: rgba(var(--accent-rgb), 0.36);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.56),
-      0 0 0 3px rgba(var(--accent-rgb), 0.14),
-      0 10px 20px rgba(15, 23, 42, 0.1);
-  }
-
-  :global(.library-search-scope-button) {
-    --scope-bg: var(--accent);
-    --scope-bg-hover: var(--accent-hover);
-    interpolate-size: allow-keywords;
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    width: auto;
-    min-width: 32px;
-    height: 32px;
-    padding: 0 8px;
-    border: 1px solid color-mix(in srgb, var(--scope-bg) 72%, white 28%);
-    border-radius: 8px;
-    background: var(--scope-bg);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      0 5px 12px color-mix(in srgb, var(--scope-bg) 24%, transparent);
-    color: var(--accent-readable-foreground);
-    font-family: var(--font-wide);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    line-height: 1;
-    white-space: nowrap;
-    transition:
-      width 0.25s ease,
-      transform 0.15s ease,
-      background-color 0.2s ease,
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-
-  :global(.library-search-scope-button[data-scope='albums']) {
-    --scope-bg: oklch(from var(--accent) l c calc(h + 22));
-    --scope-bg-hover: oklch(from var(--accent-hover) l c calc(h + 22));
-  }
-
-  :global(.library-search-scope-button[data-scope='songs']) {
-    --scope-bg: oklch(from var(--accent) l c calc(h - 28));
-    --scope-bg-hover: oklch(from var(--accent-hover) l c calc(h - 28));
-  }
-
-  :global(.library-search-scope-button:hover) {
-    border-color: color-mix(in srgb, var(--scope-bg-hover) 78%, white 22%);
-    background: var(--scope-bg-hover);
-    color: var(--accent-hover-readable-foreground);
-  }
-
-  :global(.library-search-scope-button[data-scope='all']) {
-    overflow: hidden;
-    isolation: isolate;
-  }
-
-  :global(.library-search-scope-button[data-scope='all']::before) {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 800px;
-    height: 800px;
-    background: linear-gradient(
-      to right,
-      #ff2080,
-      #c830ff,
-      #5050ff,
-      #00a0ff,
-      #00d4a0,
-      #60e840,
-      #e8d020,
-      #ff8020,
-      #ff2080
-    );
-    background-size: 25% 100%;
-    z-index: -2;
-    pointer-events: none;
-    opacity: 0;
-    transform: translate(-50%, -50%) rotate(135deg);
-    animation: scope-rainbow-slide 2.4s linear infinite;
-    transition: opacity 0.3s ease;
-  }
-
-  :global(.library-search-scope-button[data-scope='all']::after) {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0;
-    background: radial-gradient(
-        circle,
-        rgba(255, 255, 255, 0.32) 0.7px,
-        transparent 0.7px
-      )
-      0 0 / 3.5px 3.5px;
-    transition: opacity 0.3s ease;
-  }
-
-  :global(.library-search-scope-button[data-scope='all']:hover) {
-    border-color: rgba(255, 255, 255, 0.48);
-    background: transparent;
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    -webkit-text-stroke: 2px rgba(0, 0, 0, 0.5);
-    paint-order: stroke fill;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
-  }
-
-  :global(.library-search-scope-button[data-scope='all']:hover::before) {
-    opacity: 1;
-  }
-
-  :global(.library-search-scope-button[data-scope='all']:hover::after) {
-    opacity: 1;
-  }
-
-  :global(.library-search-scope-button:active) {
-    transform: scaleX(0.92);
-    box-shadow:
-      inset 0 1px 2px rgba(15, 23, 42, 0.08),
-      0 2px 6px rgba(15, 23, 42, 0.06);
   }
 
   .search-status-card {
@@ -559,15 +302,6 @@
     }
     100% {
       transform: translateX(240%);
-    }
-  }
-
-  @keyframes scope-rainbow-slide {
-    from {
-      transform: translate(-50%, -50%) rotate(135deg) translateX(0);
-    }
-    to {
-      transform: translate(-50%, -50%) rotate(135deg) translateX(-25%);
     }
   }
 

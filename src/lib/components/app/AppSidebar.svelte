@@ -10,6 +10,7 @@
     SearchLibraryResponse,
     SearchLibraryResultItem,
   } from '$lib/types';
+
   import type { AppView } from '$lib/features/shell/store.svelte';
 
   interface Props {
@@ -80,8 +81,10 @@
     <SidebarNav
       {currentView}
       {searchQuery}
+      {searchScope}
       {onNavigate}
       {onSearchQueryChange}
+      {onSearchScopeChange}
     />
   </div>
 
@@ -93,11 +96,8 @@
       {loadingAlbums}
       {errorMsg}
       {searchQuery}
-      {searchScope}
       {searchLoading}
       {searchResponse}
-      {onSearchQueryChange}
-      {onSearchScopeChange}
       onSelect={onSelectAlbum}
       {onSelectSearchResult}
     />
