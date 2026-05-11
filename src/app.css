@@ -408,12 +408,6 @@ body {
   flex-direction: column;
 }
 
-.sidebar .sidebar-layout {
-  padding: 24px 16px;
-  flex: 1;
-  min-height: 0;
-}
-
 .section-title {
   font-size: 13px;
   font-weight: 600;
@@ -422,11 +416,6 @@ body {
   text-transform: uppercase;
   margin-bottom: 16px;
   padding-left: 4px;
-}
-
-.album-list {
-  display: flex;
-  flex-direction: column;
 }
 
 .main-region {
@@ -860,10 +849,6 @@ body {
   height: 56px;
   z-index: 90;
   user-select: none;
-}
-
-.app-shell.macos-overlay .sidebar .home-nav-button {
-  margin-top: 60px;
 }
 
 .sidebar-drag-region,
