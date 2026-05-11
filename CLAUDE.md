@@ -26,9 +26,9 @@ cargo clippy --workspace --all-targets
 cargo test --workspace
 
 # 文档
-cargo doc -p siren_core --no-deps
-cargo doc -p siren-music-download --lib --no-deps --document-private-items
-cargo doc -p siren-music-download --bin siren-music-download --no-deps --document-private-items
+cargo doc -p harubble_core --no-deps
+cargo doc -p harubble --lib --no-deps --document-private-items
+cargo doc -p harubble --bin harubble --no-deps --document-private-items
 ```
 
 ## 关键入口
@@ -84,7 +84,7 @@ cargo doc -p siren-music-download --bin siren-music-download --no-deps --documen
   - `src/lib/api.ts`
   - `src/lib/types.ts`
   - `README.md`
-  - `src-tauri` / `siren_core` 中对应的 rustdoc
+  - `src-tauri` / `harubble_core` 中对应的 rustdoc
 
 ### 格式化与质量
 

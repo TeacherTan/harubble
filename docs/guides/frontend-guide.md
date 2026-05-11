@@ -764,6 +764,5 @@ App.svelte
 - [backend-completed-phases.md](../history/backend-completed-phases.md)：后端已完成阶段
 - [backend-pending-phases.md](../history/backend-pending-phases.md)：后端待办阶段
 - [decisions.md](../history/decisions.md)：技术选型决策记录
-- [i18n-migration-plan.md](../guides/i18n-migration-plan.md)：i18n 迁移计划与阶段记录
-- [i18n-inventory.md](../guides/i18n-inventory.md)：i18n 文件级文案清单
+- [i18n.md](../reference/i18n.md)：i18n 架构参考
 - [release-process.md](../process/release-process.md)：CI 与发布流程

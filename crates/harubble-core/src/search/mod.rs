@@ -124,7 +124,7 @@ impl SearchLibraryResponse {
     /// # 示例
     ///
     /// ```
-    /// use siren_core::{LibraryIndexState, LibrarySearchScope, SearchLibraryResponse};
+    /// use harubble_core::{LibraryIndexState, LibrarySearchScope, SearchLibraryResponse};
     ///
     /// let response = SearchLibraryResponse::empty(
     ///     "ep",

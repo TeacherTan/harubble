@@ -100,8 +100,8 @@ fn duration_from_secs(value: f64) -> Option<Duration> {
 
 fn platform_config(app: &AppHandle) -> Result<PlatformConfig<'static>> {
     Ok(PlatformConfig {
-        display_name: "Siren Music Download",
-        dbus_name: "com.siren.musicdownload",
+        display_name: "Harubble",
+        dbus_name: "com.harubble.app",
         hwnd: platform_hwnd(app)?,
     })
 }

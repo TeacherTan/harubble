@@ -428,7 +428,7 @@ mod tests {
             status: DownloadTaskStatus::Completed,
             bytes_done: 0,
             bytes_total: None,
-            output_path: Some("/Users/me/Downloads/SirenMusic/Album/Disc 1/Track.flac".to_string()),
+            output_path: Some("/Users/me/Downloads/Harubble/Album/Disc 1/Track.flac".to_string()),
             error: None,
             attempt: 0,
             song_index: 0,
@@ -437,7 +437,7 @@ mod tests {
             download_lyrics: true,
         };
 
-        let snapshot = task.to_snapshot("/Users/me/Downloads/SirenMusic");
+        let snapshot = task.to_snapshot("/Users/me/Downloads/Harubble");
 
         assert_eq!(
             snapshot.output_path.as_deref(),
@@ -467,7 +467,7 @@ mod tests {
             download_lyrics: true,
         };
 
-        let snapshot = task.to_snapshot("/Users/me/Downloads/SirenMusic");
+        let snapshot = task.to_snapshot("/Users/me/Downloads/Harubble");
 
         assert_eq!(snapshot.output_path, None);
     }

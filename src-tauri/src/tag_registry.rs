@@ -15,7 +15,7 @@
 use crate::preferences::Locale;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use siren_core::api::TagEntry;
+use harubble_core::api::TagEntry;
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -30,7 +30,7 @@ pub(crate) const CURRENT_SCHEMA_VERSION: u32 = 2;
 /// 远端 tag 注册表 JSON 文件地址，用于后台增量拉取与版本比对。
 #[cfg(not(debug_assertions))]
 pub(crate) const REMOTE_URL: &str =
-    "https://raw.githubusercontent.com/anselyuki/siren-music-download/main/data/tag_registry.json";
+    "https://raw.githubusercontent.com/anselyuki/harubble/main/data/tag_registry.json";
 
 /// dev 模式下使用的本地 tag 注册表文件路径（相对于 src-tauri 目录）。
 #[cfg(debug_assertions)]

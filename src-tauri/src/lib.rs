@@ -1,8 +1,8 @@
-//! Siren Music Download 后端库。
+//! Harubble 后端库。
 //!
-//! 这个 crate 是桌面应用后端的宿主层入口，负责把 `siren_core` 提供的领域能力接入
+//! 这个 crate 是桌面应用后端的宿主层入口，负责把 `harubble_core` 提供的领域能力接入
 //! Tauri 运行时，并组合成可供 `main.rs`、命令注册、事件桥接与集成测试复用的最小公共边界。
-//! 如果 `siren_core` 关注的是“平台无关的核心能力”，那么这里关注的就是“应用进程内如何把
+//! 如果 `harubble_core` 关注的是“平台无关的核心能力”，那么这里关注的就是“应用进程内如何把
 //! 这些能力接线成一个真正可运行的桌面后端”。
 //!
 //! # 首页导航
@@ -25,11 +25,11 @@
 //! - 内部实现细节（helper、normalization、worker pipeline）保持私有，避免把临时结构扩散成契约。
 //! - 不为测试便利扩大可见性；若某项能力需要被外部使用，应通过明确公共入口暴露，而不是直接泄漏内部模块。
 //!
-//! # 与 `siren_core` 的关系
+//! # 与 `harubble_core` 的关系
 //!
 //! 该 crate 主要负责宿主层编排：状态装配、Tauri command、事件发射、系统通知、播放器后端和偏好持久化。
-//! 业务语义本身仍尽量下沉到 `siren_core`，因此当你需要修改下载模型、搜索结果或音频写盘契约时，
-//! 通常应该优先检查 `siren_core` 的公开 API，再回到这里看宿主层如何接入。
+//! 业务语义本身仍尽量下沉到 `harubble_core`，因此当你需要修改下载模型、搜索结果或音频写盘契约时，
+//! 通常应该优先检查 `harubble_core` 的公开 API，再回到这里看宿主层如何接入。
 
 mod album_metadata_cache;
 mod app_state;
@@ -43,6 +43,7 @@ mod listening_history;
 mod local_inventory;
 mod local_inventory_provenance;
 mod logging;
+mod migration;
 mod notification;
 mod player;
 mod preferences;

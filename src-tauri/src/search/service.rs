@@ -7,7 +7,7 @@ use crate::search::snapshot::{
     LibrarySearchSnapshot,
 };
 use anyhow::Result;
-use siren_core::{
+use harubble_core::{
     LibraryIndexState, LocalInventorySnapshot, LocalInventoryStatus, SearchLibraryRequest,
     SearchLibraryResponse, SEARCH_LIBRARY_MAX_LIMIT, SEARCH_LIBRARY_MAX_OFFSET,
 };
@@ -302,7 +302,7 @@ mod tests {
     use crate::search::index::LibrarySearchIndex;
     use crate::search::snapshot::LibrarySearchSnapshot;
     use crate::search::snapshot::{LibrarySearchAlbumRecord, LibrarySearchSongRecord};
-    use siren_core::{LibraryIndexState, LocalInventorySnapshot, LocalInventoryStatus};
+    use harubble_core::{LibraryIndexState, LocalInventorySnapshot, LocalInventoryStatus};
     use tempfile::tempdir;
 
     fn inventory_snapshot(version: &str) -> LocalInventorySnapshot {
@@ -369,9 +369,9 @@ mod tests {
         assert_eq!(generation, 1);
         let response = service
             .search(
-                siren_core::SearchLibraryRequest {
+                harubble_core::SearchLibraryRequest {
                     query: "alpha".to_string(),
-                    scope: siren_core::LibrarySearchScope::All,
+                    scope: harubble_core::LibrarySearchScope::All,
                     limit: None,
                     offset: None,
                 },
@@ -395,9 +395,9 @@ mod tests {
 
         let response = service
             .search(
-                siren_core::SearchLibraryRequest {
+                harubble_core::SearchLibraryRequest {
                     query: "alpha".to_string(),
-                    scope: siren_core::LibrarySearchScope::All,
+                    scope: harubble_core::LibrarySearchScope::All,
                     limit: None,
                     offset: None,
                 },
@@ -431,9 +431,9 @@ mod tests {
 
         let response = service
             .search(
-                siren_core::SearchLibraryRequest {
+                harubble_core::SearchLibraryRequest {
                     query: "alpha".to_string(),
-                    scope: siren_core::LibrarySearchScope::All,
+                    scope: harubble_core::LibrarySearchScope::All,
                     limit: None,
                     offset: None,
                 },

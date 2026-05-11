@@ -2,18 +2,20 @@
 
 <div align="center">
 
-# 塞壬音乐下载器
+# Harubble
 
 <div>
   <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-4c8bf5">
-  <img alt="license" src="https://img.shields.io/github/license/Anselyuki/siren-music-download">
-  <img alt="stars" src="https://img.shields.io/github/stars/Anselyuki/siren-music-download?style=social">
+  <img alt="license" src="https://img.shields.io/github/license/Anselyuki/harubble">
+  <img alt="stars" src="https://img.shields.io/github/stars/Anselyuki/harubble?style=social">
 </div>
+
+名字取自《明日方舟》角色 **遥**（Haru）与她的源石技艺——漂浮在空中的透明泡泡（Bubble）。
 
 面向 [塞壬唱片](https://monster-siren.hypergryph.com/) 的桌面音乐播放器与下载器。  
 把专辑浏览、标签分类、库内搜索、在线播放、整专下载、歌词和下载管理整合进同一个桌面应用里。
 
-[下载发布版](https://github.com/Anselyuki/siren-music-download/releases) | [功能亮点](#功能亮点) | [使用方式](#使用方式) | [本地开发](#本地开发) | [Rust 文档](#rustdoc-guide) | [开发文档](./doc/guides/frontend-guide.md) | [后端契约](./doc/reference/backend-api-contract.md) | [Release 流程](./doc/process/release-process.md)
+[下载发布版](https://github.com/Anselyuki/harubble/releases) | [功能亮点](#功能亮点) | [使用方式](#使用方式) | [本地开发](#本地开发) | [Rust 文档](#rustdoc-guide) | [开发文档](./doc/guides/frontend-guide.md) | [后端契约](./doc/reference/backend-api-contract.md) | [Release 流程](./doc/process/release-process.md)
 
 </div>
 
@@ -21,7 +23,7 @@
 
 ## 下载与安装
 
-- 推荐直接从 [GitHub Releases](https://github.com/Anselyuki/siren-music-download/releases) 下载对应系统的发布文件。
+- 推荐直接从 [GitHub Releases](https://github.com/Anselyuki/harubble/releases) 下载对应系统的发布文件。
 - 应用目前面向 `macOS` 和 `Windows` 提供桌面端体验。
 - Release 文件名中，`macos_intel` 对应 Intel Mac，`macos_apple_silicon` 对应 Apple Silicon Mac。
 - Windows 发布版为依赖系统 `WebView2` 运行时的精简 `.exe`，不会额外提供安装型打包。
@@ -87,13 +89,13 @@ bun run tauri:build
 
 ```bash
 # 生成核心库文档
-cargo doc -p siren_core --no-deps
+cargo doc -p harubble_core --no-deps
 
 # 生成桌面应用库文档（包含 private items）
-cargo doc -p siren-music-download --lib --no-deps --document-private-items
+cargo doc -p harubble --lib --no-deps --document-private-items
 
 # 生成桌面应用二进制入口文档（包含 private items）
-cargo doc -p siren-music-download --bin siren-music-download --no-deps --document-private-items
+cargo doc -p harubble --bin harubble --no-deps --document-private-items
 ```
 
 说明：
@@ -153,7 +155,7 @@ cargo doc -p siren-music-download --bin siren-music-download --no-deps --documen
 
 - 项目依赖塞壬唱片公开接口与公开资源；若上游接口或资源地址变化，应用也需要同步调整。
 - 本项目为桌面端体验整合与学习项目，与塞壬唱片或鹰角网络无官方隶属关系。
-- 如果你在使用中遇到问题或有改进建议，欢迎提交 [Issue](https://github.com/Anselyuki/siren-music-download/issues) 或 Pull Request。
+- 如果你在使用中遇到问题或有改进建议，欢迎提交 [Issue](https://github.com/Anselyuki/harubble/issues) 或 Pull Request。
 
 ## 许可证
 

@@ -1,7 +1,7 @@
-//! 塞壬音乐下载器共享核心库。
+//! Harubble 共享核心库。
 //!
-//! `siren_core` 负责承载桌面端后端中与平台无关、可脱离 Tauri runtime 复用的核心能力，
-//! 包括上游 Monster Siren 数据访问、音频格式处理、下载任务模型与本地库存扫描等。
+//! `harubble_core` 负责承载桌面端后端中与平台无关、可脱离 Tauri runtime 复用的核心能力，
+//! 包括上游数据访问、音频格式处理、下载任务模型与本地库存扫描等。
 //! 对于希望在 CLI、测试、后台服务或未来的其它宿主中复用同一套下载语义的调用方，
 //! 这里是最稳定的公共 Rust API 入口。
 //!
@@ -14,7 +14,7 @@
 //!
 //! # 模块导览
 //!
-//! - [`api`]：对 Monster Siren 公开 HTTP 接口的强类型访问与响应缓存。
+//! - [`api`]：对上游公开 HTTP 接口的强类型访问与响应缓存。
 //! - [`audio`]：音频格式识别、文件写入、封面处理与 FLAC 标签工具。
 //! - [`download`]：下载领域模型、错误类型、状态机与服务层实现。
 //! - [`downloader`]：面向单首歌曲 / 封面的高层下载与写盘编排。
@@ -32,13 +32,13 @@
 //! # 边界说明
 //!
 //! 这个 crate 不负责 Tauri command 注册、窗口事件广播或平台媒体会话等宿主相关逻辑；
-//! 这些能力由 `src-tauri` crate 负责封装。`siren_core` 更偏向“可复用的领域层与库层契约”，
+//! 这些能力由 `src-tauri` crate 负责封装。`harubble_core` 更偏向“可复用的领域层与库层契约”，
 //! 上层应把它当作稳定核心，而不是依赖某个具体桌面运行时的薄包装。
 //!
 //! # 生成 rustdoc
 //!
 //! ```bash
-//! cargo doc -p siren_core --no-deps
+//! cargo doc -p harubble_core --no-deps
 //! ```
 
 pub mod api;
@@ -51,7 +51,7 @@ pub mod search;
 pub mod url_validator;
 
 // 重新导出公共 API，便于上层直接使用
-/// Monster Siren 上游数据访问相关的公共类型与客户端入口。
+/// 上游数据访问相关的公共类型与客户端入口。
 pub use api::{Album, AlbumDetail, ApiClient, SongDetail, SongEntry, TagEntry};
 /// 音频格式识别、落盘与 FLAC 标签写入相关的公共工具。
 pub use audio::{save_audio, tag_flac, AudioFormat, OutputFormat};

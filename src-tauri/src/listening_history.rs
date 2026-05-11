@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use rusqlite::Connection;
-use siren_core::homepage::{HistoryEntry, ListeningEvent};
+use harubble_core::homepage::{HistoryEntry, ListeningEvent};
 
 const MAX_HISTORY_ROWS: u32 = 500;
 

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use pinyin::ToPinyin;
 use serde::{Deserialize, Serialize};
-use siren_core::ApiClient;
+use harubble_core::ApiClient;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use time::format_description::well_known::Iso8601;

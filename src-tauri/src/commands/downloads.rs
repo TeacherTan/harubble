@@ -6,7 +6,7 @@
 use crate::app_state::AppState;
 use crate::audio_cache;
 use crate::downloads::events::{emit_download_job_updated, emit_download_manager_state_changed};
-use siren_core::download::model::{
+use harubble_core::download::model::{
     CreateDownloadJobRequest, DownloadJobSnapshot, DownloadManagerSnapshot,
 };
 use tauri::{AppHandle, State};
@@ -54,7 +54,7 @@ pub async fn create_download_job(
     let api = state.api.clone();
     let preferences = state.preferences();
     let normalized_request = CreateDownloadJobRequest {
-        options: siren_core::download::model::DownloadOptions {
+        options: harubble_core::download::model::DownloadOptions {
             output_dir: preferences.output_dir,
             ..request.options
         },

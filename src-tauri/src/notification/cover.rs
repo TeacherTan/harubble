@@ -9,7 +9,7 @@ const MAX_CACHE_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 const MAX_CACHED_FILES: usize = 128;
 
 pub fn temp_dir() -> PathBuf {
-    std::env::temp_dir().join("siren-music-download-covers")
+    std::env::temp_dir().join("harubble-covers")
 }
 
 fn file_extension(cover_url: &str) -> &'static str {

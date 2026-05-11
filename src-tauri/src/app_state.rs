@@ -14,7 +14,7 @@ use crate::search::LibrarySearchService;
 use crate::tag_editor::TagEditorService;
 use crate::tag_registry::TagRegistryService;
 use anyhow::{Context, Result};
-use siren_core::{DownloadManagerSnapshot, DownloadService};
+use harubble_core::{DownloadManagerSnapshot, DownloadService};
 use souvlaki::{MediaControlEvent, SeekDirection};
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
@@ -30,7 +30,7 @@ use tokio::sync::Mutex;
 #[derive(Clone)]
 pub struct AppState {
     pub(crate) player: Arc<AudioPlayer>,
-    pub(crate) api: Arc<siren_core::ApiClient>,
+    pub(crate) api: Arc<harubble_core::ApiClient>,
     pub(crate) download_service: Arc<Mutex<DownloadService>>,
     pub(crate) local_inventory_service: LocalInventoryService,
     pub(crate) local_inventory_provenance_store: Arc<LocalInventoryProvenanceStore>,
@@ -59,7 +59,8 @@ impl AppState {
     pub fn new(app: tauri::AppHandle) -> Result<Self, String> {
         let log_center = Arc::new(LogCenter::new(app.clone())?);
         let player = AudioPlayer::new(app.clone()).map_err(|e| e.to_string())?;
-        let api = siren_core::ApiClient::new().map_err(|e| e.to_string())?;
+        let api = harubble_core::ApiClient::new().map_err(|e| e.to_string())?;
+        crate::migration::migrate_legacy_data(&app.path().app_data_dir().unwrap_or_default());
         let app_data_dir = app
             .path()
             .app_data_dir()
@@ -80,7 +81,7 @@ impl AppState {
         let search_data_dir = app_data_dir.join("library-search");
         let library_search_service =
             LibrarySearchService::new(search_data_dir, preferences.output_dir.clone());
-        let db_path = app_data_dir.join("siren_local.db");
+        let db_path = app_data_dir.join("harubble_local.db");
         let listening_history = Arc::new(
             ListeningHistoryService::new(&db_path)
                 .map_err(|e| format!("初始化收听历史服务失败: {e}"))?,
@@ -246,7 +247,7 @@ impl AppState {
 
         match result {
             Ok(duration) => {
-                let listening_event = siren_core::ListeningEvent {
+                let listening_event = harubble_core::ListeningEvent {
                     song_cid: song_cid.clone(),
                     song_name: song_detail.name.clone(),
                     album_cid: song_detail.album_cid.clone(),

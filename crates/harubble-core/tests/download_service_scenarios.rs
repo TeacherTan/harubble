@@ -1,9 +1,9 @@
-use siren_core::audio::OutputFormat;
-use siren_core::download::model::{
+use harubble_core::audio::OutputFormat;
+use harubble_core::download::model::{
     DownloadErrorCode, DownloadErrorInfo, DownloadJobKind, DownloadJobSnapshot, DownloadJobStatus,
     DownloadManagerSnapshot, DownloadOptions, DownloadTaskSnapshot, DownloadTaskStatus,
 };
-use siren_core::DownloadService;
+use harubble_core::DownloadService;
 
 fn make_task_snapshot(status: DownloadTaskStatus) -> DownloadTaskSnapshot {
     DownloadTaskSnapshot {

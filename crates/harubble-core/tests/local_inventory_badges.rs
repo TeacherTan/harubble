@@ -1,5 +1,5 @@
-use siren_core::local_inventory::is_downloaded_status;
-use siren_core::{
+use harubble_core::local_inventory::is_downloaded_status;
+use harubble_core::{
     aggregate_album_download_badge, album_badge_from_evidence, badge_for_detected_file,
     badge_for_status, candidate_relative_paths, has_detected_track, matched_track_evidence,
     track_badge_from_matches, AlbumDownloadBadge, LocalAudioFileEvidence,

@@ -217,8 +217,8 @@ pub struct LocalInventoryScanProgressEvent {
 /// # 示例
 ///
 /// ```
-/// use siren_core::local_inventory::is_downloaded_status;
-/// use siren_core::LocalTrackDownloadStatus;
+/// use harubble_core::local_inventory::is_downloaded_status;
+/// use harubble_core::LocalTrackDownloadStatus;
 ///
 /// assert!(is_downloaded_status(LocalTrackDownloadStatus::Verified));
 /// assert!(!is_downloaded_status(LocalTrackDownloadStatus::Missing));
@@ -453,7 +453,7 @@ pub fn matched_track_evidence(
 /// # 示例
 ///
 /// ```
-/// use siren_core::candidate_relative_paths;
+/// use harubble_core::candidate_relative_paths;
 ///
 /// let paths = candidate_relative_paths("My Album", "Track/01");
 ///

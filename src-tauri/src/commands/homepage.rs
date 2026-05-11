@@ -1,9 +1,9 @@
 //! 首页数据聚合相关的 Tauri command。
 
 use crate::app_state::AppState;
-use siren_core::api::Album;
-use siren_core::homepage::{HistoryEntry, HomepageStatus, SeriesGroup};
-use siren_core::DownloadJobStatus;
+use harubble_core::api::Album;
+use harubble_core::homepage::{HistoryEntry, HomepageStatus, SeriesGroup};
+use harubble_core::DownloadJobStatus;
 use tauri::State;
 
 /// 获取最新专辑列表。

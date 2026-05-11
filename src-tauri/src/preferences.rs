@@ -209,7 +209,7 @@ impl PreferencesStore {
             .unwrap_or_else(|| {
                 std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"))
             })
-            .join("SirenMusic");
+            .join("Harubble");
         let resolved_output_dir = if fs::create_dir_all(&default_output_dir).is_ok() {
             default_output_dir
         } else {

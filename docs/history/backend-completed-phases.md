@@ -92,7 +92,7 @@
 - albums / songs / lyrics 支持 IndexedDB 持久化与启动预热
 - 支持按 key / tag 失效，并纳入 `inventoryVersion` 驱动的失效链
 - 提供前端缓存 hit / miss / eviction 统计
-- `siren-core` `ApiClient` 增加 100 条 LRU 响应缓存
+- `harubble-core` `ApiClient` 增加 100 条 LRU 响应缓存
 - 增加 `clear_response_cache` 命令，支持手动刷新时同步清理后端响应缓存
 - 音频缓存增加 2GB 软上限与后台按 mtime 淘汰
 - 通知封面缓存清理改为异步后台执行，不阻塞主流程

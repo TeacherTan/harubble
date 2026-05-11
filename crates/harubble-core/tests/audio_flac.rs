@@ -1,6 +1,6 @@
 use anyhow::Result;
-use siren_core::audio::FlacMetadata;
-use siren_core::{save_audio, tag_flac, OutputFormat};
+use harubble_core::audio::FlacMetadata;
+use harubble_core::{save_audio, tag_flac, OutputFormat};
 
 fn build_test_wav() -> Vec<u8> {
     let mut cursor = std::io::Cursor::new(Vec::new());

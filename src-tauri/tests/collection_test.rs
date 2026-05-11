@@ -1,10 +1,10 @@
 use tempfile::TempDir;
 
-fn create_service() -> (siren_music_download::collection::CollectionService, TempDir) {
+fn create_service() -> (harubble::collection::CollectionService, TempDir) {
     let tmp = TempDir::new().unwrap();
     let db_path = tmp.path().join("test.db");
     let official_json = r#"{"schemaVersion":1,"collections":[{"id":"official:test","name":{"zh-CN":"测试合集","en-US":"Test Collection"},"description":{"zh-CN":"描述","en-US":"Description"},"cover":null,"songIds":["song-1","song-2"]}]}"#;
-    let service = siren_music_download::collection::CollectionService::new(
+    let service = harubble::collection::CollectionService::new(
         &db_path,
         official_json.as_bytes(),
     )

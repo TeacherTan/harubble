@@ -1,7 +1,7 @@
 use crate::logging::{LogCenter, LogLevel, LogPayload};
 use crate::preferences::Locale;
 use serde::{Deserialize, Serialize};
-use siren_core::download::model::{
+use harubble_core::download::model::{
     DownloadErrorCode, DownloadErrorInfo, DownloadJobSnapshot, DownloadJobStatus,
     DownloadManagerSnapshot, DownloadTaskSnapshot, DownloadTaskStatus,
 };
@@ -384,8 +384,8 @@ fn iso_timestamp_now() -> String {
 mod tests {
     use super::{apply_retention, normalize_restored_snapshot, DownloadSessionStore};
     use crate::preferences::Locale;
-    use siren_core::audio::OutputFormat;
-    use siren_core::download::model::{
+    use harubble_core::audio::OutputFormat;
+    use harubble_core::download::model::{
         DownloadJobKind, DownloadJobSnapshot, DownloadJobStatus, DownloadManagerSnapshot,
         DownloadOptions, DownloadTaskSnapshot, DownloadTaskStatus,
     };

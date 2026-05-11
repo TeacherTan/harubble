@@ -1,6 +1,6 @@
 //! 下载服务与 Tauri 事件系统之间的桥接层。
 //!
-//! 该模块负责把 `siren-core` 的下载执行循环接入 Tauri 事件体系，使前端能够通过
+//! 该模块负责把 `harubble-core` 的下载执行循环接入 Tauri 事件体系，使前端能够通过
 //! 事件订阅下载状态、批次变更与任务进度。
 //!
 //! ## 流水线架构
@@ -22,10 +22,10 @@ use crate::downloads::events::{
     emit_download_job_updated, emit_download_manager_state_changed, DOWNLOAD_TASK_PROGRESS,
 };
 use crate::local_inventory::spawn_inventory_scan;
-use siren_core::download::model::{DownloadJobKind, DownloadTaskStatus, InternalDownloadTask};
-use siren_core::download::worker::{CompletedTaskArtifacts, TaskExecutionResult};
-use siren_core::WritePayload;
-use siren_core::{album_cover_exists, album_output_dir, download_album_cover};
+use harubble_core::download::model::{DownloadJobKind, DownloadTaskStatus, InternalDownloadTask};
+use harubble_core::download::worker::{CompletedTaskArtifacts, TaskExecutionResult};
+use harubble_core::WritePayload;
+use harubble_core::{album_cover_exists, album_output_dir, download_album_cover};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -61,7 +61,7 @@ struct WriteJob {
 /// 写入 worker 发出进度事件所需的全部上下文。
 #[derive(Clone)]
 struct WriteProgressCtx {
-    service: Arc<tokio::sync::Mutex<siren_core::DownloadService>>,
+    service: Arc<tokio::sync::Mutex<harubble_core::DownloadService>>,
     app: AppHandle,
 }
 
@@ -185,7 +185,7 @@ async fn execution_loop(app: &AppHandle, state: AppState) {
 
 async fn start_job(
     app: &AppHandle,
-    service: &Arc<tokio::sync::Mutex<siren_core::DownloadService>>,
+    service: &Arc<tokio::sync::Mutex<harubble_core::DownloadService>>,
 ) -> Option<StartedJob> {
     let job_snapshot = {
         let mut svc = service.lock().await;
@@ -242,8 +242,8 @@ async fn start_job(
             })
             .await
             .unwrap_or_else(|_| {
-                TaskExecutionResult::Failed(siren_core::download::model::DownloadErrorInfo {
-                    code: siren_core::download::model::DownloadErrorCode::Internal,
+                TaskExecutionResult::Failed(harubble_core::download::model::DownloadErrorInfo {
+                    code: harubble_core::download::model::DownloadErrorCode::Internal,
                     message: "Write worker panicked".to_string(),
                     retryable: false,
                     details: None,
@@ -277,8 +277,8 @@ fn resolve_task_output_dir(
 }
 
 async fn prepare_task_output_dir(
-    service: &Arc<tokio::sync::Mutex<siren_core::DownloadService>>,
-    api: &Arc<siren_core::ApiClient>,
+    service: &Arc<tokio::sync::Mutex<harubble_core::DownloadService>>,
+    api: &Arc<harubble_core::ApiClient>,
     job_id: &str,
     task: &InternalDownloadTask,
     cancellation_flag: Option<&Arc<std::sync::atomic::AtomicBool>>,
@@ -310,8 +310,8 @@ async fn prepare_task_output_dir(
 
 async fn run_download_phase(
     app: &AppHandle,
-    service: &Arc<tokio::sync::Mutex<siren_core::DownloadService>>,
-    api: &Arc<siren_core::ApiClient>,
+    service: &Arc<tokio::sync::Mutex<harubble_core::DownloadService>>,
+    api: &Arc<harubble_core::ApiClient>,
     task: &InternalDownloadTask,
     out_dir: &PathBuf,
     cancellation_flag: Option<Arc<std::sync::atomic::AtomicBool>>,
@@ -367,7 +367,7 @@ async fn flush_pending_write(
 
 async fn finalize_job(
     app: &AppHandle,
-    service: &Arc<tokio::sync::Mutex<siren_core::DownloadService>>,
+    service: &Arc<tokio::sync::Mutex<harubble_core::DownloadService>>,
     started_job: StartedJob,
 ) {
     drop(started_job.write_tx);
@@ -442,7 +442,7 @@ fn unpack_task_result(
 ) -> (
     DownloadTaskStatus,
     Option<String>,
-    Option<siren_core::download::model::DownloadErrorInfo>,
+    Option<harubble_core::download::model::DownloadErrorInfo>,
     Option<CompletedTaskArtifacts>,
 ) {
     match result {
@@ -455,8 +455,8 @@ fn unpack_task_result(
         TaskExecutionResult::Cancelled => (
             DownloadTaskStatus::Cancelled,
             None,
-            Some(siren_core::download::model::DownloadErrorInfo {
-                code: siren_core::download::model::DownloadErrorCode::Cancelled,
+            Some(harubble_core::download::model::DownloadErrorInfo {
+                code: harubble_core::download::model::DownloadErrorCode::Cancelled,
                 message: "Cancelled by user".to_string(),
                 retryable: false,
                 details: None,
@@ -470,8 +470,8 @@ fn unpack_task_result(
 #[cfg(test)]
 mod tests {
     use super::resolve_task_output_dir;
-    use siren_core::audio::OutputFormat;
-    use siren_core::download::model::{DownloadJobKind, DownloadTaskStatus, InternalDownloadTask};
+    use harubble_core::audio::OutputFormat;
+    use harubble_core::download::model::{DownloadJobKind, DownloadTaskStatus, InternalDownloadTask};
     use std::path::Path;
 
     fn make_task(album_name: &str) -> InternalDownloadTask {

@@ -1,7 +1,7 @@
 use crate::preferences::Locale;
 use crate::search::snapshot::{inventory_index_dir, LibrarySearchSnapshot};
 use anyhow::{Context, Result};
-use siren_core::{
+use harubble_core::{
     LibrarySearchHitField, LibrarySearchScope, SearchLibraryRequest, SearchLibraryResultItem,
     SearchLibraryResultKind,
 };
@@ -389,7 +389,7 @@ pub(crate) fn sanitize_search_request(
     if query.is_empty() {
         anyhow::bail!(crate::i18n::tr(locale, "search-query-empty"));
     }
-    if query.chars().count() > siren_core::SEARCH_LIBRARY_QUERY_MAX_LENGTH {
+    if query.chars().count() > harubble_core::SEARCH_LIBRARY_QUERY_MAX_LENGTH {
         anyhow::bail!(crate::i18n::tr(locale, "search-query-too-long"));
     }
 
@@ -398,11 +398,11 @@ pub(crate) fn sanitize_search_request(
         scope: request.scope,
         limit: request
             .limit
-            .unwrap_or(siren_core::SEARCH_LIBRARY_DEFAULT_LIMIT)
+            .unwrap_or(harubble_core::SEARCH_LIBRARY_DEFAULT_LIMIT)
             .min(max_limit),
         offset: request
             .offset
-            .unwrap_or(siren_core::SEARCH_LIBRARY_DEFAULT_OFFSET)
+            .unwrap_or(harubble_core::SEARCH_LIBRARY_DEFAULT_OFFSET)
             .min(max_offset),
     })
 }
@@ -997,9 +997,9 @@ mod tests {
 
     #[test]
     fn rejects_empty_query() {
-        let request = siren_core::SearchLibraryRequest {
+        let request = harubble_core::SearchLibraryRequest {
             query: "   ".to_string(),
-            scope: siren_core::LibrarySearchScope::All,
+            scope: harubble_core::LibrarySearchScope::All,
             limit: None,
             offset: None,
         };
@@ -1012,9 +1012,9 @@ mod tests {
 
     #[test]
     fn clamps_limit_and_offset() {
-        let request = siren_core::SearchLibraryRequest {
+        let request = harubble_core::SearchLibraryRequest {
             query: "alpha".to_string(),
-            scope: siren_core::LibrarySearchScope::All,
+            scope: harubble_core::LibrarySearchScope::All,
             limit: Some(999),
             offset: Some(999),
         };
@@ -1026,9 +1026,9 @@ mod tests {
 
     #[test]
     fn accepts_plain_text_with_query_parser_characters() {
-        let request = siren_core::SearchLibraryRequest {
+        let request = harubble_core::SearchLibraryRequest {
             query: "artist:(alpha) \"beta\"".to_string(),
-            scope: siren_core::LibrarySearchScope::All,
+            scope: harubble_core::LibrarySearchScope::All,
             limit: None,
             offset: None,
         };
@@ -1042,9 +1042,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "be".to_string(),
-                scope: siren_core::LibrarySearchScope::Songs,
+                scope: harubble_core::LibrarySearchScope::Songs,
                 limit: Some(1),
                 offset: Some(0),
             },
@@ -1057,7 +1057,7 @@ mod tests {
         let (items, total) = index.search(&request).expect("search");
         assert_eq!(total, 2);
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].kind, siren_core::SearchLibraryResultKind::Song);
+        assert_eq!(items[0].kind, harubble_core::SearchLibraryResultKind::Song);
         assert_eq!(items[0].song_title.as_deref(), Some("Beacon"));
     }
 
@@ -1066,9 +1066,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "archive".to_string(),
-                scope: siren_core::LibrarySearchScope::All,
+                scope: harubble_core::LibrarySearchScope::All,
                 limit: None,
                 offset: None,
             },
@@ -1083,7 +1083,7 @@ mod tests {
         assert_eq!(items[0].album_cid, "album-a");
         assert_eq!(
             items[0].matched_fields,
-            vec![siren_core::LibrarySearchHitField::Intro]
+            vec![harubble_core::LibrarySearchHitField::Intro]
         );
     }
 
@@ -1093,9 +1093,9 @@ mod tests {
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
 
         let title_request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "brm".to_string(),
-                scope: siren_core::LibrarySearchScope::Albums,
+                scope: harubble_core::LibrarySearchScope::Albums,
                 limit: None,
                 offset: None,
             },
@@ -1109,12 +1109,12 @@ mod tests {
         assert_eq!(title_items[0].album_cid, "album-b");
         assert!(title_items[0]
             .matched_fields
-            .contains(&siren_core::LibrarySearchHitField::Title));
+            .contains(&harubble_core::LibrarySearchHitField::Title));
 
         let belong_request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "guanfang".to_string(),
-                scope: siren_core::LibrarySearchScope::Albums,
+                scope: harubble_core::LibrarySearchScope::Albums,
                 limit: None,
                 offset: None,
             },
@@ -1128,7 +1128,7 @@ mod tests {
         assert_eq!(belong_items[0].album_cid, "album-b");
         assert!(belong_items[0]
             .matched_fields
-            .contains(&siren_core::LibrarySearchHitField::Belong));
+            .contains(&harubble_core::LibrarySearchHitField::Belong));
     }
 
     #[test]
@@ -1136,9 +1136,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "alpha".to_string(),
-                scope: siren_core::LibrarySearchScope::All,
+                scope: harubble_core::LibrarySearchScope::All,
                 limit: None,
                 offset: None,
             },
@@ -1151,11 +1151,11 @@ mod tests {
         let (items, total) = index.search(&request).expect("search");
         assert_eq!(total, 2);
         assert_eq!(items[0].album_cid, "album-a");
-        assert_eq!(items[0].kind, siren_core::SearchLibraryResultKind::Album);
+        assert_eq!(items[0].kind, harubble_core::SearchLibraryResultKind::Album);
         assert_eq!(items[1].album_cid, "album-c");
         assert!(items[1]
             .matched_fields
-            .contains(&siren_core::LibrarySearchHitField::Intro));
+            .contains(&harubble_core::LibrarySearchHitField::Intro));
     }
 
     #[test]
@@ -1163,9 +1163,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "beacon".to_string(),
-                scope: siren_core::LibrarySearchScope::All,
+                scope: harubble_core::LibrarySearchScope::All,
                 limit: None,
                 offset: None,
             },
@@ -1177,9 +1177,9 @@ mod tests {
 
         let (items, total) = index.search(&request).expect("search");
         assert_eq!(total, 2);
-        assert_eq!(items[0].kind, siren_core::SearchLibraryResultKind::Song);
+        assert_eq!(items[0].kind, harubble_core::SearchLibraryResultKind::Song);
         assert_eq!(items[0].song_title.as_deref(), Some("Beacon"));
-        assert_eq!(items[1].kind, siren_core::SearchLibraryResultKind::Album);
+        assert_eq!(items[1].kind, harubble_core::SearchLibraryResultKind::Album);
         assert_eq!(items[1].album_cid, "album-c");
     }
 
@@ -1188,9 +1188,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "zzzznothing".to_string(),
-                scope: siren_core::LibrarySearchScope::All,
+                scope: harubble_core::LibrarySearchScope::All,
                 limit: None,
                 offset: None,
             },
@@ -1210,9 +1210,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "official".to_string(),
-                scope: siren_core::LibrarySearchScope::Songs,
+                scope: harubble_core::LibrarySearchScope::Songs,
                 limit: None,
                 offset: None,
             },
@@ -1232,9 +1232,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "beyond".to_string(),
-                scope: siren_core::LibrarySearchScope::Albums,
+                scope: harubble_core::LibrarySearchScope::Albums,
                 limit: None,
                 offset: None,
             },

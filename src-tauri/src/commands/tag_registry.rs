@@ -1,8 +1,8 @@
 //! 自定义元数据 Tag Registry 相关的 Tauri command。
 
 use crate::app_state::AppState;
-use siren_core::api::Album;
-use siren_core::homepage::TagGroup;
+use harubble_core::api::Album;
+use harubble_core::homepage::TagGroup;
 use tauri::State;
 
 /// 获取适用于专辑粒度的 tag 维度列表。

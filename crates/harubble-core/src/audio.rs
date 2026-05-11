@@ -26,7 +26,7 @@ impl AudioFormat {
     /// # 示例
     ///
     /// ```
-    /// use siren_core::AudioFormat;
+    /// use harubble_core::AudioFormat;
     ///
     /// assert_eq!(AudioFormat::detect(b"RIFF\0\0\0\0WAVE"), AudioFormat::Wav);
     /// assert_eq!(AudioFormat::detect(b"fLaC\0\0\0\0"), AudioFormat::Flac);
@@ -52,7 +52,7 @@ impl AudioFormat {
     /// # 示例
     ///
     /// ```
-    /// use siren_core::AudioFormat;
+    /// use harubble_core::AudioFormat;
     ///
     /// assert_eq!(AudioFormat::Flac.extension(), "flac");
     /// assert_eq!(AudioFormat::Unknown.extension(), "bin");
@@ -86,7 +86,7 @@ impl OutputFormat {
     /// # 示例
     ///
     /// ```
-    /// use siren_core::OutputFormat;
+    /// use harubble_core::OutputFormat;
     ///
     /// assert_eq!(OutputFormat::Wav.label(), "WAV (Lossless)");
     /// assert_eq!(OutputFormat::Mp3.label(), "MP3");
@@ -130,7 +130,7 @@ pub struct FlacMetadata<'a> {
 /// # 示例
 ///
 /// ```
-/// use siren_core::audio::sanitize_filename;
+/// use harubble_core::audio::sanitize_filename;
 ///
 /// assert_eq!(sanitize_filename("A/B:C"), "A_B_C");
 /// assert_eq!(sanitize_filename("  hello  "), "hello");
@@ -216,7 +216,7 @@ pub fn save_audio(
 /// # 示例
 ///
 /// ```
-/// use siren_core::audio::detect_image_mime;
+/// use harubble_core::audio::detect_image_mime;
 ///
 /// assert_eq!(detect_image_mime(&[0xFF, 0xD8, 0xFF, 0x00]), Some("image/jpeg"));
 /// assert_eq!(detect_image_mime(b"GIF89a"), Some("image/gif"));

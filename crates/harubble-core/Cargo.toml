@@ -1,12 +1,12 @@
 [package]
-name = "siren_core"
+name = "harubble_core"
 version = "0.1.0"
 edition = "2021"
-description = "Shared core library for Siren Music Download"
+description = "Shared core library for Harubble"
 license = "MIT"
 
 [lib]
-name = "siren_core"
+name = "harubble_core"
 path = "src/lib.rs"
 
 [dependencies]

@@ -117,9 +117,9 @@ PR 阶段不会执行以下行为：
 
 当前发布产物如下：
 
-- `siren-music-download_<version>_macos_intel.dmg`
-- `siren-music-download_<version>_macos_apple_silicon.dmg`
-- `siren-music-download_<version>_windows_x64_portable_webview2.exe`
+- `harubble_<version>_macos_intel.dmg`
+- `harubble_<version>_macos_apple_silicon.dmg`
+- `harubble_<version>_windows_x64_portable_webview2.exe`
 
 说明：
 

@@ -1,4 +1,4 @@
-//! Monster Siren 上游接口访问与响应模型。
+//! 上游接口访问与响应模型。
 //!
 //! 该模块定义专辑、单曲与专辑详情等上游响应结构，并提供带响应缓存的 API 客户端，
 //! 供下载、播放预取、本地库存增强与前端命令层复用。
@@ -156,7 +156,7 @@ struct ApiResponse<T> {
     data: T,
 }
 
-/// 用于访问 Monster Siren 公开接口的强类型客户端。
+/// 用于访问上游公开接口的强类型客户端。
 ///
 /// 该客户端统一封装了专辑/单曲查询、远端资源下载与响应缓存逻辑，适合作为
 /// 上层播放器、下载服务或 Tauri command 的共享数据入口。
@@ -178,7 +178,7 @@ impl ApiClient {
 
     fn new_with_config(base_url: String, capacity: usize) -> Result<Self> {
         let client = Client::builder()
-            .user_agent("Mozilla/5.0 (compatible; siren-music-download)")
+            .user_agent("Mozilla/5.0 (compatible; harubble)")
             .connect_timeout(CONNECT_TIMEOUT)
             .timeout(REQUEST_TIMEOUT)
             .build()?;
@@ -485,7 +485,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "hits the live Monster Siren API"]
+    #[ignore = "hits the live upstream API"]
     async fn downloads_real_lyrics_text() {
         let client = ApiClient::new().expect("client");
         let detail = client.get_song_detail("048760").await.expect("song detail");

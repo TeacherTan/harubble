@@ -4,7 +4,7 @@
 //! 主要用于前端搜索框、筛选切换与结果页的本地召回。
 
 use crate::app_state::AppState;
-use siren_core::{SearchLibraryRequest, SearchLibraryResponse};
+use harubble_core::{SearchLibraryRequest, SearchLibraryResponse};
 use tauri::State;
 
 /// 在本地索引中执行库内搜索。

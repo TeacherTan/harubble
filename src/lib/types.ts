@@ -170,7 +170,7 @@ export interface ThemePalette {
 export type OutputFormat = 'flac' | 'wav' | 'mp3';
 
 // ---------------------------------------------------------------------------
-// Download job types (mirrors siren-core/src/download/model.rs)
+// Download job types (mirrors harubble-core/src/download/model.rs)
 // ---------------------------------------------------------------------------
 
 export type DownloadJobKind = 'song' | 'album' | 'selection';

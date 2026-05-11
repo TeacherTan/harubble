@@ -1,4 +1,4 @@
-//! 塞壬音乐下载器的 Tauri 桌面后端。
+//! Harubble Tauri 桌面后端。
 //!
 //! 这个二进制 crate 通过 Tauri 命令和播放器事件向前端暴露后端能力。
 //!
@@ -29,17 +29,17 @@
 //! 如需查看二进制入口文档，请使用：
 //!
 //! ```bash
-//! cargo doc -p siren-music-download --bin siren-music-download --no-deps --document-private-items
+//! cargo doc -p harubble --bin harubble --no-deps --document-private-items
 //! ```
 //!
 //! 如需查看后端模块与命令定义，请使用：
 //!
 //! ```bash
-//! cargo doc -p siren-music-download --lib --no-deps --document-private-items
+//! cargo doc -p harubble --lib --no-deps --document-private-items
 //! ```
 
 use anyhow::Context;
-use siren_music_download::{
+use harubble::{
     commands, initialize_download_bridge, spawn_belong_warmup, spawn_inventory_scan,
     spawn_tag_registry_sync, AppState, LogLevel, LogPayload,
 };

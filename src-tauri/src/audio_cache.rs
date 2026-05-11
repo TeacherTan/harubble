@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::SystemTime;
 use walkdir::WalkDir;
 
-const APP_CACHE_DIR: &str = "siren-music-download";
+const APP_CACHE_DIR: &str = "harubble";
 const AUDIO_CACHE_DIR: &str = "audio";
 const AUDIO_CACHE_SOFT_LIMIT_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const AUDIO_CACHE_TARGET_BYTES: u64 = AUDIO_CACHE_SOFT_LIMIT_BYTES * 8 / 10;

@@ -10,7 +10,7 @@ use crate::app_state::AppState;
 use crate::i18n::{fluent_args, tr, tr_args};
 use crate::logging::{LogLevel, LogPayload};
 use crate::player::state::PlayerState;
-use siren_core::download::model::{DownloadJobKind, DownloadJobSnapshot, DownloadJobStatus};
+use harubble_core::download::model::{DownloadJobKind, DownloadJobSnapshot, DownloadJobStatus};
 use std::collections::HashSet;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};

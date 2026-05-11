@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use siren_core::download::model::InternalDownloadTask;
-use siren_core::download::worker::CompletedTaskArtifacts;
+use harubble_core::download::model::InternalDownloadTask;
+use harubble_core::download::worker::CompletedTaskArtifacts;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use time::format_description::well_known::Iso8601;

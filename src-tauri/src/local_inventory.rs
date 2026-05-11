@@ -3,7 +3,7 @@ use crate::local_inventory_provenance::{
     LocalInventoryProvenanceRecord, LocalInventoryProvenanceStore,
 };
 use crate::preferences::Locale;
-use siren_core::{
+use harubble_core::{
     aggregate_album_download_badge, album_badge_from_evidence, matched_track_evidence,
     track_badge_from_matches, Album, AlbumDetail, LocalAudioFileEvidence,
     LocalAudioFileVerificationState, LocalInventoryScanProgressEvent, LocalInventorySnapshot,
@@ -531,7 +531,7 @@ mod tests {
         LocalInventoryProvenanceRecord, LocalInventoryProvenanceStore,
     };
     use crate::preferences::Locale;
-    use siren_core::{
+    use harubble_core::{
         Album, AlbumDetail, LocalAudioFileEvidence, LocalAudioFileVerificationState,
         LocalInventoryStatus, LocalTrackDownloadStatus, SongEntry, VerificationMode,
     };

@@ -724,7 +724,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "hits the live Monster Siren API"]
+    #[ignore = "hits the live upstream API"]
     async fn downloads_real_flac_with_metadata() -> Result<()> {
         let client = ApiClient::new()?;
         let song = client.get_song_detail("048760").await?;

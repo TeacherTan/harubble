@@ -1,7 +1,7 @@
 {
-  "productName": "塞壬音乐下载器",
+  "productName": "Harubble",
   "version": "0.1.0",
-  "identifier": "com.siren.music-download",
+  "identifier": "com.harubble.app",
   "build": {
     "beforeBuildCommand": "bun run build",
     "beforeDevCommand": "bun run build && bun run dev",
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "塞壬音乐下载器",
+        "title": "Harubble",
         "width": 1120,
         "height": 800,
         "minWidth": 1120,
