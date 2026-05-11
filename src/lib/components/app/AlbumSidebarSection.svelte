@@ -49,7 +49,11 @@
   const scopeOptions = $derived.by(() => {
     void localeState.current;
     return [
-      { value: 'all' as LibrarySearchScope, label: 'ALL' },
+      {
+        value: 'all' as LibrarySearchScope,
+        // "ALL" 是固定品牌文案，不走 i18n
+        label: 'ALL',
+      },
       {
         value: 'albums' as LibrarySearchScope,
         label: m.library_search_scope_albums(),
@@ -565,32 +569,6 @@
     to {
       transform: translate(-50%, -50%) rotate(135deg) translateX(-25%);
     }
-  }
-
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 24px 12px;
-    color: var(--text-secondary);
-  }
-
-  .empty-icon {
-    font-size: 24px;
-    margin-bottom: 8px;
-  }
-
-  .empty-text {
-    font-size: 13px;
-  }
-
-  .loading {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 16px 12px;
-    color: var(--text-secondary);
-    font-size: 13px;
   }
 
   .search-result {
