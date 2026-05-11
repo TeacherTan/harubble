@@ -7,7 +7,7 @@ use crate::search::snapshot::{
     LibrarySearchSnapshot,
 };
 use anyhow::Result;
-use siren_core::{
+use harubble_core::{
     LibraryIndexState, LocalInventorySnapshot, LocalInventoryStatus, SearchLibraryRequest,
     SearchLibraryResponse, SEARCH_LIBRARY_MAX_LIMIT, SEARCH_LIBRARY_MAX_OFFSET,
 };
@@ -186,6 +186,7 @@ impl LibrarySearchService {
             let generation = service.start_rebuild(&inventory).await;
             let snapshot_result = build_library_search_snapshot(
                 state.api.clone(),
+                state.tag_registry.clone(),
                 inventory.root_output_dir.clone(),
                 inventory.inventory_version.clone(),
             )
@@ -301,7 +302,7 @@ mod tests {
     use crate::search::index::LibrarySearchIndex;
     use crate::search::snapshot::LibrarySearchSnapshot;
     use crate::search::snapshot::{LibrarySearchAlbumRecord, LibrarySearchSongRecord};
-    use siren_core::{LibraryIndexState, LocalInventorySnapshot, LocalInventoryStatus};
+    use harubble_core::{LibraryIndexState, LocalInventorySnapshot, LocalInventoryStatus};
     use tempfile::tempdir;
 
     fn inventory_snapshot(version: &str) -> LocalInventorySnapshot {
@@ -335,6 +336,9 @@ mod tests {
                 artist_line_pinyin_initials: None,
                 belong_pinyin_full: None,
                 belong_pinyin_initials: None,
+                tag_values: None,
+                tag_values_pinyin_full: None,
+                tag_values_pinyin_initials: None,
             }],
             songs: vec![LibrarySearchSongRecord {
                 album_cid: "album-a".to_string(),
@@ -346,6 +350,9 @@ mod tests {
                 song_title_pinyin_initials: None,
                 artist_line_pinyin_full: None,
                 artist_line_pinyin_initials: None,
+                tag_values: None,
+                tag_values_pinyin_full: None,
+                tag_values_pinyin_initials: None,
             }],
         }
     }
@@ -362,9 +369,9 @@ mod tests {
         assert_eq!(generation, 1);
         let response = service
             .search(
-                siren_core::SearchLibraryRequest {
+                harubble_core::SearchLibraryRequest {
                     query: "alpha".to_string(),
-                    scope: siren_core::LibrarySearchScope::All,
+                    scope: harubble_core::LibrarySearchScope::All,
                     limit: None,
                     offset: None,
                 },
@@ -388,9 +395,9 @@ mod tests {
 
         let response = service
             .search(
-                siren_core::SearchLibraryRequest {
+                harubble_core::SearchLibraryRequest {
                     query: "alpha".to_string(),
-                    scope: siren_core::LibrarySearchScope::All,
+                    scope: harubble_core::LibrarySearchScope::All,
                     limit: None,
                     offset: None,
                 },
@@ -424,9 +431,9 @@ mod tests {
 
         let response = service
             .search(
-                siren_core::SearchLibraryRequest {
+                harubble_core::SearchLibraryRequest {
                     query: "alpha".to_string(),
-                    scope: siren_core::LibrarySearchScope::All,
+                    scope: harubble_core::LibrarySearchScope::All,
                     limit: None,
                     offset: None,
                 },

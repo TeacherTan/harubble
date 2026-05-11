@@ -3,6 +3,7 @@
   import { localeState } from '$lib/i18n';
   import { Button } from '$lib/components/ui/button/index.js';
   import { toolbarIconButton } from '$lib/design/variants';
+  import { RefreshCw, ArrowDown, Tag, Settings } from '@lucide/svelte';
 
   interface Props {
     activeDownloadCount: number;
@@ -12,6 +13,7 @@
     onRefresh: () => void;
     onOpenDownloads: () => void;
     onOpenSettings: () => void;
+    onOpenTagEditor: () => void;
   }
 
   let {
@@ -22,6 +24,7 @@
     onRefresh,
     onOpenDownloads,
     onOpenSettings,
+    onOpenTagEditor,
   }: Props = $props();
 
   const labels = $derived.by(() => {
@@ -30,6 +33,7 @@
       refresh: m.shell_toolbar_refresh(),
       downloads: m.shell_toolbar_downloads(),
       settings: m.shell_toolbar_settings(),
+      tagEditor: m.shell_toolbar_tag_editor(),
     };
   });
 </script>
@@ -47,7 +51,7 @@
       aria-label={labels.refresh}
       title={labels.refresh}
     >
-      ↻
+      <RefreshCw size={16} />
     </Button>
 
     <Button
@@ -59,10 +63,21 @@
       aria-pressed={downloadPanelOpen}
       title={labels.downloads}
     >
-      ↓
+      <ArrowDown size={16} />
       {#if activeDownloadCount > 0}
         <span class="toolbar-badge">{activeDownloadCount}</span>
       {/if}
+    </Button>
+
+    <Button
+      size="icon"
+      variant="ghost"
+      class={`text-base ${toolbarIconButton({ active: false })}`}
+      onclick={onOpenTagEditor}
+      aria-label={labels.tagEditor}
+      title={labels.tagEditor}
+    >
+      <Tag size={16} />
     </Button>
 
     <Button
@@ -74,7 +89,7 @@
       aria-pressed={settingsOpen}
       title={labels.settings}
     >
-      ⚙
+      <Settings size={16} />
     </Button>
   </div>
 </div>

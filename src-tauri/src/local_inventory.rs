@@ -3,7 +3,7 @@ use crate::local_inventory_provenance::{
     LocalInventoryProvenanceRecord, LocalInventoryProvenanceStore,
 };
 use crate::preferences::Locale;
-use siren_core::{
+use harubble_core::{
     aggregate_album_download_badge, album_badge_from_evidence, matched_track_evidence,
     track_badge_from_matches, Album, AlbumDetail, LocalAudioFileEvidence,
     LocalAudioFileVerificationState, LocalInventoryScanProgressEvent, LocalInventorySnapshot,
@@ -470,9 +470,22 @@ fn resolve_verification_state(
 }
 
 fn checksum_path(path: &Path, locale: Locale) -> Result<String, String> {
-    let bytes =
-        std::fs::read(path).map_err(|_| crate::i18n::tr(locale, "inventory-read-audio-failed"))?;
-    Ok(format!("{:x}", md5::compute(bytes)))
+    use std::io::Read;
+    let file = std::fs::File::open(path)
+        .map_err(|_| crate::i18n::tr(locale, "inventory-read-audio-failed"))?;
+    let mut reader = std::io::BufReader::with_capacity(8192, file);
+    let mut context = md5::Context::new();
+    let mut buf = [0u8; 8192];
+    loop {
+        let n = reader
+            .read(&mut buf)
+            .map_err(|_| crate::i18n::tr(locale, "inventory-read-audio-failed"))?;
+        if n == 0 {
+            break;
+        }
+        context.consume(&buf[..n]);
+    }
+    Ok(format!("{:x}", context.compute()))
 }
 
 fn is_audio_file(path: &Path) -> bool {
@@ -518,7 +531,7 @@ mod tests {
         LocalInventoryProvenanceRecord, LocalInventoryProvenanceStore,
     };
     use crate::preferences::Locale;
-    use siren_core::{
+    use harubble_core::{
         Album, AlbumDetail, LocalAudioFileEvidence, LocalAudioFileVerificationState,
         LocalInventoryStatus, LocalTrackDownloadStatus, SongEntry, VerificationMode,
     };
@@ -580,11 +593,13 @@ mod tests {
                 cover_de_url: None,
                 artists: Some(vec!["Artist".to_string()]),
                 download: Default::default(),
+                tags: Vec::new(),
                 songs: vec![SongEntry {
                     cid: "song-1".to_string(),
                     name: "Track".to_string(),
                     artists: vec!["Artist".to_string()],
                     download: Default::default(),
+                    tags: Vec::new(),
                 }],
             };
 
@@ -642,18 +657,21 @@ mod tests {
                 cover_de_url: None,
                 artists: Some(vec!["Artist".to_string()]),
                 download: Default::default(),
+                tags: Vec::new(),
                 songs: vec![
                     SongEntry {
                         cid: "song-1".to_string(),
                         name: "Track A".to_string(),
                         artists: vec!["Artist".to_string()],
                         download: Default::default(),
+                        tags: Vec::new(),
                     },
                     SongEntry {
                         cid: "song-2".to_string(),
                         name: "Track B".to_string(),
                         artists: vec!["Artist".to_string()],
                         download: Default::default(),
+                        tags: Vec::new(),
                     },
                 ],
             };
@@ -712,6 +730,7 @@ mod tests {
                     cover_url: "cover".to_string(),
                     artists: vec!["Artist".to_string()],
                     download: Default::default(),
+                    tags: Vec::new(),
                 }])
                 .await;
 

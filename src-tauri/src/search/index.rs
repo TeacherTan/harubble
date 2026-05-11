@@ -1,7 +1,7 @@
 use crate::preferences::Locale;
 use crate::search::snapshot::{inventory_index_dir, LibrarySearchSnapshot};
 use anyhow::{Context, Result};
-use siren_core::{
+use harubble_core::{
     LibrarySearchHitField, LibrarySearchScope, SearchLibraryRequest, SearchLibraryResultItem,
     SearchLibraryResultKind,
 };
@@ -44,6 +44,9 @@ struct LibrarySearchFields {
     artist_line_pinyin_initials: Field,
     belong_pinyin_full: Field,
     belong_pinyin_initials: Field,
+    tag_values: Field,
+    tag_values_pinyin_full: Field,
+    tag_values_pinyin_initials: Field,
 }
 
 #[derive(Clone)]
@@ -72,6 +75,9 @@ struct LibrarySearchDocument {
     artist_line_pinyin_initials: Option<String>,
     belong_pinyin_full: Option<String>,
     belong_pinyin_initials: Option<String>,
+    tag_values: Option<String>,
+    tag_values_pinyin_full: Option<String>,
+    tag_values_pinyin_initials: Option<String>,
 }
 
 #[derive(Debug)]
@@ -115,6 +121,9 @@ impl LibrarySearchIndex {
                 fields.artist_line_pinyin_initials => album.artist_line_pinyin_initials.clone().unwrap_or_default(),
                 fields.belong_pinyin_full => album.belong_pinyin_full.clone().unwrap_or_default(),
                 fields.belong_pinyin_initials => album.belong_pinyin_initials.clone().unwrap_or_default(),
+                fields.tag_values => album.tag_values.clone().unwrap_or_default(),
+                fields.tag_values_pinyin_full => album.tag_values_pinyin_full.clone().unwrap_or_default(),
+                fields.tag_values_pinyin_initials => album.tag_values_pinyin_initials.clone().unwrap_or_default(),
             ));
         }
 
@@ -137,6 +146,9 @@ impl LibrarySearchIndex {
                 fields.artist_line_pinyin_initials => song.artist_line_pinyin_initials.clone().unwrap_or_default(),
                 fields.belong_pinyin_full => "",
                 fields.belong_pinyin_initials => "",
+                fields.tag_values => song.tag_values.clone().unwrap_or_default(),
+                fields.tag_values_pinyin_full => song.tag_values_pinyin_full.clone().unwrap_or_default(),
+                fields.tag_values_pinyin_initials => song.tag_values_pinyin_initials.clone().unwrap_or_default(),
             ));
         }
 
@@ -269,6 +281,7 @@ impl LibrarySearchIndex {
                 self.fields.artist_line,
                 self.fields.intro,
                 self.fields.belong,
+                self.fields.tag_values,
             ],
         );
         text_parser.set_field_boost(self.fields.song_title, 6.0);
@@ -276,6 +289,7 @@ impl LibrarySearchIndex {
         text_parser.set_field_boost(self.fields.artist_line, 2.0);
         text_parser.set_field_boost(self.fields.belong, 1.1);
         text_parser.set_field_boost(self.fields.intro, 0.8);
+        text_parser.set_field_boost(self.fields.tag_values, 1.0);
         Ok(text_parser.parse_query(&escape_query_text(&request.query))?)
     }
 
@@ -291,6 +305,8 @@ impl LibrarySearchIndex {
                 self.fields.artist_line_pinyin_initials,
                 self.fields.belong_pinyin_full,
                 self.fields.belong_pinyin_initials,
+                self.fields.tag_values_pinyin_full,
+                self.fields.tag_values_pinyin_initials,
             ],
         );
         pinyin_parser.set_field_boost(self.fields.song_title_pinyin_full, 2.8);
@@ -301,6 +317,8 @@ impl LibrarySearchIndex {
         pinyin_parser.set_field_boost(self.fields.album_title_pinyin_initials, 1.6);
         pinyin_parser.set_field_boost(self.fields.artist_line_pinyin_initials, 1.0);
         pinyin_parser.set_field_boost(self.fields.belong_pinyin_initials, 0.7);
+        pinyin_parser.set_field_boost(self.fields.tag_values_pinyin_full, 0.9);
+        pinyin_parser.set_field_boost(self.fields.tag_values_pinyin_initials, 0.7);
         Ok(pinyin_parser.parse_query(&escape_query_text(compact_query))?)
     }
 
@@ -348,6 +366,15 @@ impl LibrarySearchIndex {
                 document,
                 self.fields.belong_pinyin_initials,
             )),
+            tag_values: empty_to_none(field_text(document, self.fields.tag_values)),
+            tag_values_pinyin_full: empty_to_none(field_text(
+                document,
+                self.fields.tag_values_pinyin_full,
+            )),
+            tag_values_pinyin_initials: empty_to_none(field_text(
+                document,
+                self.fields.tag_values_pinyin_initials,
+            )),
         }
     }
 }
@@ -362,7 +389,7 @@ pub(crate) fn sanitize_search_request(
     if query.is_empty() {
         anyhow::bail!(crate::i18n::tr(locale, "search-query-empty"));
     }
-    if query.chars().count() > siren_core::SEARCH_LIBRARY_QUERY_MAX_LENGTH {
+    if query.chars().count() > harubble_core::SEARCH_LIBRARY_QUERY_MAX_LENGTH {
         anyhow::bail!(crate::i18n::tr(locale, "search-query-too-long"));
     }
 
@@ -371,11 +398,11 @@ pub(crate) fn sanitize_search_request(
         scope: request.scope,
         limit: request
             .limit
-            .unwrap_or(siren_core::SEARCH_LIBRARY_DEFAULT_LIMIT)
+            .unwrap_or(harubble_core::SEARCH_LIBRARY_DEFAULT_LIMIT)
             .min(max_limit),
         offset: request
             .offset
-            .unwrap_or(siren_core::SEARCH_LIBRARY_DEFAULT_OFFSET)
+            .unwrap_or(harubble_core::SEARCH_LIBRARY_DEFAULT_OFFSET)
             .min(max_offset),
     })
 }
@@ -413,7 +440,13 @@ fn build_schema() -> (Schema, LibrarySearchFields) {
         artist_line_pinyin_initials: builder
             .add_text_field("artist_line_pinyin_initials", text_options.clone()),
         belong_pinyin_full: builder.add_text_field("belong_pinyin_full", text_options.clone()),
-        belong_pinyin_initials: builder.add_text_field("belong_pinyin_initials", text_options),
+        belong_pinyin_initials: builder
+            .add_text_field("belong_pinyin_initials", text_options.clone()),
+        tag_values: builder.add_text_field("tag_values", text_options.clone()),
+        tag_values_pinyin_full: builder
+            .add_text_field("tag_values_pinyin_full", text_options.clone()),
+        tag_values_pinyin_initials: builder
+            .add_text_field("tag_values_pinyin_initials", text_options),
     };
 
     (builder.build(), fields)
@@ -471,6 +504,15 @@ fn load_fields(schema: Schema) -> Result<LibrarySearchFields> {
             .map_err(|error| anyhow::anyhow!(error.to_string()))?,
         belong_pinyin_initials: schema
             .get_field("belong_pinyin_initials")
+            .map_err(|error| anyhow::anyhow!(error.to_string()))?,
+        tag_values: schema
+            .get_field("tag_values")
+            .map_err(|error| anyhow::anyhow!(error.to_string()))?,
+        tag_values_pinyin_full: schema
+            .get_field("tag_values_pinyin_full")
+            .map_err(|error| anyhow::anyhow!(error.to_string()))?,
+        tag_values_pinyin_initials: schema
+            .get_field("tag_values_pinyin_initials")
             .map_err(|error| anyhow::anyhow!(error.to_string()))?,
     })
 }
@@ -694,6 +736,24 @@ fn rank_search_document(
     );
     let intro_text_score =
         score_text_match(document.intro.as_deref(), normalized_query, 420, 360, 320);
+    let tag_text_score = score_text_match(
+        document.tag_values.as_deref(),
+        normalized_query,
+        620,
+        560,
+        500,
+    );
+    let tag_pinyin_score = score_compact_match(
+        document.tag_values_pinyin_full.as_deref(),
+        document.tag_values_pinyin_initials.as_deref(),
+        compact_query,
+        520,
+        480,
+        440,
+        400,
+        360,
+        320,
+    );
     let kind_bias = match document.kind {
         SearchLibraryResultKind::Song => 40,
         SearchLibraryResultKind::Album => 0,
@@ -706,6 +766,8 @@ fn rank_search_document(
         + belong_text_score
         + belong_pinyin_score
         + intro_text_score
+        + tag_text_score
+        + tag_pinyin_score
         + kind_bias
 }
 
@@ -778,6 +840,20 @@ fn collect_matched_fields(
         matched_fields.push(LibrarySearchHitField::Belong);
     }
 
+    let tag_text_matched = document
+        .tag_values
+        .as_deref()
+        .is_some_and(|value| contains_normalized_match(value, normalized_query));
+    let tag_pinyin_matched =
+        contains_compact_match(document.tag_values_pinyin_full.as_deref(), compact_query)
+            || contains_compact_match(
+                document.tag_values_pinyin_initials.as_deref(),
+                compact_query,
+            );
+    if tag_text_matched || tag_pinyin_matched {
+        matched_fields.push(LibrarySearchHitField::TagValues);
+    }
+
     matched_fields
 }
 
@@ -835,6 +911,9 @@ mod tests {
                     artist_line_pinyin_initials: None,
                     belong_pinyin_full: None,
                     belong_pinyin_initials: None,
+                    tag_values: None,
+                    tag_values_pinyin_full: None,
+                    tag_values_pinyin_initials: None,
                 },
                 LibrarySearchAlbumRecord {
                     album_cid: "album-b".to_string(),
@@ -848,6 +927,9 @@ mod tests {
                     artist_line_pinyin_initials: Some("srcp".to_string()),
                     belong_pinyin_full: Some("guanfangzhuanji".to_string()),
                     belong_pinyin_initials: Some("gfzj".to_string()),
+                    tag_values: None,
+                    tag_values_pinyin_full: None,
+                    tag_values_pinyin_initials: None,
                 },
                 LibrarySearchAlbumRecord {
                     album_cid: "album-c".to_string(),
@@ -861,6 +943,9 @@ mod tests {
                     artist_line_pinyin_initials: None,
                     belong_pinyin_full: None,
                     belong_pinyin_initials: None,
+                    tag_values: None,
+                    tag_values_pinyin_full: None,
+                    tag_values_pinyin_initials: None,
                 },
             ],
             songs: vec![
@@ -874,6 +959,9 @@ mod tests {
                     song_title_pinyin_initials: None,
                     artist_line_pinyin_full: None,
                     artist_line_pinyin_initials: None,
+                    tag_values: None,
+                    tag_values_pinyin_full: None,
+                    tag_values_pinyin_initials: None,
                 },
                 LibrarySearchSongRecord {
                     album_cid: "album-b".to_string(),
@@ -885,6 +973,9 @@ mod tests {
                     song_title_pinyin_initials: Some("ys".to_string()),
                     artist_line_pinyin_full: Some("sirenchangpian".to_string()),
                     artist_line_pinyin_initials: Some("srcp".to_string()),
+                    tag_values: None,
+                    tag_values_pinyin_full: None,
+                    tag_values_pinyin_initials: None,
                 },
                 LibrarySearchSongRecord {
                     album_cid: "album-c".to_string(),
@@ -896,6 +987,9 @@ mod tests {
                     song_title_pinyin_initials: None,
                     artist_line_pinyin_full: None,
                     artist_line_pinyin_initials: None,
+                    tag_values: None,
+                    tag_values_pinyin_full: None,
+                    tag_values_pinyin_initials: None,
                 },
             ],
         }
@@ -903,9 +997,9 @@ mod tests {
 
     #[test]
     fn rejects_empty_query() {
-        let request = siren_core::SearchLibraryRequest {
+        let request = harubble_core::SearchLibraryRequest {
             query: "   ".to_string(),
-            scope: siren_core::LibrarySearchScope::All,
+            scope: harubble_core::LibrarySearchScope::All,
             limit: None,
             offset: None,
         };
@@ -918,9 +1012,9 @@ mod tests {
 
     #[test]
     fn clamps_limit_and_offset() {
-        let request = siren_core::SearchLibraryRequest {
+        let request = harubble_core::SearchLibraryRequest {
             query: "alpha".to_string(),
-            scope: siren_core::LibrarySearchScope::All,
+            scope: harubble_core::LibrarySearchScope::All,
             limit: Some(999),
             offset: Some(999),
         };
@@ -932,9 +1026,9 @@ mod tests {
 
     #[test]
     fn accepts_plain_text_with_query_parser_characters() {
-        let request = siren_core::SearchLibraryRequest {
+        let request = harubble_core::SearchLibraryRequest {
             query: "artist:(alpha) \"beta\"".to_string(),
-            scope: siren_core::LibrarySearchScope::All,
+            scope: harubble_core::LibrarySearchScope::All,
             limit: None,
             offset: None,
         };
@@ -948,9 +1042,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "be".to_string(),
-                scope: siren_core::LibrarySearchScope::Songs,
+                scope: harubble_core::LibrarySearchScope::Songs,
                 limit: Some(1),
                 offset: Some(0),
             },
@@ -963,7 +1057,7 @@ mod tests {
         let (items, total) = index.search(&request).expect("search");
         assert_eq!(total, 2);
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].kind, siren_core::SearchLibraryResultKind::Song);
+        assert_eq!(items[0].kind, harubble_core::SearchLibraryResultKind::Song);
         assert_eq!(items[0].song_title.as_deref(), Some("Beacon"));
     }
 
@@ -972,9 +1066,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "archive".to_string(),
-                scope: siren_core::LibrarySearchScope::All,
+                scope: harubble_core::LibrarySearchScope::All,
                 limit: None,
                 offset: None,
             },
@@ -989,7 +1083,7 @@ mod tests {
         assert_eq!(items[0].album_cid, "album-a");
         assert_eq!(
             items[0].matched_fields,
-            vec![siren_core::LibrarySearchHitField::Intro]
+            vec![harubble_core::LibrarySearchHitField::Intro]
         );
     }
 
@@ -999,9 +1093,9 @@ mod tests {
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
 
         let title_request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "brm".to_string(),
-                scope: siren_core::LibrarySearchScope::Albums,
+                scope: harubble_core::LibrarySearchScope::Albums,
                 limit: None,
                 offset: None,
             },
@@ -1015,12 +1109,12 @@ mod tests {
         assert_eq!(title_items[0].album_cid, "album-b");
         assert!(title_items[0]
             .matched_fields
-            .contains(&siren_core::LibrarySearchHitField::Title));
+            .contains(&harubble_core::LibrarySearchHitField::Title));
 
         let belong_request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "guanfang".to_string(),
-                scope: siren_core::LibrarySearchScope::Albums,
+                scope: harubble_core::LibrarySearchScope::Albums,
                 limit: None,
                 offset: None,
             },
@@ -1034,7 +1128,7 @@ mod tests {
         assert_eq!(belong_items[0].album_cid, "album-b");
         assert!(belong_items[0]
             .matched_fields
-            .contains(&siren_core::LibrarySearchHitField::Belong));
+            .contains(&harubble_core::LibrarySearchHitField::Belong));
     }
 
     #[test]
@@ -1042,9 +1136,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "alpha".to_string(),
-                scope: siren_core::LibrarySearchScope::All,
+                scope: harubble_core::LibrarySearchScope::All,
                 limit: None,
                 offset: None,
             },
@@ -1057,11 +1151,11 @@ mod tests {
         let (items, total) = index.search(&request).expect("search");
         assert_eq!(total, 2);
         assert_eq!(items[0].album_cid, "album-a");
-        assert_eq!(items[0].kind, siren_core::SearchLibraryResultKind::Album);
+        assert_eq!(items[0].kind, harubble_core::SearchLibraryResultKind::Album);
         assert_eq!(items[1].album_cid, "album-c");
         assert!(items[1]
             .matched_fields
-            .contains(&siren_core::LibrarySearchHitField::Intro));
+            .contains(&harubble_core::LibrarySearchHitField::Intro));
     }
 
     #[test]
@@ -1069,9 +1163,9 @@ mod tests {
         let temp_dir = tempdir().expect("temp dir");
         let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
         let request = sanitize_search_request(
-            siren_core::SearchLibraryRequest {
+            harubble_core::SearchLibraryRequest {
                 query: "beacon".to_string(),
-                scope: siren_core::LibrarySearchScope::All,
+                scope: harubble_core::LibrarySearchScope::All,
                 limit: None,
                 offset: None,
             },
@@ -1083,9 +1177,75 @@ mod tests {
 
         let (items, total) = index.search(&request).expect("search");
         assert_eq!(total, 2);
-        assert_eq!(items[0].kind, siren_core::SearchLibraryResultKind::Song);
+        assert_eq!(items[0].kind, harubble_core::SearchLibraryResultKind::Song);
         assert_eq!(items[0].song_title.as_deref(), Some("Beacon"));
-        assert_eq!(items[1].kind, siren_core::SearchLibraryResultKind::Album);
+        assert_eq!(items[1].kind, harubble_core::SearchLibraryResultKind::Album);
         assert_eq!(items[1].album_cid, "album-c");
+    }
+
+    #[test]
+    fn returns_no_results_for_unmatched_query() {
+        let temp_dir = tempdir().expect("temp dir");
+        let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
+        let request = sanitize_search_request(
+            harubble_core::SearchLibraryRequest {
+                query: "zzzznothing".to_string(),
+                scope: harubble_core::LibrarySearchScope::All,
+                limit: None,
+                offset: None,
+            },
+            50,
+            500,
+            Locale::default(),
+        )
+        .expect("request");
+
+        let (items, total) = index.search(&request).expect("search");
+        assert_eq!(total, 0);
+        assert!(items.is_empty());
+    }
+
+    #[test]
+    fn album_only_query_does_not_leak_into_song_scope() {
+        let temp_dir = tempdir().expect("temp dir");
+        let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
+        let request = sanitize_search_request(
+            harubble_core::SearchLibraryRequest {
+                query: "official".to_string(),
+                scope: harubble_core::LibrarySearchScope::Songs,
+                limit: None,
+                offset: None,
+            },
+            50,
+            500,
+            Locale::default(),
+        )
+        .expect("request");
+
+        let (items, total) = index.search(&request).expect("search");
+        assert_eq!(total, 0);
+        assert!(items.is_empty());
+    }
+
+    #[test]
+    fn song_only_query_does_not_leak_into_album_scope() {
+        let temp_dir = tempdir().expect("temp dir");
+        let index = LibrarySearchIndex::build(temp_dir.path(), &build_snapshot()).expect("index");
+        let request = sanitize_search_request(
+            harubble_core::SearchLibraryRequest {
+                query: "beyond".to_string(),
+                scope: harubble_core::LibrarySearchScope::Albums,
+                limit: None,
+                offset: None,
+            },
+            50,
+            500,
+            Locale::default(),
+        )
+        .expect("request");
+
+        let (items, total) = index.search(&request).expect("search");
+        assert_eq!(total, 0);
+        assert!(items.is_empty());
     }
 }

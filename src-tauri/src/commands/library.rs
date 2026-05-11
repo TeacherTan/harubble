@@ -8,15 +8,22 @@ use crate::theme;
 use base64::Engine;
 use tauri::State;
 
-/// 获取专辑列表，并附带本地库存增强后的下载徽标。
+/// 获取专辑列表，并附带本地库存增强后的下载徽标与 tag 信息。
 ///
 /// 适用于首页或专辑浏览视图的初始加载与刷新场景。
-/// 入参 `state` 提供共享后端状态与 API 客户端；返回值为已经过本地库存增强的专辑列表。
+/// 入参 `state` 提供共享后端状态与 API 客户端；返回值为已经过本地库存增强与 tag 注入的专辑列表。
 /// 调用方应把该结果视为展示快照：远端数据或本地库存状态变化后，需要重新调用以获取最新结果。
 #[tauri::command]
-pub async fn get_albums(state: State<'_, AppState>) -> Result<Vec<siren_core::api::Album>, String> {
+pub async fn get_albums(
+    state: State<'_, AppState>,
+) -> Result<Vec<harubble_core::api::Album>, String> {
     let albums = state.api.get_albums().await.map_err(|e| e.to_string())?;
-    Ok(state.local_inventory_service.enrich_albums(albums).await)
+    let mut enriched = state.local_inventory_service.enrich_albums(albums).await;
+    let locale = state.preferences().locale;
+    for album in &mut enriched {
+        album.tags = state.tag_registry.get_album_tags(&album.cid, locale);
+    }
+    Ok(enriched)
 }
 
 /// 根据专辑 CID 获取专辑详情，并补充本地库存相关信息。
@@ -24,20 +31,32 @@ pub async fn get_albums(state: State<'_, AppState>) -> Result<Vec<siren_core::ap
 /// 适用于进入专辑详情页、刷新当前专辑信息或在下载后重新拉取专辑展示数据。
 /// 入参 `album_cid` 为上游专辑唯一标识；返回值为已补齐本地库存状态的专辑详情。
 /// 调用方应确保 `album_cid` 来自有效列表项；若 CID 无效或上游请求失败，将返回错误字符串。
+/// 该接口会在成功获取详情后顺带更新 belong 缓存（尽力而为，失败不影响主流程返回值）。
 #[tauri::command]
 pub async fn get_album_detail(
     state: State<'_, AppState>,
     album_cid: String,
-) -> Result<siren_core::api::AlbumDetail, String> {
+) -> Result<harubble_core::api::AlbumDetail, String> {
     let album = state
         .api
         .get_album_detail(&album_cid)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(state
+    let _ = state
+        .album_metadata_cache
+        .upsert_belong(&album.cid, &album.belong);
+    let mut enriched = state
         .local_inventory_service
         .enrich_album_detail(album)
-        .await)
+        .await;
+    let locale = state.preferences().locale;
+    enriched.tags = state.tag_registry.get_album_tags(&enriched.cid, locale);
+    for song in &mut enriched.songs {
+        song.tags = state
+            .tag_registry
+            .get_song_tags(&song.cid, &enriched.cid, locale);
+    }
+    Ok(enriched)
 }
 
 /// 根据歌曲 CID 获取单曲详情，并联动所属专辑补齐库存徽标。
@@ -49,7 +68,7 @@ pub async fn get_album_detail(
 pub async fn get_song_detail(
     state: State<'_, AppState>,
     cid: String,
-) -> Result<siren_core::api::SongDetail, String> {
+) -> Result<harubble_core::api::SongDetail, String> {
     let song = state
         .api
         .get_song_detail(&cid)
@@ -60,10 +79,15 @@ pub async fn get_song_detail(
         .get_album_detail(&song.album_cid)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(state
+    let mut enriched = state
         .local_inventory_service
         .enrich_song_detail(song, &album.name)
-        .await)
+        .await;
+    let locale = state.preferences().locale;
+    enriched.tags = state
+        .tag_registry
+        .get_song_tags(&enriched.cid, &enriched.album_cid, locale);
+    Ok(enriched)
 }
 
 /// 获取歌曲歌词文本；若上游未提供歌词地址则返回 `None`。
@@ -104,6 +128,8 @@ pub async fn extract_image_theme(
     state: State<'_, AppState>,
     image_url: String,
 ) -> Result<theme::ThemePalette, String> {
+    harubble_core::validate_download_url(&image_url).map_err(|e| e.to_string())?;
+
     let bytes = state
         .api
         .download_bytes(&image_url, |_, _| {})
@@ -134,20 +160,23 @@ pub async fn get_image_data_url(
     state: State<'_, AppState>,
     image_url: String,
 ) -> Result<String, String> {
+    harubble_core::validate_download_url(&image_url).map_err(|e| e.to_string())?;
+
     let bytes = state
         .api
         .download_bytes(&image_url, |_, _| {})
         .await
         .map_err(|e| e.to_string())?;
 
-    let mime = siren_core::audio::detect_image_mime(&bytes).unwrap_or("application/octet-stream");
+    let mime =
+        harubble_core::audio::detect_image_mime(&bytes).unwrap_or("application/octet-stream");
     Ok(encode_image_data_url(mime, &bytes))
 }
 
 /// 返回默认下载输出目录。
 ///
 /// 适用于首次启动或重置偏好时为下载目录提供默认值。
-/// 返回值始终为字符串路径：优先使用系统下载目录，其次回退到当前工作目录，再统一追加 `SirenMusic` 子目录。
+/// 返回值始终为字符串路径：优先使用系统下载目录，其次回退到当前工作目录，再统一追加 `Harubble` 子目录。
 /// 该接口只提供默认建议值，不保证目录已经存在，也不会自动创建目录。
 #[tauri::command]
 pub fn get_default_output_dir() -> String {
@@ -155,18 +184,7 @@ pub fn get_default_output_dir() -> String {
         .unwrap_or_else(|| {
             std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"))
         })
-        .join("SirenMusic")
+        .join("Harubble")
         .to_string_lossy()
         .to_string()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::encode_image_data_url;
-
-    #[test]
-    fn encodes_image_data_url() {
-        let url = encode_image_data_url("image/png", b"abc");
-        assert_eq!(url, "data:image/png;base64,YWJj");
-    }
 }

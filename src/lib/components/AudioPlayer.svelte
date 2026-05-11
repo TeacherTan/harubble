@@ -2,6 +2,8 @@
   import { getImageDataUrl } from '$lib/api';
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
+  import LyricsBubble from '$lib/components/app/LyricsBubble.svelte';
+  import type { LyricLine } from '$lib/features/player/lyrics';
   type RepeatMode = 'all' | 'one';
   type SongDownloadState = 'idle' | 'creating' | 'queued' | 'running';
   interface Song {
@@ -23,6 +25,11 @@
     isShuffled?: boolean;
     repeatMode?: RepeatMode;
     lyricsActive?: boolean;
+    lyricsUnavailable?: boolean;
+    lyricsLoading?: boolean;
+    lyricsError?: string;
+    lyricsLines?: LyricLine[];
+    activeLyricIndex?: number;
     playlistActive?: boolean;
     downloadState?: SongDownloadState;
     downloadDisabled?: boolean;
@@ -34,6 +41,7 @@
     onRepeatModeChange?: (next: RepeatMode) => void | Promise<void>;
     onToggleLyrics?: () => void;
     onTogglePlaylist?: () => void;
+    onToggleFullscreen?: () => void;
     onDownload?: () => void | Promise<void>;
   }
   let {
@@ -49,6 +57,11 @@
     isShuffled = false,
     repeatMode = 'all',
     lyricsActive = false,
+    lyricsUnavailable = false,
+    lyricsLoading = false,
+    lyricsError = '',
+    lyricsLines = [],
+    activeLyricIndex = -1,
     playlistActive = false,
     downloadState = 'idle',
     downloadDisabled = false,
@@ -60,6 +73,7 @@
     onRepeatModeChange,
     onToggleLyrics,
     onTogglePlaylist,
+    onToggleFullscreen,
     onDownload,
   }: Props = $props();
   let seekPreview = $state<number | null>(null);
@@ -147,13 +161,16 @@
   const detailPanel = $derived.by(() =>
     lyricsActive ? 'lyrics' : playlistActive ? 'playlist' : 'none'
   );
-  const lyricsButtonLabel = $derived.by(() =>
-    lyricsActive ? labels.lyricsClose : labels.lyricsOpen
-  );
+  const lyricsButtonLabel = $derived.by(() => {
+    if (lyricsUnavailable) return m.player_lyrics_unavailable();
+    return lyricsActive ? labels.lyricsClose : labels.lyricsOpen;
+  });
   const playlistButtonLabel = $derived.by(() =>
     playlistActive ? labels.playlistClose : labels.playlistOpen
   );
-  const lyricsToggleDisabled = $derived(!song || isLoading || !onToggleLyrics);
+  const lyricsToggleDisabled = $derived(
+    !song || isLoading || !onToggleLyrics || lyricsUnavailable
+  );
   const playlistToggleDisabled = $derived(
     !song || isLoading || !onTogglePlaylist
   );
@@ -406,19 +423,35 @@
     <div class="center-panel">
       <div class="playback-stage">
         <div class="track-info">
-          {#if resolvedCoverUrl}
-            <img
-              src={resolvedCoverUrl}
-              alt={m.player_cover_alt({ name: song.name })}
-              class="cover"
-            />
-          {:else}
-            <div class="cover fallback" aria-hidden="true">
-              <svg viewBox="0 0 24 24"
-                ><path d="M12 3v10.5a4 4 0 1 0 2 3.5V7h4V3h-6z" /></svg
-              >
+          <button
+            type="button"
+            class="cover-expand-trigger"
+            aria-label={m.player_fullscreen_open()}
+            disabled={!onToggleFullscreen}
+            onclick={() => onToggleFullscreen?.()}
+          >
+            {#if resolvedCoverUrl}
+              <img
+                src={resolvedCoverUrl}
+                alt={m.player_cover_alt({ name: song.name })}
+                class="cover"
+              />
+            {:else}
+              <div class="cover fallback" aria-hidden="true">
+                <svg viewBox="0 0 24 24"
+                  ><path d="M12 3v10.5a4 4 0 1 0 2 3.5V7h4V3h-6z" /></svg
+                >
+              </div>
+            {/if}
+            <div class="cover-expand-hint" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M15 3h6v6"></path>
+                <path d="M9 21H3v-6"></path>
+                <path d="m21 3-7 7"></path>
+                <path d="m3 21 7-7"></path>
+              </svg>
             </div>
-          {/if}
+          </button>
 
           <div class="meta meta-stage">
             <p class="title">{song.name}</p>
@@ -441,28 +474,49 @@
         <span class="time time-remaining">{remainingLabel}</span>
       </div>
 
-      <button
-        type="button"
-        class="icon-button panel-toggle"
-        class:panel-active={lyricsActive}
-        aria-label={lyricsButtonLabel}
-        aria-pressed={lyricsActive}
-        disabled={lyricsToggleDisabled}
-        onclick={() => onToggleLyrics?.()}
-      >
-        <svg
-          class="control-icon stateful-icon"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
+      <div class="lyrics-toggle-anchor">
+        <button
+          type="button"
+          class="icon-button panel-toggle"
+          class:panel-active={lyricsActive}
+          class:lyrics-unavailable={lyricsUnavailable}
+          aria-label={lyricsButtonLabel}
+          aria-pressed={lyricsActive}
+          title={lyricsUnavailable ? lyricsButtonLabel : undefined}
+          disabled={lyricsToggleDisabled}
+          onclick={() => onToggleLyrics?.()}
         >
-          <path d="M5.5 7.25h13"></path>
-          <path d="M5.5 11h13"></path>
-          <path d="M5.5 14.75h9.5"></path>
-          <path d="M5.5 18.5h6.25"></path>
-          <circle class="toggle-badge" cx="18" cy="6" r="3.1"></circle>
-          <path class="toggle-mark" d="m16.55 5.25 1.45 1.45 1.45-1.45"></path>
-        </svg>
-      </button>
+          <svg
+            class="control-icon stateful-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M5.5 7.25h13"></path>
+            <path d="M5.5 11h13"></path>
+            <path d="M5.5 14.75h9.5"></path>
+            <path d="M5.5 18.5h6.25"></path>
+            {#if lyricsUnavailable}
+              <line class="lyrics-slash" x1="4" y1="4" x2="20" y2="20"></line>
+            {:else}
+              <circle class="toggle-badge" cx="18" cy="6" r="3.1"></circle>
+              <path class="toggle-mark" d="m16.55 5.25 1.45 1.45 1.45-1.45"
+              ></path>
+            {/if}
+          </svg>
+        </button>
+
+        {#if lyricsActive && song}
+          <LyricsBubble
+            loading={lyricsLoading}
+            error={lyricsError}
+            lines={lyricsLines}
+            {activeLyricIndex}
+            songName={song.name}
+            {reducedMotion}
+            onClose={() => onToggleLyrics?.()}
+          />
+        {/if}
+      </div>
 
       <button
         type="button"
@@ -550,8 +604,8 @@
     min-width: 0;
     min-height: 76px;
     margin: 0 auto;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 0;
+    border: 0;
     background: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -627,6 +681,47 @@
     justify-self: start;
     display: grid;
     gap: 0;
+  }
+
+  .cover-expand-trigger {
+    position: relative;
+    appearance: none;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    border-radius: 11px;
+    overflow: hidden;
+  }
+
+  .cover-expand-trigger:disabled {
+    cursor: default;
+  }
+
+  .cover-expand-hint {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity var(--motion-duration) var(--ease-standard);
+    border-radius: inherit;
+  }
+
+  .cover-expand-hint svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .cover-expand-trigger:hover:not(:disabled) .cover-expand-hint {
+    opacity: 1;
   }
 
   .cover {
@@ -938,6 +1033,20 @@
       0 8px 18px rgba(var(--accent-rgb), 0.12);
   }
 
+  .lyrics-toggle-anchor {
+    position: relative;
+  }
+
+  .lyrics-unavailable {
+    opacity: 0.5;
+  }
+
+  .lyrics-slash {
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+  }
+
   .icon-button.download-active {
     background: var(--player-control-hover-bg);
     color: var(--icon-active);
@@ -1033,7 +1142,6 @@
 
   @media (max-width: 900px) {
     .am-player {
-      border-radius: 999px;
       grid-template-columns: 1fr;
       gap: 8px;
       padding: 11px 10px 7px;

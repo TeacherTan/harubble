@@ -1,4 +1,4 @@
-//! 塞壬音乐下载器的 Tauri 桌面后端。
+//! Harubble Tauri 桌面后端。
 //!
 //! 这个二进制 crate 通过 Tauri 命令和播放器事件向前端暴露后端能力。
 //!
@@ -29,18 +29,19 @@
 //! 如需查看二进制入口文档，请使用：
 //!
 //! ```bash
-//! cargo doc -p siren-music-download --bin siren-music-download --no-deps --document-private-items
+//! cargo doc -p harubble --bin harubble --no-deps --document-private-items
 //! ```
 //!
 //! 如需查看后端模块与命令定义，请使用：
 //!
 //! ```bash
-//! cargo doc -p siren-music-download --lib --no-deps --document-private-items
+//! cargo doc -p harubble --lib --no-deps --document-private-items
 //! ```
 
 use anyhow::Context;
-use siren_music_download::{
-    commands, initialize_download_bridge, spawn_inventory_scan, AppState, LogLevel, LogPayload,
+use harubble::{
+    commands, initialize_download_bridge, spawn_belong_warmup, spawn_inventory_scan,
+    spawn_tag_registry_sync, AppState, LogLevel, LogPayload,
 };
 use tauri::{LogicalSize, Manager, RunEvent, WebviewWindow};
 
@@ -129,6 +130,8 @@ fn main() {
                 state.output_dir(),
                 None,
             );
+            spawn_belong_warmup(app.handle().clone(), &state);
+            spawn_tag_registry_sync(&state);
             app.manage(state);
 
             #[cfg(debug_assertions)]
@@ -138,6 +141,16 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::collection::list_collections,
+            commands::collection::get_collection,
+            commands::collection::create_collection,
+            commands::collection::update_collection,
+            commands::collection::delete_collection,
+            commands::collection::add_songs_to_collection,
+            commands::collection::remove_songs_from_collection,
+            commands::collection::reorder_collection_songs,
+            commands::collection::export_collection,
+            commands::collection::import_collection,
             commands::library::get_albums,
             commands::library::get_album_detail,
             commands::library::get_song_detail,
@@ -162,6 +175,7 @@ fn main() {
             commands::local_inventory::get_local_inventory_snapshot,
             commands::local_inventory::rescan_local_inventory,
             commands::local_inventory::cancel_local_inventory_scan,
+            commands::local_inventory::get_audio_metadata,
             commands::preferences::get_notification_permission_state,
             commands::preferences::send_test_notification,
             commands::logging::list_log_records,
@@ -176,6 +190,21 @@ fn main() {
             commands::downloads::retry_download_job,
             commands::downloads::retry_download_task,
             commands::downloads::clear_download_history,
+            commands::homepage::get_latest_albums,
+            commands::homepage::get_albums_by_series,
+            commands::homepage::get_recent_history,
+            commands::homepage::clear_listening_history,
+            commands::homepage::get_homepage_status,
+            commands::tag_registry::get_tag_dimensions,
+            commands::tag_registry::get_albums_by_tag_dimension,
+            commands::tag_editor::get_tag_editor_merged,
+            commands::tag_editor::get_tag_editor_local_overlay,
+            commands::tag_editor::set_tag_editor_entity_tag,
+            commands::tag_editor::remove_tag_editor_entity_tag,
+            commands::tag_editor::add_tag_editor_dimension,
+            commands::tag_editor::remove_tag_editor_dimension,
+            commands::tag_editor::apply_tag_editor_remote_update,
+            commands::tag_editor::resolve_tag_editor_conflict,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

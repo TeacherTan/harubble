@@ -1,5 +1,5 @@
 [workspace]
-members = ["src-tauri", "crates/siren-core"]
+members = ["src-tauri", "crates/harubble-core"]
 resolver = "2"
 
 [profile.release]

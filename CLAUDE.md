@@ -26,9 +26,9 @@ cargo clippy --workspace --all-targets
 cargo test --workspace
 
 # 文档
-cargo doc -p siren_core --no-deps
-cargo doc -p siren-music-download --lib --no-deps --document-private-items
-cargo doc -p siren-music-download --bin siren-music-download --no-deps --document-private-items
+cargo doc -p harubble_core --no-deps
+cargo doc -p harubble --lib --no-deps --document-private-items
+cargo doc -p harubble --bin harubble --no-deps --document-private-items
 ```
 
 ## 关键入口
@@ -44,11 +44,11 @@ cargo doc -p siren-music-download --bin siren-music-download --no-deps --documen
 
 ## 真相来源
 
-- **后端契约真相**：`doc/reference/backend-api-contract.md`
-- **前端架构真相**：`doc/guides/frontend-guide.md`
-- **发布流程真相**：`.github/workflows/ci.yml`、`.github/workflows/distribute.yml` 与 `doc/process/release-process.md`
-- **阶段记录**：`doc/history/backend-completed-phases.md`、`doc/history/backend-pending-phases.md`
-- **技术决策背景**：`doc/history/decisions.md`
+- **后端契约真相**：`docs/reference/backend-api-contract.md`
+- **前端架构真相**：`docs/guides/frontend-guide.md`
+- **发布流程真相**：`.github/workflows/ci.yml`、`.github/workflows/distribute.yml` 与 `docs/process/release-process.md`
+- **阶段记录**：`docs/history/backend-completed-phases.md`、`docs/history/backend-pending-phases.md`
+- **技术决策背景**：`docs/history/decisions.md`
 
 ## 当前实现状态
 
@@ -62,7 +62,7 @@ cargo doc -p siren-music-download --bin siren-music-download --no-deps --documen
 
 - 前端相关实现一律以 Svelte 5 为最高优先级；除非用户明确要求，否则不要为了延续旧习惯而主动回退到旧版写法或保守兼容模式
 - UI 展示组件不要直接调用 `invoke` / `listen`；统一走 bridge、controller 或具备明确边界的 shell 层
-- 组件的 `font-family` 统一通过 `--font-body` / `--font-display` / `--font-mono` CSS 变量引用，不直接硬编码字体名；字体方案详见 `doc/guides/frontend-guide.md` 的「字体方案」小节
+- 组件的 `font-family` 统一通过 `--font-body` / `--font-display` / `--font-mono` CSS 变量引用，不直接硬编码字体名；字体方案详见 `docs/guides/frontend-guide.md` 的「字体方案」小节
 - 如果改了歌词、下载设置或播放器交互，同时检查 `src/App.svelte` 和 `src/lib/components/AudioPlayer.svelte` 的状态同步
 - **动画编排**：当前所有动画均使用 CSS transitions / CSS @keyframes / Svelte 内置 `transition:fade|fly` 实现。如果后续需要更复杂的编排能力（stagger 序列、layout animation、shared element transition），可考虑引入 `@humanspeak/svelte-motion` 或同类库；遇到此类需求时应主动向用户提供"纯 CSS/Svelte 方案"与"引入动画库方案"的对比选项，由用户决定取舍
 
@@ -84,7 +84,7 @@ cargo doc -p siren-music-download --bin siren-music-download --no-deps --documen
   - `src/lib/api.ts`
   - `src/lib/types.ts`
   - `README.md`
-  - `src-tauri` / `siren_core` 中对应的 rustdoc
+  - `src-tauri` / `harubble_core` 中对应的 rustdoc
 
 ### 格式化与质量
 
@@ -103,4 +103,4 @@ cargo doc -p siren-music-download --bin siren-music-download --no-deps --documen
 
 - 未经用户明确指示，不要新建分支；默认在当前分支上工作，涉及分支切换、新建分支、基于分支的推送或 PR 准备时先确认
 - 所有提交、PR 及相关 git / GitHub 协作文案一律使用中文
-- 如果本轮改动属于测试整理、结构性重构或审批材料补充，优先对照 `doc/guides/review-rules.md` 中的通用规则，而不是把实现细节写进审批文档
+- 如果本轮改动属于测试整理、结构性重构或审批材料补充，优先对照 `docs/guides/review-rules.md` 中的通用规则，而不是把实现细节写进审批文档

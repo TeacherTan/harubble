@@ -25,6 +25,17 @@ import type {
   LogFileStatus,
   SearchLibraryRequest,
   SearchLibraryResponse,
+  SeriesGroup,
+  HistoryEntry,
+  HomepageStatus,
+  TagDimension,
+  TagGroup,
+  TagEditorEntityType,
+  TagEditorLocalizedValue,
+  TagEditorRegistry,
+  TagEditorMergeResult,
+  ConflictResolution,
+  AudioFileMetadata,
 } from './types';
 
 const CACHE_KEY_ALBUM_DETAIL = 'album_detail:';
@@ -261,6 +272,16 @@ export async function cancelLocalInventoryScan(): Promise<LocalInventorySnapshot
   return invoke<LocalInventorySnapshot>('cancel_local_inventory_scan');
 }
 
+export async function getAudioMetadata(
+  albumName: string,
+  songName: string
+): Promise<AudioFileMetadata | null> {
+  return invoke<AudioFileMetadata | null>('get_audio_metadata', {
+    albumName,
+    songName,
+  });
+}
+
 export async function getPreferences(): Promise<AppPreferences> {
   return invoke<AppPreferences>('get_preferences');
 }
@@ -291,4 +312,104 @@ export async function listLogRecords(
 
 export async function getLogFileStatus(): Promise<LogFileStatus> {
   return invoke<LogFileStatus>('get_log_file_status');
+}
+
+export async function getLatestAlbums(limit: number): Promise<Album[]> {
+  return invoke<Album[]>('get_latest_albums', { limit });
+}
+
+export async function getAlbumsBySeriesGroup(): Promise<SeriesGroup[]> {
+  return invoke<SeriesGroup[]>('get_albums_by_series');
+}
+
+export async function getRecentHistory(limit: number): Promise<HistoryEntry[]> {
+  return invoke<HistoryEntry[]>('get_recent_history', { limit });
+}
+
+export async function clearListeningHistory(): Promise<number> {
+  return invoke<number>('clear_listening_history');
+}
+
+export async function getHomepageStatus(): Promise<HomepageStatus> {
+  return invoke<HomepageStatus>('get_homepage_status');
+}
+
+export async function getTagDimensions(): Promise<TagDimension[]> {
+  return invoke<TagDimension[]>('get_tag_dimensions');
+}
+
+export async function getAlbumsByTagDimension(
+  dimensionKey: string
+): Promise<TagGroup[]> {
+  return invoke<TagGroup[]>('get_albums_by_tag_dimension', { dimensionKey });
+}
+
+// ─── Tag Editor ──────────────────────────────────────────────────────────────
+
+export async function getTagEditorMerged(): Promise<TagEditorRegistry> {
+  return invoke<TagEditorRegistry>('get_tag_editor_merged');
+}
+
+export async function getTagEditorLocalOverlay(): Promise<TagEditorRegistry> {
+  return invoke<TagEditorRegistry>('get_tag_editor_local_overlay');
+}
+
+export async function setTagEditorEntityTag(
+  entityType: TagEditorEntityType,
+  cid: string,
+  dimensionKey: string,
+  values: TagEditorLocalizedValue[]
+): Promise<void> {
+  return invoke('set_tag_editor_entity_tag', {
+    entityType,
+    cid,
+    dimensionKey,
+    values,
+  });
+}
+
+export async function removeTagEditorEntityTag(
+  entityType: TagEditorEntityType,
+  cid: string,
+  dimensionKey: string
+): Promise<void> {
+  return invoke('remove_tag_editor_entity_tag', {
+    entityType,
+    cid,
+    dimensionKey,
+  });
+}
+
+export async function addTagEditorDimension(
+  key: string,
+  labelZh: string,
+  labelEn: string
+): Promise<void> {
+  return invoke('add_tag_editor_dimension', { key, labelZh, labelEn });
+}
+
+export async function removeTagEditorDimension(key: string): Promise<void> {
+  return invoke('remove_tag_editor_dimension', { key });
+}
+
+export async function applyTagEditorRemoteUpdate(
+  newRemote: TagEditorRegistry
+): Promise<TagEditorMergeResult> {
+  return invoke<TagEditorMergeResult>('apply_tag_editor_remote_update', {
+    newRemote,
+  });
+}
+
+export async function resolveTagEditorConflict(
+  entityType: TagEditorEntityType,
+  cid: string,
+  dimensionKey: string,
+  keep: ConflictResolution
+): Promise<void> {
+  return invoke('resolve_tag_editor_conflict', {
+    entityType,
+    cid,
+    dimensionKey,
+    keep,
+  });
 }

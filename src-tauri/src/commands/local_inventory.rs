@@ -1,11 +1,15 @@
-//! 本地库存扫描与快照管理相关的 Tauri command。
+//! 本地库存扫描、快照管理与音频元数据读取相关的 Tauri command。
 //!
-//! 当前暴露的接口覆盖库存快照读取、重新扫描与扫描取消，
-//! 主要用于前端同步本地文件存在性、校验状态与扫描进度。
+//! 当前暴露的接口覆盖库存快照读取、重新扫描、扫描取消与本地音频文件技术元数据提取，
+//! 主要用于前端同步本地文件存在性、校验状态、扫描进度与音频详情展示。
 
 use crate::app_state::AppState;
 use crate::local_inventory::{emit_local_inventory_state_changed, spawn_inventory_scan};
-use siren_core::{LocalInventorySnapshot, VerificationMode};
+use harubble_core::{
+    candidate_relative_paths, AudioFormat, LocalInventorySnapshot, VerificationMode,
+};
+use serde::Serialize;
+use std::path::Path;
 use tauri::{AppHandle, State};
 
 /// 获取当前本地库存扫描快照。
@@ -54,4 +58,189 @@ pub async fn cancel_local_inventory_scan(
     let snapshot = state.local_inventory_service.cancel_scan().await;
     emit_local_inventory_state_changed(&app, &snapshot);
     Ok(snapshot)
+}
+
+/// 本地音频文件的技术元数据。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioFileMetadata {
+    /// 音频格式名称（FLAC / MP3 / WAV）。
+    pub format: String,
+    /// 采样率，单位 Hz。
+    pub sample_rate: u32,
+    /// 声道数。
+    pub channels: u16,
+    /// 位深（FLAC/WAV 可获取，MP3 为 None）。
+    pub bits_per_sample: Option<u16>,
+    /// 音频时长，单位秒。
+    pub duration_secs: f64,
+    /// 码率，单位 kbps（由文件大小与时长计算）。
+    pub bitrate_kbps: Option<u32>,
+    /// 文件大小，单位字节。
+    pub file_size: u64,
+}
+
+/// 读取本地已下载歌曲的音频技术元数据。
+///
+/// 适用于歌曲详情面板展示采样率、码率、位深等音频技术信息。
+/// 入参 `album_name` 与 `song_name` 用于定位本地文件（与库存扫描使用相同的路径规则）。
+/// 若文件不存在或无法解析，返回 `None`。
+#[tauri::command]
+pub async fn get_audio_metadata(
+    state: State<'_, AppState>,
+    album_name: String,
+    song_name: String,
+) -> Result<Option<AudioFileMetadata>, String> {
+    let output_dir = state.output_dir();
+    let root = Path::new(&output_dir);
+
+    if !root.exists() {
+        return Ok(None);
+    }
+
+    let candidates = candidate_relative_paths(&album_name, &song_name);
+    let file_path = candidates
+        .iter()
+        .map(|rel| root.join(rel))
+        .find(|p| p.is_file());
+
+    let Some(path) = file_path else {
+        return Ok(None);
+    };
+
+    let file_size = std::fs::metadata(&path).map_err(|e| e.to_string())?.len();
+
+    let detected = {
+        let mut buf = [0u8; 12];
+        let mut f = std::fs::File::open(&path).map_err(|e| e.to_string())?;
+        std::io::Read::read(&mut f, &mut buf).map_err(|e| e.to_string())?;
+        AudioFormat::detect(&buf)
+    };
+
+    let meta = match detected {
+        AudioFormat::Flac => read_flac_metadata(&path, file_size)?,
+        AudioFormat::Wav => read_wav_metadata(&path, file_size)?,
+        AudioFormat::Mp3 => read_mp3_metadata(&path, file_size)?,
+        AudioFormat::Unknown => return Ok(None),
+    };
+
+    Ok(Some(meta))
+}
+
+fn read_flac_metadata(path: &Path, file_size: u64) -> Result<AudioFileMetadata, String> {
+    let tag = metaflac::Tag::read_from_path(path).map_err(|e| e.to_string())?;
+    let stream_info = tag
+        .get_streaminfo()
+        .ok_or_else(|| "FLAC missing StreamInfo".to_string())?;
+
+    let sample_rate = stream_info.sample_rate;
+    let channels = stream_info.num_channels as u16;
+    let bits_per_sample = stream_info.bits_per_sample as u16;
+    let duration_secs = if sample_rate > 0 {
+        stream_info.total_samples as f64 / sample_rate as f64
+    } else {
+        0.0
+    };
+    let bitrate_kbps = if duration_secs > 0.0 {
+        Some((file_size as f64 * 8.0 / duration_secs / 1000.0) as u32)
+    } else {
+        None
+    };
+
+    Ok(AudioFileMetadata {
+        format: "FLAC".to_string(),
+        sample_rate,
+        channels,
+        bits_per_sample: Some(bits_per_sample),
+        duration_secs,
+        bitrate_kbps,
+        file_size,
+    })
+}
+
+fn read_wav_metadata(path: &Path, file_size: u64) -> Result<AudioFileMetadata, String> {
+    let reader = hound::WavReader::open(path).map_err(|e| e.to_string())?;
+    let spec = reader.spec();
+    let duration_secs = if spec.sample_rate > 0 {
+        reader.duration() as f64 / spec.sample_rate as f64
+    } else {
+        0.0
+    };
+    let bitrate_kbps = if duration_secs > 0.0 {
+        Some((file_size as f64 * 8.0 / duration_secs / 1000.0) as u32)
+    } else {
+        None
+    };
+
+    Ok(AudioFileMetadata {
+        format: "WAV".to_string(),
+        sample_rate: spec.sample_rate,
+        channels: spec.channels,
+        bits_per_sample: Some(spec.bits_per_sample),
+        duration_secs,
+        bitrate_kbps,
+        file_size,
+    })
+}
+
+fn read_mp3_metadata(path: &Path, file_size: u64) -> Result<AudioFileMetadata, String> {
+    use symphonia::core::formats::FormatOptions;
+    use symphonia::core::io::MediaSourceStream;
+    use symphonia::core::meta::MetadataOptions;
+    use symphonia::core::probe::Hint;
+
+    let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    let mss = MediaSourceStream::new(Box::new(file), Default::default());
+
+    let mut hint = Hint::new();
+    hint.with_extension("mp3");
+
+    let probed = symphonia::default::get_probe()
+        .format(
+            &hint,
+            mss,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )
+        .map_err(|e| e.to_string())?;
+
+    let track = probed
+        .format
+        .default_track()
+        .ok_or_else(|| "No audio track found".to_string())?;
+
+    let codec_params = &track.codec_params;
+    let sample_rate = codec_params.sample_rate.unwrap_or(0);
+    let channels = codec_params
+        .channels
+        .map(|ch| ch.count() as u16)
+        .unwrap_or(0);
+    let duration_secs = match (codec_params.n_frames, codec_params.time_base) {
+        (Some(n_frames), Some(time_base)) => {
+            let d = time_base.calc_time(n_frames);
+            d.seconds as f64 + d.frac
+        }
+        _ => {
+            if sample_rate > 0 {
+                file_size as f64 * 8.0 / (sample_rate as f64 * channels.max(1) as f64 * 16.0)
+            } else {
+                0.0
+            }
+        }
+    };
+    let bitrate_kbps = if duration_secs > 0.0 {
+        Some((file_size as f64 * 8.0 / duration_secs / 1000.0) as u32)
+    } else {
+        None
+    };
+
+    Ok(AudioFileMetadata {
+        format: "MP3".to_string(),
+        sample_rate,
+        channels,
+        bits_per_sample: None,
+        duration_secs,
+        bitrate_kbps,
+        file_size,
+    })
 }

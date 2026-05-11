@@ -125,7 +125,7 @@ jobs:
           echo "should_release=true" >> "$GITHUB_OUTPUT"
           echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
           echo "release_version=${release_tag#v}" >> "$GITHUB_OUTPUT"
-          echo "release_name=Siren Music Download $release_tag" >> "$GITHUB_OUTPUT"
+          echo "release_name=Harubble $release_tag" >> "$GITHUB_OUTPUT"
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
   build-and-distribute:
@@ -158,7 +158,7 @@ jobs:
             runner: windows-latest
             target: x86_64-pc-windows-msvc
             args: --target x86_64-pc-windows-msvc --no-bundle
-            artifact_glob: target/x86_64-pc-windows-msvc/release/siren-music-download.exe
+            artifact_glob: target/x86_64-pc-windows-msvc/release/harubble.exe
             asset_suffix: windows_x64_portable_webview2.exe
 
     steps:
@@ -229,7 +229,7 @@ jobs:
           RELEASE_VERSION: ${{ needs.resolve-release.outputs.release_version }}
         run: |
           set -euo pipefail
-          asset_name="siren-music-download_${RELEASE_VERSION}_${{ matrix.asset_suffix }}"
+          asset_name="harubble_${RELEASE_VERSION}_${{ matrix.asset_suffix }}"
           shopt -s nullglob
           files=( ${{ matrix.artifact_glob }} )
           if [ "${#files[@]}" -ne 1 ]; then

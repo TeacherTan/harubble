@@ -1,15 +1,15 @@
 [package]
-name = "siren-music-download"
+name = "harubble"
 version = "0.1.0"
 edition = "2021"
-description = "Cross-platform lossless music downloader for Monster Siren Records"
+description = "Cross-platform lossless music player and downloader"
 license = "MIT"
 
 [lib]
 path = "src/lib.rs"
 
 [[bin]]
-name = "siren-music-download"
+name = "harubble"
 path = "src/main.rs"
 
 [dependencies]
@@ -17,11 +17,13 @@ anyhow = "1"
 base64 = "0.22"
 dirs = "5"
 cpal = "0.17"
+hound = "3"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 md5 = "0.7"
+metaflac = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-siren_core = { path = "../crates/siren-core" }
+harubble_core = { path = "../crates/harubble-core" }
 souvlaki = "0.8"
 symphonia = { version = "0.5.5", features = ["flac", "mp3", "wav"] }
 tauri = { version = "2", features = ["custom-protocol"] }
@@ -35,6 +37,8 @@ walkdir = "2"
 tempfile = "3"
 tantivy = "0.22"
 pinyin = { version = "0.11", default-features = false, features = ["plain"] }
+rusqlite = { version = "0.34", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
 fluent-templates = "0.14.0"
 unic-langid = "0.9.6"
 

@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::SystemTime;
 use walkdir::WalkDir;
 
-const APP_CACHE_DIR: &str = "siren-music-download";
+const APP_CACHE_DIR: &str = "harubble";
 const AUDIO_CACHE_DIR: &str = "audio";
 const AUDIO_CACHE_SOFT_LIMIT_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const AUDIO_CACHE_TARGET_BYTES: u64 = AUDIO_CACHE_SOFT_LIMIT_BYTES * 8 / 10;
@@ -41,13 +41,21 @@ pub fn ensure_audio_cache_dir() -> Result<PathBuf> {
     Ok(dir)
 }
 
+const ALLOWED_EXTENSIONS: &[&str] = &["flac", "wav", "mp3", "ogg", "bin"];
+
 /// 根据歌曲 CID 与源地址推导缓存文件路径。
 pub fn cached_song_path(song_cid: &str, source_url: &str) -> Result<PathBuf> {
-    let extension = Path::new(source_url.split('?').next().unwrap_or(source_url))
+    let raw_extension = Path::new(source_url.split('?').next().unwrap_or(source_url))
         .extension()
         .and_then(|value| value.to_str())
         .filter(|value| !value.is_empty())
         .unwrap_or("bin");
+
+    let extension = if ALLOWED_EXTENSIONS.contains(&raw_extension) {
+        raw_extension
+    } else {
+        "bin"
+    };
 
     Ok(ensure_audio_cache_dir()?.join(format!("{song_cid}.{extension}")))
 }

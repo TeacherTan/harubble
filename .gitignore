@@ -128,3 +128,12 @@ coverage/
 # Paraglide (generated)
 # =============================================
 src/lib/paraglide/
+
+# Superpowers brainstorm artifacts
+.superpowers/
+
+# =============================================
+# Local plans (not committed)
+# =============================================
+docs/plans/
+docs/superpowers/

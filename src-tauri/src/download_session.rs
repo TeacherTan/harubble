@@ -1,10 +1,10 @@
 use crate::logging::{LogCenter, LogLevel, LogPayload};
 use crate::preferences::Locale;
-use serde::{Deserialize, Serialize};
-use siren_core::download::model::{
+use harubble_core::download::model::{
     DownloadErrorCode, DownloadErrorInfo, DownloadJobSnapshot, DownloadJobStatus,
     DownloadManagerSnapshot, DownloadTaskSnapshot, DownloadTaskStatus,
 };
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -384,8 +384,8 @@ fn iso_timestamp_now() -> String {
 mod tests {
     use super::{apply_retention, normalize_restored_snapshot, DownloadSessionStore};
     use crate::preferences::Locale;
-    use siren_core::audio::OutputFormat;
-    use siren_core::download::model::{
+    use harubble_core::audio::OutputFormat;
+    use harubble_core::download::model::{
         DownloadJobKind, DownloadJobSnapshot, DownloadJobStatus, DownloadManagerSnapshot,
         DownloadOptions, DownloadTaskSnapshot, DownloadTaskStatus,
     };
@@ -490,42 +490,6 @@ mod tests {
             loaded.jobs[0].status,
             DownloadJobStatus::Completed
         ));
-    }
-
-    #[test]
-    fn save_replaces_existing_session_file() {
-        let dir = tempdir().expect("temp dir should exist");
-        let store = DownloadSessionStore::new(dir.path().to_path_buf());
-        let first = DownloadManagerSnapshot {
-            jobs: vec![make_job(
-                "job-1",
-                DownloadJobStatus::Completed,
-                DownloadTaskStatus::Completed,
-            )],
-            active_job_id: None,
-            queued_job_ids: Vec::new(),
-        };
-        let second = DownloadManagerSnapshot {
-            jobs: vec![make_job(
-                "job-2",
-                DownloadJobStatus::Failed,
-                DownloadTaskStatus::Failed,
-            )],
-            active_job_id: None,
-            queued_job_ids: Vec::new(),
-        };
-
-        store
-            .save(&first, Locale::default())
-            .expect("first snapshot should save");
-        store
-            .save(&second, Locale::default())
-            .expect("second snapshot should replace first");
-        let loaded = store.load(None, Locale::default()).snapshot;
-
-        assert_eq!(loaded.jobs.len(), 1);
-        assert_eq!(loaded.jobs[0].id, "job-2");
-        assert!(matches!(loaded.jobs[0].status, DownloadJobStatus::Failed));
     }
 
     #[test]

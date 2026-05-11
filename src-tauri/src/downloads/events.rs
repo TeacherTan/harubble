@@ -5,7 +5,7 @@
 
 #![allow(dead_code)]
 
-use siren_core::download::model::{DownloadJobSnapshot, DownloadManagerSnapshot};
+use harubble_core::download::model::{DownloadJobSnapshot, DownloadManagerSnapshot};
 use tauri::{AppHandle, Emitter};
 
 /// 完整下载管理器快照发生变化时发出的事件名。

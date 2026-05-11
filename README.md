@@ -2,18 +2,20 @@
 
 <div align="center">
 
-# 塞壬音乐下载器
+# Harubble
 
 <div>
   <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-4c8bf5">
-  <img alt="license" src="https://img.shields.io/github/license/Anselyuki/siren-music-download">
-  <img alt="stars" src="https://img.shields.io/github/stars/Anselyuki/siren-music-download?style=social">
+  <img alt="license" src="https://img.shields.io/github/license/Anselyuki/harubble">
+  <img alt="stars" src="https://img.shields.io/github/stars/Anselyuki/harubble?style=social">
 </div>
 
-面向 [塞壬唱片](https://monster-siren.hypergryph.com/) 的桌面音乐播放器与下载器。  
-把专辑浏览、库内搜索、在线播放、整专下载、歌词和下载管理整合进同一个桌面应用里。
+名字取自《明日方舟》角色 **遥**（Haru）与她的源石技艺——漂浮在空中的透明泡泡（Bubble）。
 
-[下载发布版](https://github.com/Anselyuki/siren-music-download/releases) | [功能亮点](#功能亮点) | [使用方式](#使用方式) | [本地开发](#本地开发) | [Rust 文档](#rustdoc-guide) | [开发文档](./doc/guides/frontend-guide.md) | [后端契约](./doc/reference/backend-api-contract.md) | [Release 流程](./doc/process/release-process.md)
+面向 [塞壬唱片](https://monster-siren.hypergryph.com/) 的桌面音乐播放器与下载器。  
+把专辑浏览、标签分类、库内搜索、在线播放、整专下载、歌词和下载管理整合进同一个桌面应用里。
+
+[下载发布版](https://github.com/Anselyuki/harubble/releases) | [功能亮点](#功能亮点) | [使用方式](#使用方式) | [本地开发](#本地开发) | [Rust 文档](#rustdoc-guide) | [开发文档](./doc/guides/frontend-guide.md) | [后端契约](./doc/reference/backend-api-contract.md) | [Release 流程](./doc/process/release-process.md)
 
 </div>
 
@@ -21,7 +23,7 @@
 
 ## 下载与安装
 
-- 推荐直接从 [GitHub Releases](https://github.com/Anselyuki/siren-music-download/releases) 下载对应系统的发布文件。
+- 推荐直接从 [GitHub Releases](https://github.com/Anselyuki/harubble/releases) 下载对应系统的发布文件。
 - 应用目前面向 `macOS` 和 `Windows` 提供桌面端体验。
 - Release 文件名中，`macos_intel` 对应 Intel Mac，`macos_apple_silicon` 对应 Apple Silicon Mac。
 - Windows 发布版为依赖系统 `WebView2` 运行时的精简 `.exe`，不会额外提供安装型打包。
@@ -30,7 +32,8 @@
 ## 功能亮点
 
 - 专辑浏览与在线播放：启动后即可加载专辑列表，点选曲目直接播放。
-- 库内搜索与定位：支持按专辑 / 歌曲 / 艺术家搜索，并从结果直接定位到对应专辑或曲目。
+- 库内搜索与定位：支持按专辑 / 歌曲 / 艺术家 / 标签搜索，并从结果直接定位到对应专辑或曲目。
+- 自定义标签分类：通过远程 Tag Registry 为专辑和歌曲附加流派、阵营、时代等元数据标签，支持按维度分组浏览。
 - 单曲与整专下载：既可以下载当前歌曲，也可以一键创建整张专辑的下载任务。
 - 完整播放器控制：支持暂停、继续、拖动进度、上一首、下一首、乱序和循环模式切换。
 - 歌词与播放队列：底部播放器可展开歌词面板和当前播放列表。
@@ -86,13 +89,13 @@ bun run tauri:build
 
 ```bash
 # 生成核心库文档
-cargo doc -p siren_core --no-deps
+cargo doc -p harubble_core --no-deps
 
 # 生成桌面应用库文档（包含 private items）
-cargo doc -p siren-music-download --lib --no-deps --document-private-items
+cargo doc -p harubble --lib --no-deps --document-private-items
 
 # 生成桌面应用二进制入口文档（包含 private items）
-cargo doc -p siren-music-download --bin siren-music-download --no-deps --document-private-items
+cargo doc -p harubble --bin harubble --no-deps --document-private-items
 ```
 
 说明：
@@ -104,26 +107,55 @@ cargo doc -p siren-music-download --bin siren-music-download --no-deps --documen
 
 更多实现细节与协作约定见：
 
-- [前端开发指南](./doc/guides/frontend-guide.md)
-- [后端 API 契约](./doc/reference/backend-api-contract.md)
-- [Release 流程](./doc/process/release-process.md)
-- [后端阶段记录](./doc/history/backend-completed-phases.md)
-- [后端增强路线](./doc/history/backend-pending-phases.md)
+- [前端开发指南](./docs/guides/frontend-guide.md)
+- [后端 API 契约](./docs/reference/backend-api-contract.md)
+- [Release 流程](./docs/process/release-process.md)
+- [后端阶段记录](./docs/history/backend-completed-phases.md)
+- [后端增强路线](./docs/history/backend-pending-phases.md)
 
 ## 开发指南
 
-- [Claude Code Hook 安装与启用说明](./doc/guides/claude-code-hook-setup.md)
-- [前端开发指南](./doc/guides/frontend-guide.md)
-- [后端 API 契约](./doc/reference/backend-api-contract.md)
-- [Release 流程](./doc/process/release-process.md)
-- [评审规则](./doc/guides/review-rules.md)
-- [技术决策记录](./doc/history/decisions.md)
+- [Claude Code Hook 安装与启用说明](./docs/guides/claude-code-hook-setup.md)
+- [前端开发指南](./docs/guides/frontend-guide.md)
+- [后端 API 契约](./docs/reference/backend-api-contract.md)
+- [Release 流程](./docs/process/release-process.md)
+- [评审规则](./docs/guides/review-rules.md)
+- [技术决策记录](./docs/history/decisions.md)
+
+## 资源更新说明
+
+### Tag Registry（标签注册表）
+
+应用通过 `data/tag_registry.json` 维护专辑和歌曲的元数据标签（类型、阵营、角色、活动等），用于分组浏览和库内搜索。
+
+**更新机制：**
+
+- **Release 模式**：应用启动时后台从 GitHub 仓库 `main` 分支拉取最新的 `data/tag_registry.json`，与本地缓存的 `updatedAt` 字段比对；若远端版本更新则原子替换本地缓存并自动重建搜索索引。网络失败时静默使用本地缓存，不阻塞启动。
+- **开发模式**：直接读取仓库本地的 `data/tag_registry.json`，每次启动都会加载最新内容。
+- **Schema 版本校验**：加载时会检查 `schemaVersion` 字段，若与当前应用支持的版本不匹配则拒绝加载并降级为空注册表。
+
+**如何更新标签数据：**
+
+1. 编辑 `data/tag_registry.json`，按现有结构添加或修改专辑/歌曲的标签条目。
+2. 更新根级 `updatedAt` 字段为当前时间（ISO 8601 格式）。
+3. 提交并合入 `main` 分支后，所有用户下次启动应用时将自动获取更新。
+
+**JSON 结构概览：**
+
+| 字段              | 说明                                                                      |
+| ----------------- | ------------------------------------------------------------------------- |
+| `schemaVersion`   | Schema 版本号，当前为 2                                                   |
+| `updatedAt`       | 最后更新时间，用于增量拉取比对                                            |
+| `tagDimensions`   | 标签维度定义（key + 多语种 label），可选 `scope: "song"` 限定仅适用于单曲 |
+| `typeDefinitions` | 专辑类型枚举（如 ost、characterEp）的多语种映射                           |
+| `albums`          | 专辑标签条目列表，每条包含 `cid` 及各维度的标签值                         |
+| `songs`           | 单曲标签条目列表，单曲标签会继承所属专辑的同维度标签                      |
 
 ## 说明
 
 - 项目依赖塞壬唱片公开接口与公开资源；若上游接口或资源地址变化，应用也需要同步调整。
 - 本项目为桌面端体验整合与学习项目，与塞壬唱片或鹰角网络无官方隶属关系。
-- 如果你在使用中遇到问题或有改进建议，欢迎提交 [Issue](https://github.com/Anselyuki/siren-music-download/issues) 或 Pull Request。
+- 如果你在使用中遇到问题或有改进建议，欢迎提交 [Issue](https://github.com/Anselyuki/harubble/issues) 或 Pull Request。
 
 ## 许可证
 

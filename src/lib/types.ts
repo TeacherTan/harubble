@@ -46,12 +46,24 @@ export interface AlbumDownloadBadge {
   inventoryVersion: string;
 }
 
+export interface TagEntry {
+  dimension: string;
+  values: string[];
+  colors?: (string | null)[];
+}
+
+export interface TagDimension {
+  key: string;
+  label: string;
+}
+
 export interface Album {
   cid: string;
   name: string;
   coverUrl: string;
   artists: string[];
   download: AlbumDownloadBadge;
+  tags: TagEntry[];
 }
 
 export interface SongEntry {
@@ -59,6 +71,7 @@ export interface SongEntry {
   name: string;
   artists: string[];
   download: TrackDownloadBadge;
+  tags: TagEntry[];
 }
 
 export interface PlaybackQueueEntry {
@@ -83,6 +96,7 @@ export interface SongDetail {
   mvCoverUrl: string | null;
   artists: string[];
   download: TrackDownloadBadge;
+  tags: TagEntry[];
 }
 
 export interface AlbumDetail {
@@ -94,12 +108,28 @@ export interface AlbumDetail {
   coverDeUrl: string | null;
   artists: string[] | null;
   download: AlbumDownloadBadge;
+  tags: TagEntry[];
   songs: SongEntry[];
+}
+
+export interface AudioFileMetadata {
+  format: string;
+  sampleRate: number;
+  channels: number;
+  bitsPerSample: number | null;
+  durationSecs: number;
+  bitrateKbps: number | null;
+  fileSize: number;
 }
 
 export type LibrarySearchScope = 'all' | 'albums' | 'songs';
 
-export type LibrarySearchHitField = 'title' | 'artist' | 'intro' | 'belong';
+export type LibrarySearchHitField =
+  | 'title'
+  | 'artist'
+  | 'intro'
+  | 'belong'
+  | 'tagValues';
 
 export type LibraryIndexState = 'notReady' | 'building' | 'stale' | 'ready';
 
@@ -140,7 +170,7 @@ export interface ThemePalette {
 export type OutputFormat = 'flac' | 'wav' | 'mp3';
 
 // ---------------------------------------------------------------------------
-// Download job types (mirrors siren-core/src/download/model.rs)
+// Download job types (mirrors harubble-core/src/download/model.rs)
 // ---------------------------------------------------------------------------
 
 export type DownloadJobKind = 'song' | 'album' | 'selection';
@@ -326,3 +356,107 @@ export type NotificationPermissionState =
   | 'denied'
   | 'prompt'
   | 'prompt-with-rationale';
+
+export interface SeriesGroup {
+  series: string;
+  albums: Album[];
+}
+
+export interface TagGroup {
+  dimensionKey: string;
+  value: string;
+  albums: Album[];
+}
+
+export interface HistoryEntry {
+  id: number;
+  songCid: string;
+  songName: string;
+  albumCid: string;
+  albumName: string;
+  coverUrl: string | null;
+  artists: string[];
+  playedAt: string;
+}
+
+export interface HomepageStatus {
+  platformAlbumCount: number;
+  platformSongCount: number;
+  localDownloadedCount: number;
+  localStorageBytes: number;
+  activeDownloadCount: number;
+  completedDownloadCount: number;
+}
+
+// ─── Tag Editor ──────────────────────────────────────────────────────────────
+
+export type TagEditorEntityType = 'album' | 'song';
+
+export interface TagEditorLocalizedValue {
+  [locale: string]: string;
+}
+
+export interface TagEditorTagSet {
+  tags: Record<string, TagEditorLocalizedValue[]>;
+}
+
+export interface TagEditorDimension {
+  key: string;
+  label: Record<string, string>;
+}
+
+export interface TagEditorAlbumEntry {
+  cid: string;
+  type: string | null;
+  name: string | null;
+  releaseDate: string | null;
+  faction: TagEditorLocalizedValue | null;
+  character: TagEditorLocalizedValue | null;
+}
+
+export interface TagEditorRegistry {
+  schemaVersion: number;
+  updatedAt: string;
+  tagDimensions: TagEditorDimension[];
+  typeDefinitions: Record<string, TagEditorLocalizedValue>;
+  albums: TagEditorAlbumEntry[];
+  songs: Record<string, TagEditorTagSet>;
+}
+
+export interface TagEditorMergeConflict {
+  entityType: TagEditorEntityType;
+  cid: string;
+  dimensionKey: string;
+  baseValues: TagEditorLocalizedValue[] | null;
+  remoteValues: TagEditorLocalizedValue[] | null;
+  localValues: TagEditorLocalizedValue[] | null;
+}
+
+export interface TagEditorMergeResult {
+  conflicts: TagEditorMergeConflict[];
+  autoMergedCount: number;
+}
+
+export type ConflictResolution = 'keepLocal' | 'keepRemote';
+
+// ─── Collections ─────────────────────────────────────────────────────────────
+
+export interface CollectionSummary {
+  id: string;
+  name: string;
+  description: string;
+  cover: string | null;
+  songCount: number;
+  isOfficial: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CollectionSection {
+  name?: string;
+  songIds: string[];
+}
+
+export interface Collection extends CollectionSummary {
+  sections: CollectionSection[];
+}

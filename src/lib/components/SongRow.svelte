@@ -1,5 +1,7 @@
 <script lang="ts">
-  import type { SongEntry } from '$lib/types';
+  import type { SongEntry, TagEntry, CollectionSummary } from '$lib/types';
+  import MetadataPopover from '$lib/components/MetadataPopover.svelte';
+  import AddToCollectionMenu from '$lib/components/app/AddToCollectionMenu.svelte';
   import {
     getDownloadBadgeLabel,
     shouldShowDownloadBadge,
@@ -11,28 +13,44 @@
   interface Props {
     song: SongEntry;
     index: number;
+    albumCid: string;
+    albumName: string;
+    coverUrl?: string | null;
     isPlaying?: boolean;
+    isPaused?: boolean;
     downloadState?: SongDownloadState;
     downloadDisabled?: boolean;
     selectionMode?: boolean;
     isSelected?: boolean;
     selectionDisabled?: boolean;
     reducedMotion?: boolean;
+    albumTags?: TagEntry[];
+    collections?: CollectionSummary[];
+    onAddToCollection?: (collectionId: string, songCid: string) => void;
     onclick?: () => void;
+    onTogglePlay?: () => void;
     onDownload?: () => void;
     onToggleSelection?: () => void;
   }
   let {
     song,
     index,
+    albumCid,
+    albumName,
+    coverUrl = null,
     isPlaying = false,
+    isPaused = false,
     downloadState = 'idle',
     downloadDisabled = false,
     selectionMode = false,
     isSelected = false,
     selectionDisabled = false,
     reducedMotion = false,
+    albumTags = [],
+    collections = [],
+    onAddToCollection,
     onclick,
+    onTogglePlay,
     onDownload,
     onToggleSelection,
   }: Props = $props();
@@ -101,10 +119,41 @@
       if (!selectionDisabled) {
         onToggleSelection?.();
       }
-      return;
     }
+  }
+
+  function handleRowPlay() {
+    if (selectionMode) return;
     onclick?.();
   }
+
+  function computeExtraTags(
+    songTags: TagEntry[],
+    albumTags: TagEntry[]
+  ): TagEntry[] {
+    return songTags
+      .map((st): TagEntry | null => {
+        const albumValues =
+          albumTags.find((at) => at.dimension === st.dimension)?.values ?? [];
+        const albumSet = new Set(albumValues);
+        const filtered = st.values
+          .map((v, i) => ({
+            value: v,
+            color: st.colors?.[i] ?? null,
+            keep: !albumSet.has(v),
+          }))
+          .filter((x) => x.keep);
+        if (filtered.length === 0) return null;
+        return {
+          dimension: st.dimension,
+          values: filtered.map((x) => x.value),
+          colors: filtered.map((x) => x.color),
+        };
+      })
+      .filter((entry): entry is TagEntry => entry !== null);
+  }
+
+  const extraTags = $derived.by(() => computeExtraTags(song.tags, albumTags));
 </script>
 
 <div
@@ -117,12 +166,15 @@
   data-song-cid={song.cid}
   role="button"
   tabindex="0"
-  aria-label={selectionMode
-    ? isSelected
-      ? labels.deselectAria
-      : labels.selectAria
-    : labels.playAria}
+  aria-label={song.name}
   onclick={handleRowActivate}
+  ondblclick={handleRowPlay}
+  onkeydown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleRowPlay();
+    }
+  }}
   onmouseenter={() => {
     isHovered = true;
   }}
@@ -134,12 +186,6 @@
   }}
   onfocusout={() => {
     isFocused = false;
-  }}
-  onkeydown={(e: KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleRowActivate();
-    }
   }}
 >
   {#if selectionMode}
@@ -157,25 +203,67 @@
     >
   {/if}
   <div class="song-number" class:is-emphasis={showEmphasis}>{index + 1}</div>
+  {#if coverUrl}
+    <img class="song-cover-thumb" src={coverUrl} alt="" aria-hidden="true" />
+  {/if}
   <div class="song-info">
     <div class="song-name" class:is-emphasis={showEmphasis}>{song.name}</div>
     <div class="song-artists">{song.artists.join(' · ')}</div>
+    {#if extraTags.length > 0}
+      <div class="song-extra-tags">
+        {#each extraTags as tag (tag.dimension)}
+          {#each tag.values as value, i (`${tag.dimension}:${i}`)}
+            <span
+              class="song-tag-badge"
+              style:color={tag.colors?.[i] ?? undefined}
+              style:background={tag.colors?.[i]
+                ? `${tag.colors[i]}1a`
+                : undefined}>{value}</span
+            >
+          {/each}
+        {/each}
+      </div>
+    {/if}
   </div>
-  <div
+  <button
+    type="button"
     class="song-play-indicator"
     class:is-playing={isPlaying}
     class:is-visible={showPlayIndicator}
+    aria-label={labels.playAria}
+    onclick={(event: MouseEvent) => {
+      event.stopPropagation();
+      if (isPlaying) {
+        onTogglePlay?.();
+      } else {
+        onclick?.();
+      }
+    }}
   >
     <svg class="play-indicator-icon" viewBox="0 0 24 24" aria-hidden="true">
-      {#if isPlaying}<rect x="7.15" y="5.95" width="3.4" height="12.1" rx="1.25"
+      {#if isPlaying && !isPaused}<rect
+          x="7.15"
+          y="5.95"
+          width="3.4"
+          height="12.1"
+          rx="1.25"
         ></rect><rect x="13.45" y="5.95" width="3.4" height="12.1" rx="1.25"
         ></rect>{:else}<path d="M8.2 6.3v11.4L17.35 12z"></path>{/if}
     </svg>
-  </div>
+  </button>
   <div class="song-actions">
     {#if showDownloadedBadge}<span class="song-download-badge"
         >{downloadedBadgeLabel}</span
       >{/if}
+    <span class="song-meta-wrapper">
+      <MetadataPopover target={{ kind: 'song', song, albumCid, albumName }} />
+    </span>
+    {#if collections.length > 0 && onAddToCollection}
+      <AddToCollectionMenu
+        {collections}
+        onAdd={(colId) => onAddToCollection(colId, song.cid)}
+      />
+    {/if}
     <button
       type="button"
       class="song-download-button"
@@ -258,6 +346,13 @@
   .song-row.is-reduced-motion .song-number {
     transition: none;
   }
+  .song-cover-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
   .song-info {
     flex: 1;
     min-width: 0;
@@ -285,7 +380,26 @@
     text-overflow: ellipsis;
     margin-top: 2px;
   }
+  .song-extra-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 3px;
+  }
+  .song-tag-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(var(--accent-rgb), 0.08);
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
   .song-play-indicator {
+    appearance: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -331,8 +445,21 @@
   .song-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     flex-shrink: 0;
+  }
+  .song-meta-wrapper {
+    display: inline-flex;
+    opacity: 0;
+    transition: opacity 0.16s ease-out;
+  }
+  .song-row:hover .song-meta-wrapper,
+  .song-row:focus-within .song-meta-wrapper {
+    opacity: 1;
+  }
+  .song-row.is-reduced-motion .song-meta-wrapper {
+    transition: none;
+    opacity: 1;
   }
   .song-download-badge {
     display: inline-flex;

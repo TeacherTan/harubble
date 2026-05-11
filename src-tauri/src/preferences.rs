@@ -209,7 +209,7 @@ impl PreferencesStore {
             .unwrap_or_else(|| {
                 std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"))
             })
-            .join("SirenMusic");
+            .join("Harubble");
         let resolved_output_dir = if fs::create_dir_all(&default_output_dir).is_ok() {
             default_output_dir
         } else {
@@ -254,7 +254,12 @@ impl PreferencesStore {
         fs::create_dir_all(parent).map_err(|_| tr(locale, "preferences-dir-create-failed"))?;
         let content = toml::to_string_pretty(prefs)
             .map_err(|e| format!("failed to serialize preferences: {e}"))?;
-        fs::write(&self.path, content.as_bytes())
+
+        let mut tmp = tempfile::NamedTempFile::new_in(parent)
+            .map_err(|_| tr(locale, "preferences-file-write-failed"))?;
+        std::io::Write::write_all(&mut tmp, content.as_bytes())
+            .map_err(|_| tr(locale, "preferences-file-write-failed"))?;
+        tmp.persist(&self.path)
             .map_err(|_| tr(locale, "preferences-file-write-failed"))?;
         Ok(())
     }

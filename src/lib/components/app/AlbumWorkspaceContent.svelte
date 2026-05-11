@@ -4,7 +4,7 @@
   import { fade } from 'svelte/transition';
   import { OverlayScrollbarsComponent } from 'overlayscrollbars-svelte';
   import type { EventListeners, PartialOptions } from 'overlayscrollbars';
-  import type { AlbumDetail, SongEntry } from '$lib/types';
+  import type { AlbumDetail, CollectionSummary, SongEntry } from '$lib/types';
   import MotionSpinner from '$lib/components/MotionSpinner.svelte';
   import AlbumStage from '$lib/components/app/AlbumStage.svelte';
   import AlbumDetailSkeleton from '$lib/components/app/AlbumDetailSkeleton.svelte';
@@ -20,6 +20,7 @@
     selectedAlbumArtworkUrl: string | null;
     currentSongCid: string | null;
     isPlaybackActive: boolean;
+    isPlaybackPaused: boolean;
     downloadingAlbumCid: string | null;
     selectionModeEnabled: boolean;
     selectedSongCids: string[];
@@ -41,6 +42,7 @@
     onDownloadAlbum: (albumCid: string) => void | Promise<void>;
     onDownloadSelection: (songCids: string[]) => void | Promise<void>;
     onPlaySong: (song: SongEntry) => void | Promise<void>;
+    onTogglePlay: () => void | Promise<void>;
     onDownloadSong: (songCid: string) => void | Promise<void>;
     onToggleSongSelection: (songCid: string) => void;
     isSongSelected: (songCid: string) => boolean;
@@ -50,6 +52,8 @@
     isSelectionDownloadDisabled: (songCids: string[]) => boolean;
     isCurrentSelectionCreating: (songCids: string[]) => boolean;
     hasCurrentSelectionJob: (songCids: string[]) => boolean;
+    collections?: CollectionSummary[];
+    onAddToCollection?: (collectionId: string, songCid: string) => void;
   }
 
   let {
@@ -60,6 +64,7 @@
     selectedAlbumArtworkUrl,
     currentSongCid,
     isPlaybackActive,
+    isPlaybackPaused,
     downloadingAlbumCid,
     selectionModeEnabled,
     selectedSongCids,
@@ -81,6 +86,7 @@
     onDownloadAlbum,
     onDownloadSelection,
     onPlaySong,
+    onTogglePlay,
     onDownloadSong,
     onToggleSongSelection,
     isSongSelected,
@@ -90,6 +96,8 @@
     isSelectionDownloadDisabled,
     isCurrentSelectionCreating,
     hasCurrentSelectionJob,
+    collections,
+    onAddToCollection,
   }: Props = $props();
 
   function dur(base: number): number {
@@ -154,6 +162,7 @@
           album={selectedAlbum}
           {currentSongCid}
           {isPlaybackActive}
+          {isPlaybackPaused}
           {downloadingAlbumCid}
           {selectionModeEnabled}
           {selectedSongCids}
@@ -165,6 +174,7 @@
           {onDownloadAlbum}
           {onDownloadSelection}
           {onPlaySong}
+          {onTogglePlay}
           {onDownloadSong}
           {onToggleSongSelection}
           {isSongSelected}
@@ -174,6 +184,8 @@
           {isSelectionDownloadDisabled}
           {isCurrentSelectionCreating}
           {hasCurrentSelectionJob}
+          {collections}
+          {onAddToCollection}
         />
       </section>
     {/key}
