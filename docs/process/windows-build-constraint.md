@@ -24,10 +24,10 @@
 
 **`cfg_attr` 条件编译的意图**：
 
-| 构建模式 | 子系统 | 行为 |
-|---------|--------|------|
-| Debug（`tauri:dev` 等） | Console | 保留终端，便于查看 `println!` / `eprintln!` / `dbg!` 输出 |
-| Release（`tauri:build`） | Windows | 无终端窗口，纯 GUI 体验 |
+| 构建模式                 | 子系统  | 行为                                                      |
+| ------------------------ | ------- | --------------------------------------------------------- |
+| Debug（`tauri:dev` 等）  | Console | 保留终端，便于查看 `println!` / `eprintln!` / `dbg!` 输出 |
+| Release（`tauri:build`） | Windows | 无终端窗口，纯 GUI 体验                                   |
 
 ## 3. Agent 约束
 
@@ -108,15 +108,15 @@ dumpbin /headers target\release\harubble.exe | Select-String "subsystem"
 
 ## 5. 相关文件
 
-| 文件 | 角色 |
-|------|------|
-| `src-tauri/src/main.rs` | 二进制入口，承载 `windows_subsystem` 属性 |
-| `src-tauri/Cargo.toml` | `[[bin]]` 声明，决定哪些 `.rs` 文件需要该属性 |
-| `package.json` | `@tauri-apps/api` 版本声明，需与 Rust 侧 `tauri` 版本对齐 |
-| `src-tauri/Cargo.lock` | `tauri` crate 实际解析版本，版本对齐的事实来源 |
+| 文件                    | 角色                                                      |
+| ----------------------- | --------------------------------------------------------- |
+| `src-tauri/src/main.rs` | 二进制入口，承载 `windows_subsystem` 属性                 |
+| `src-tauri/Cargo.toml`  | `[[bin]]` 声明，决定哪些 `.rs` 文件需要该属性             |
+| `package.json`          | `@tauri-apps/api` 版本声明，需与 Rust 侧 `tauri` 版本对齐 |
+| `src-tauri/Cargo.lock`  | `tauri` crate 实际解析版本，版本对齐的事实来源            |
 
 ## 6. 变更历史
 
-| 日期 | 变更 | 原因 |
-|------|------|------|
+| 日期       | 变更                                                 | 原因                                        |
+| ---------- | ---------------------------------------------------- | ------------------------------------------- |
 | 2026-05-11 | 新增本文档与 `main.rs` 中的 `windows_subsystem` 属性 | 修复 Windows release 构建弹出黑色终端的问题 |
