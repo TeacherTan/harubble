@@ -1,7 +1,3 @@
-<!-- markdownlint-disable -->
-
-<div align="center">
-
 # Harubble
 
 <div>
@@ -10,123 +6,24 @@
   <img alt="stars" src="https://img.shields.io/github/stars/Anselyuki/harubble?style=social">
 </div>
 
+面向 [塞壬唱片](https://monster-siren.hypergryph.com/) 的桌面音乐播放器与下载器。
+
 > 名字取自《明日方舟》角色 **遥**（Haruka）与她的源石技艺——漂浮在空中的透明泡泡（Bubble）。Haru 是 Haruka 的简写。
 >
 > 胆小、总是害怕、常常会哭——但即便哭得一塌糊涂，还是在做着最勇敢的事情。她随身带着泡泡水，源石技艺只有以浮泡为表现形式时才能发挥最佳效果；那些漂浮在空中的泡泡，是她给所有人的庇护。
 >
 > 「横竖都是死，我和你们拼了！」
 
-面向 [塞壬唱片](https://monster-siren.hypergryph.com/) 的桌面音乐播放器与下载器。
-
-[下载发布版](https://github.com/Anselyuki/harubble/releases) | [本地开发](#本地开发) | [Rust 文档](#rustdoc-guide) | [开发文档](./docs/guides/frontend-guide.md) | [后端契约](./docs/reference/backend-api-contract.md) | [Release 流程](./docs/process/release-process.md)
-
-</div>
-
-<!-- markdownlint-restore -->
-
 ## 下载与安装
 
-- 推荐直接从 [GitHub Releases](https://github.com/Anselyuki/harubble/releases) 下载对应系统的发布文件。
-- 应用目前面向 `macOS` 和 `Windows` 提供桌面端体验。
-- Windows 发布版为依赖系统 `WebView2` 运行时的精简 `.exe`，不会额外提供安装型打包。
+- 从 [GitHub Releases](https://github.com/Anselyuki/harubble/releases) 下载对应系统的发布文件。
+- 应用目前面向 macOS 和 Windows 提供桌面端体验。
+- Windows 发布版为依赖系统 WebView2 运行时的精简 `.exe`，不会额外提供安装型打包。
 - 首次启动需要联网拉取专辑、歌词和音频资源。
 
-## 本地开发
+## 文档
 
-### 环境要求
-
-- Rust
-- Bun 1.3+（唯一 JS 包管理器）
-
-### 常用命令
-
-```bash
-# 安装依赖与启动开发
-bun install
-bun run tauri:dev
-```
-
-```bash
-# 检查与测试
-bun run format:check
-bun run lint
-bun run check
-cargo test --workspace
-```
-
-```bash
-# 构建
-bun run build
-bun run tauri:build
-```
-
-### <a id="rustdoc-guide"></a>生成 Rust 文档（rustdoc）
-
-项目中的 Rust API 文档统一通过 `cargo doc` 生成，产物默认输出到 `target/doc/`。
-
-```bash
-# 生成核心库文档
-cargo doc -p harubble_core --no-deps
-
-# 生成桌面应用库文档（包含 private items）
-cargo doc -p harubble --lib --no-deps --document-private-items
-
-# 生成桌面应用二进制入口文档（包含 private items）
-cargo doc -p harubble --bin harubble --no-deps --document-private-items
-```
-
-说明：
-
-- `--no-deps` 表示只生成当前工作区包的文档，避免把依赖库文档一并展开。
-- `--document-private-items` 适合在本地排查模块职责、内部状态和入口 wiring，便于补全文档或核对实现。
-- 生成完成后，可直接打开 `target/doc/index.html` 查看文档首页，再按 crate 进入对应模块页。
-- 如果你刚修改了公开 API、模块导出或命令契约，建议在提交前重新生成一次 rustdoc，确认模块说明、函数文档和导出结构与实际实现一致。
-
-更多实现细节与协作约定见：
-
-- [前端开发指南](./docs/guides/frontend-guide.md)
-- [后端 API 契约](./docs/reference/backend-api-contract.md)
-- [Release 流程](./docs/process/release-process.md)
-- [后端阶段记录](./docs/history/backend-completed-phases.md)
-- [后端增强路线](./docs/history/backend-pending-phases.md)
-
-## 开发指南
-
-- [Claude Code Hook 安装与启用说明](./docs/guides/claude-code-hook-setup.md)
-- [前端开发指南](./docs/guides/frontend-guide.md)
-- [后端 API 契约](./docs/reference/backend-api-contract.md)
-- [Release 流程](./docs/process/release-process.md)
-- [评审规则](./docs/guides/review-rules.md)
-- [技术决策记录](./docs/history/decisions.md)
-
-## 资源更新说明
-
-### Tag Registry（标签注册表）
-
-应用通过 `data/tag_registry.json` 维护专辑和歌曲的元数据标签（类型、阵营、角色、活动等），用于分组浏览和库内搜索。
-
-**更新机制：**
-
-- **Release 模式**：应用启动时后台从 GitHub 仓库 `main` 分支拉取最新的 `data/tag_registry.json`，与本地缓存的 `updatedAt` 字段比对；若远端版本更新则原子替换本地缓存并自动重建搜索索引。网络失败时静默使用本地缓存，不阻塞启动。
-- **开发模式**：直接读取仓库本地的 `data/tag_registry.json`，每次启动都会加载最新内容。
-- **Schema 版本校验**：加载时会检查 `schemaVersion` 字段，若与当前应用支持的版本不匹配则拒绝加载并降级为空注册表。
-
-**如何更新标签数据：**
-
-1. 编辑 `data/tag_registry.json`，按现有结构添加或修改专辑/歌曲的标签条目。
-2. 更新根级 `updatedAt` 字段为当前时间（ISO 8601 格式）。
-3. 提交并合入 `main` 分支后，所有用户下次启动应用时将自动获取更新。
-
-**JSON 结构概览：**
-
-| 字段              | 说明                                                                      |
-| ----------------- | ------------------------------------------------------------------------- |
-| `schemaVersion`   | Schema 版本号，当前为 2                                                   |
-| `updatedAt`       | 最后更新时间，用于增量拉取比对                                            |
-| `tagDimensions`   | 标签维度定义（key + 多语种 label），可选 `scope: "song"` 限定仅适用于单曲 |
-| `typeDefinitions` | 专辑类型枚举（如 ost、characterEp）的多语种映射                           |
-| `albums`          | 专辑标签条目列表，每条包含 `cid` 及各维度的标签值                         |
-| `songs`           | 单曲标签条目列表，单曲标签会继承所属专辑的同维度标签                      |
+详见 [docs/README.md](./docs/README.md)，包含本地开发指南与完整文档索引。
 
 ## 说明
 
