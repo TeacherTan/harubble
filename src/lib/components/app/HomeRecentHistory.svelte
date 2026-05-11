@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
+  import { imageDataSrc } from '$lib/imageDataSrc';
   import type { HistoryEntry } from '$lib/types';
 
   interface Props {
@@ -58,7 +59,7 @@
         >
           {#if entry.coverUrl}
             <img
-              src={entry.coverUrl}
+              use:imageDataSrc={entry.coverUrl}
               alt=""
               class="history-cover"
               loading="lazy"

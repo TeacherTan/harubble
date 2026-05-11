@@ -2,6 +2,7 @@
   import type { SongEntry, TagEntry, CollectionSummary } from '$lib/types';
   import MetadataPopover from '$lib/components/MetadataPopover.svelte';
   import AddToCollectionMenu from '$lib/components/app/AddToCollectionMenu.svelte';
+  import { imageDataSrc } from '$lib/imageDataSrc';
   import {
     getDownloadBadgeLabel,
     shouldShowDownloadBadge,
@@ -204,7 +205,12 @@
   {/if}
   <div class="song-number" class:is-emphasis={showEmphasis}>{index + 1}</div>
   {#if coverUrl}
-    <img class="song-cover-thumb" src={coverUrl} alt="" aria-hidden="true" />
+    <img
+      class="song-cover-thumb"
+      use:imageDataSrc={coverUrl}
+      alt=""
+      aria-hidden="true"
+    />
   {/if}
   <div class="song-info">
     <div class="song-name" class:is-emphasis={showEmphasis}>{song.name}</div>
