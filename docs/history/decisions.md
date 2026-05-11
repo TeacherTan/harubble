@@ -4,7 +4,7 @@
 >
 > **状态说明（2026-04）**：本文以保留决策上下文和当时的取舍为主，不等于当前实现总览。若某项决策后续被调整，应优先在此追加注记或新增决策，而不是改写历史正文。
 >
-> 相关文档：[frontend-guide.md](../guides/frontend-guide.md)
+> 相关文档：[frontend-guide.md](../reference/frontend-guide.md)
 
 ## 决策 1：选择 `shadcn-svelte` 而非黑盒组件库
 
