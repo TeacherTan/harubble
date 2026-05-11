@@ -1,7 +1,7 @@
 # Harubble
 
 <div>
-  <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-4c8bf5">
+  <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-4c8bf5">
   <img alt="license" src="https://img.shields.io/github/license/Anselyuki/harubble">
   <img alt="stars" src="https://img.shields.io/github/stars/Anselyuki/harubble?style=social">
 </div>
@@ -17,8 +17,9 @@
 ## 下载与安装
 
 - 从 [GitHub Releases](https://github.com/Anselyuki/harubble/releases) 下载对应系统的发布文件。
-- 应用目前面向 macOS 和 Windows 提供桌面端体验。
+- 应用面向 macOS、Windows 和 Linux 提供桌面端体验。
 - Windows 发布版为依赖系统 WebView2 运行时的精简 `.exe`，不会额外提供安装型打包。
+- Linux 发布版为 AppImage 格式，自包含运行时，`chmod +x` 后直接运行；构建基于 Ubuntu 22.04，要求 glibc 2.35+。
 - 首次启动需要联网拉取专辑、歌词和音频资源。
 
 ## 文档

@@ -12,7 +12,7 @@
 3. Pull Request 合并到 `main` 后，会触发发布 workflow。
 4. 发布 workflow 只会在合并 PR 存在明确发布意图时继续执行。
 5. 如果 PR 明确要求发布但没有指定版本号，则基于最新正式版自动提升一个小版本号。
-6. 发布 workflow 会构建 macOS 与 Windows 产物，并上传到对应的 GitHub Release。
+6. 发布 workflow 会构建 macOS、Windows 与 Linux 产物，并上传到对应的 GitHub Release。
 
 ## PR 阶段
 
@@ -120,12 +120,14 @@ PR 阶段不会执行以下行为：
 - `harubble_<version>_macos_intel.dmg`
 - `harubble_<version>_macos_apple_silicon.dmg`
 - `harubble_<version>_windows_x64_portable_webview2.exe`
+- `harubble_<version>_linux_x64.AppImage`
 
 说明：
 
 - `macos_intel` 对应 Intel Mac
 - `macos_apple_silicon` 对应 Apple Silicon Mac
 - Windows 当前发布的是依赖系统 `WebView2` 运行时的精简便携 `.exe`，不是 NSIS 安装包
+- Linux 当前发布的是 AppImage 格式，自包含运行时，用户无需额外安装系统依赖即可运行；构建环境为 Ubuntu 22.04，要求 glibc 2.35+
 
 ## 推荐用法
 

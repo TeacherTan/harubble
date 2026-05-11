@@ -5,7 +5,7 @@ This file provides guidance to Claude Code when working with this repository.
 ## 项目概览
 
 - 技术栈：Rust + Tauri 2 + Vite + Svelte 5
-- 形态：跨平台桌面应用（当前发布产物覆盖 macOS / Windows）
+- 形态：跨平台桌面应用（当前发布产物覆盖 macOS / Windows / Linux）
 - 当前状态：核心功能链路（下载、播放、库存、搜索、合集、Tag Editor）已稳定；当前主线聚焦于搜索体验打磨（12B/12C）与前端文档收敛
 
 ## 常用命令
