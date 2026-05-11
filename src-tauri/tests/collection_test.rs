@@ -3,10 +3,17 @@ use tempfile::TempDir;
 fn create_service() -> (harubble::collection::CollectionService, TempDir) {
     let tmp = TempDir::new().unwrap();
     let db_path = tmp.path().join("test.db");
-    let official_json = r#"{"schemaVersion":1,"collections":[{"id":"official:test","name":{"zh-CN":"测试合集","en-US":"Test Collection"},"description":{"zh-CN":"描述","en-US":"Description"},"cover":null,"songIds":["song-1","song-2"]}]}"#;
+    let official_json = r#"{"schemaVersion":1,"collections":[{"id":"official:test","name":{"zh-CN":"测试合集","en-US":"Test Collection"},"description":{"zh-CN":"描述","en-US":"Description"},"cover":null,"sections":[{"name":null,"songIds":["song-1","song-2"]}]}]}"#;
     let service =
         harubble::collection::CollectionService::new(&db_path, official_json.as_bytes()).unwrap();
     (service, tmp)
+}
+
+fn all_song_ids(col: &harubble::collection::Collection) -> Vec<String> {
+    col.sections
+        .iter()
+        .flat_map(|s| s.song_ids.clone())
+        .collect()
 }
 
 #[test]
@@ -24,7 +31,7 @@ fn test_get_official_collection() {
     let (service, _tmp) = create_service();
     let col = service.get("official:test", "en-US").unwrap();
     assert_eq!(col.name, "Test Collection");
-    assert_eq!(col.song_ids, vec!["song-1", "song-2"]);
+    assert_eq!(all_song_ids(&col), vec!["song-1", "song-2"]);
     assert!(col.is_official);
 }
 
@@ -38,7 +45,7 @@ fn test_create_and_get_user_collection() {
 
     let fetched = service.get(&created.id, "zh-CN").unwrap();
     assert_eq!(fetched.name, "我的合集");
-    assert_eq!(fetched.song_ids.len(), 0);
+    assert_eq!(all_song_ids(&fetched).len(), 0);
 }
 
 #[test]
@@ -50,13 +57,13 @@ fn test_add_and_reorder_songs() {
         .add_songs(&col.id, &["a".into(), "b".into(), "c".into()])
         .unwrap();
     let fetched = service.get(&col.id, "zh-CN").unwrap();
-    assert_eq!(fetched.song_ids, vec!["a", "b", "c"]);
+    assert_eq!(all_song_ids(&fetched), vec!["a", "b", "c"]);
 
     service
         .reorder_songs(&col.id, &["c".into(), "a".into(), "b".into()])
         .unwrap();
     let reordered = service.get(&col.id, "zh-CN").unwrap();
-    assert_eq!(reordered.song_ids, vec!["c", "a", "b"]);
+    assert_eq!(all_song_ids(&reordered), vec!["c", "a", "b"]);
 }
 
 #[test]
@@ -69,7 +76,7 @@ fn test_remove_songs() {
 
     service.remove_songs(&col.id, &["y".into()]).unwrap();
     let fetched = service.get(&col.id, "zh-CN").unwrap();
-    assert_eq!(fetched.song_ids, vec!["x", "z"]);
+    assert_eq!(all_song_ids(&fetched), vec!["x", "z"]);
 }
 
 #[test]
@@ -105,7 +112,7 @@ fn test_export_and_import() {
 
     assert_ne!(imported.id, col.id);
     assert_eq!(imported.name, "导出测试");
-    assert_eq!(imported.song_ids, vec!["s1", "s2"]);
+    assert_eq!(all_song_ids(&imported), vec!["s1", "s2"]);
 }
 
 #[test]
@@ -120,5 +127,5 @@ fn test_duplicate_song_ignored() {
         .unwrap();
 
     let fetched = service.get(&col.id, "zh-CN").unwrap();
-    assert_eq!(fetched.song_ids.len(), 3);
+    assert_eq!(all_song_ids(&fetched).len(), 3);
 }
