@@ -471,7 +471,9 @@ fn unpack_task_result(
 mod tests {
     use super::resolve_task_output_dir;
     use harubble_core::audio::OutputFormat;
-    use harubble_core::download::model::{DownloadJobKind, DownloadTaskStatus, InternalDownloadTask};
+    use harubble_core::download::model::{
+        DownloadJobKind, DownloadTaskStatus, InternalDownloadTask,
+    };
     use std::path::Path;
 
     fn make_task(album_name: &str) -> InternalDownloadTask {

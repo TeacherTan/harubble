@@ -22,7 +22,7 @@ const typeAwareParserOptions = {
 };
 
 const coreRules = {
-  eqeqeq: ['error', 'always'],
+  eqeqeq: ['error', 'always', { null: 'ignore' }],
   'no-console': 'error',
   'no-var': 'error',
   'prefer-const': 'error',
@@ -95,6 +95,14 @@ export default [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+    },
+  },
+  {
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    rules: {
+      'no-console': 'off',
+      'prefer-template': 'off',
+      'no-useless-escape': 'warn',
     },
   },
   {

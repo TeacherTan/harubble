@@ -14,8 +14,8 @@
 
 use crate::preferences::Locale;
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use harubble_core::api::TagEntry;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};

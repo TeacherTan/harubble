@@ -1,10 +1,10 @@
 use crate::logging::{LogCenter, LogLevel, LogPayload};
 use crate::preferences::Locale;
-use serde::{Deserialize, Serialize};
 use harubble_core::download::model::{
     DownloadErrorCode, DownloadErrorInfo, DownloadJobSnapshot, DownloadJobStatus,
     DownloadManagerSnapshot, DownloadTaskSnapshot, DownloadTaskStatus,
 };
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;

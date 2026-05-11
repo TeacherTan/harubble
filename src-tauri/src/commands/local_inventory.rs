@@ -5,8 +5,10 @@
 
 use crate::app_state::AppState;
 use crate::local_inventory::{emit_local_inventory_state_changed, spawn_inventory_scan};
+use harubble_core::{
+    candidate_relative_paths, AudioFormat, LocalInventorySnapshot, VerificationMode,
+};
 use serde::Serialize;
-use harubble_core::{candidate_relative_paths, AudioFormat, LocalInventorySnapshot, VerificationMode};
 use std::path::Path;
 use tauri::{AppHandle, State};
 

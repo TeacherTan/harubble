@@ -1,8 +1,8 @@
 use std::path::Path;
 use std::sync::Mutex;
 
-use rusqlite::Connection;
 use harubble_core::homepage::{HistoryEntry, ListeningEvent};
+use rusqlite::Connection;
 
 const MAX_HISTORY_ROWS: u32 = 500;
 

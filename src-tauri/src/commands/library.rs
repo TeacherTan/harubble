@@ -14,7 +14,9 @@ use tauri::State;
 /// 入参 `state` 提供共享后端状态与 API 客户端；返回值为已经过本地库存增强与 tag 注入的专辑列表。
 /// 调用方应把该结果视为展示快照：远端数据或本地库存状态变化后，需要重新调用以获取最新结果。
 #[tauri::command]
-pub async fn get_albums(state: State<'_, AppState>) -> Result<Vec<harubble_core::api::Album>, String> {
+pub async fn get_albums(
+    state: State<'_, AppState>,
+) -> Result<Vec<harubble_core::api::Album>, String> {
     let albums = state.api.get_albums().await.map_err(|e| e.to_string())?;
     let mut enriched = state.local_inventory_service.enrich_albums(albums).await;
     let locale = state.preferences().locale;
@@ -166,7 +168,8 @@ pub async fn get_image_data_url(
         .await
         .map_err(|e| e.to_string())?;
 
-    let mime = harubble_core::audio::detect_image_mime(&bytes).unwrap_or("application/octet-stream");
+    let mime =
+        harubble_core::audio::detect_image_mime(&bytes).unwrap_or("application/octet-stream");
     Ok(encode_image_data_url(mime, &bytes))
 }
 

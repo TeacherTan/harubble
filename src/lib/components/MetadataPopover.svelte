@@ -41,8 +41,7 @@
           audioMeta = result;
           audioMetaLoaded = true;
         })
-        .catch((err) => {
-          console.error('[MetadataPopover] getAudioMetadata failed:', err);
+        .catch((_err: unknown) => {
           audioMetaLoaded = true;
         });
     }
