@@ -2,7 +2,7 @@
 
 > 前端架构、开发约定与验收基线的唯一主文档。
 >
-> 最后更新：2026-04-29
+> 最后更新：2026-05-11
 
 ## 1. 布局与主要组件
 
@@ -29,20 +29,24 @@
 
 ### 主要组件
 
-| 组件                           | 职责                                                                             |
-| ------------------------------ | -------------------------------------------------------------------------------- |
-| `App.svelte`                   | 前端根装配层，负责 controller 初始化、Tauri 事件订阅、跨域状态协调和壳层组件编排 |
-| `AlbumSidebarContainer.svelte` | 左侧专辑侧栏装配容器，承接搜索输入、搜索结果、列表态与专辑选择                   |
-| `TopToolbar.svelte`            | 顶部工具栏，提供刷新、下载任务入口、设置入口和活动下载数量 badge                 |
-| `AlbumWorkspace.svelte`        | 主内容区布局容器                                                                 |
-| `AlbumWorkspaceContent.svelte` | 专辑舞台、专辑详情、骨架屏和曲目区组合容器                                       |
-| `SongRow.svelte`               | 曲目行；默认点击播放，进入多选模式后改为点击勾选                                 |
-| `PlayerFlyoutStack.svelte`     | 底部播放器 Dock 与歌词 / 播放队列浮层组合容器                                    |
-| `AudioPlayer.svelte`           | 播放器主体，包含播放控制、进度、乱序/循环、歌词/队列切换和当前歌曲下载入口       |
-| `AppSideSheets.svelte`         | 设置面板与下载任务面板装配容器                                                   |
-| `SettingsSheet.svelte`         | 右侧设置面板，负责下载参数、通知偏好、日志等级、日志浏览和缓存清理               |
-| `DownloadTasksSheet.svelte`    | 右侧下载任务面板，负责任务列表、进度、失败项、取消/重试和历史清理                |
-| `StatusToastHost.svelte`       | 顶部 toast 宿主，替代同步 `alert()` 反馈                                         |
+| 组件                              | 职责                                                                             |
+| --------------------------------- | -------------------------------------------------------------------------------- |
+| `App.svelte`                      | 前端根装配层，负责 controller 初始化、Tauri 事件订阅、跨域状态协调和壳层组件编排 |
+| `AlbumSidebarContainer.svelte`    | 左侧专辑侧栏装配容器，承接搜索输入、搜索结果、列表态与专辑选择                   |
+| `TopToolbar.svelte`               | 顶部工具栏，提供刷新、下载任务入口、设置入口和活动下载数量 badge                 |
+| `AlbumWorkspace.svelte`           | 主内容区布局容器                                                                 |
+| `AlbumWorkspaceContent.svelte`    | 专辑舞台、专辑详情、骨架屏和曲目区组合容器                                       |
+| `SongRow.svelte`                  | 曲目行；默认点击播放，进入多选模式后改为点击勾选                                 |
+| `PlayerFlyoutStack.svelte`        | 底部播放器 Dock 与歌词 / 播放队列浮层组合容器                                    |
+| `AudioPlayer.svelte`              | 播放器主体，包含播放控制、进度、乱序/循环、歌词/队列切换和当前歌曲下载入口       |
+| `FullscreenPlayer.svelte`         | 全屏播放器视图，歌词气泡与沉浸式播放体验                                         |
+| `AppSideSheets.svelte`            | 设置面板与下载任务面板装配容器                                                   |
+| `SettingsSheet.svelte`            | 右侧设置面板，负责下载参数、通知偏好、日志等级、日志浏览和缓存清理               |
+| `DownloadTasksSheet.svelte`       | 右侧下载任务面板，负责任务列表、进度、失败项、取消/重试和历史清理                |
+| `CollectionDetailPanel.svelte`    | 合集详情面板，分段展示歌曲列表与播放集成                                         |
+| `CollectionSidebarSection.svelte` | 侧栏合集分区，合集列表与新建入口                                                 |
+| `TagEditorView.svelte`            | Tag 编辑器主视图，维度管理与实体 tag 编辑                                        |
+| `StatusToastHost.svelte`          | 顶部 toast 宿主，替代同步 `alert()` 反馈                                         |
 
 ## 2. 目录结构与域边界
 
@@ -61,25 +65,39 @@ src/
     │   ├── SongRow.svelte             # 曲目行
     │   ├── AudioPlayer.svelte         # 播放器展示组件
     │   └── app/                       # 当前壳层组件
+    │       ├── AddToCollectionMenu.svelte
+    │       ├── AlbumDetailPanel.svelte
+    │       ├── AlbumDetailSkeleton.svelte
     │       ├── AlbumSidebar.svelte
     │       ├── AlbumSidebarContainer.svelte
     │       ├── AlbumStage.svelte
     │       ├── AlbumWorkspace.svelte
     │       ├── AlbumWorkspaceContent.svelte
-    │       ├── AlbumDetailPanel.svelte
-    │       ├── AlbumDetailSkeleton.svelte
+    │       ├── AppSideSheets.svelte
+    │       ├── CollectionDetailPanel.svelte
+    │       ├── CollectionFormDialog.svelte
+    │       ├── CollectionSidebarSection.svelte
+    │       ├── CollectionSongRow.svelte
+    │       ├── DownloadTasksSheet.svelte
+    │       ├── FullscreenPlayer.svelte
+    │       ├── HomeLatestAlbums.svelte
+    │       ├── HomeRecentHistory.svelte
+    │       ├── HomeSeriesGroups.svelte
+    │       ├── HomeStatusDashboard.svelte
+    │       ├── HomeTagGroups.svelte
+    │       ├── HomeView.svelte
+    │       ├── LyricsBubble.svelte
     │       ├── PlayerDock.svelte
     │       ├── PlayerFlyoutStack.svelte
-    │       ├── AppSideSheets.svelte
-    │       ├── TopToolbar.svelte
     │       ├── SettingsSheet.svelte
-    │       ├── DownloadTasksSheet.svelte
     │       ├── StatusToastHost.svelte
-    │       ├── HomeView.svelte
-    │       ├── HomeLatestAlbums.svelte
-    │       ├── HomeSeriesGroups.svelte
-    │       ├── HomeRecentHistory.svelte
-    │       └── HomeStatusDashboard.svelte
+    │       ├── TagEditorConflictItem.svelte
+    │       ├── TagEditorConflictList.svelte
+    │       ├── TagEditorDimension.svelte
+    │       ├── TagEditorPanel.svelte
+    │       ├── TagEditorSongPanel.svelte
+    │       ├── TagEditorView.svelte
+    │       └── TopToolbar.svelte
     ├── design/
     │   ├── tokens.ts                  # 设计 token
     │   ├── variants.ts                # 视觉变体
@@ -92,7 +110,9 @@ src/
     │   ├── player/                    # 播放、歌词与队列 controller / helper
     │   ├── download/                  # 下载任务与筛选 controller / formatter / guard
     │   ├── home/                      # 首页数据 controller / store
-    │   └── shell/                     # 全局壳层状态、设置、视图切换与舞台动效 controller
+    │   ├── shell/                     # 全局壳层状态、设置、视图切换与舞台动效 controller
+    │   ├── collection/                # 合集 controller
+    │   └── tagEditor/                 # Tag 编辑器 controller / store
     ├── i18n/
     │   ├── index.ts                   # 项目侧 i18n 统一导出
     │   ├── locale.svelte.ts           # 当前语言状态、初始化、切换与 runtime 同步
@@ -106,29 +126,33 @@ src/
     └── types.ts                       # 前后端共享结构的 TS 版本
 ```
 
-### 五域边界
+### 域边界
 
-| 域         | 职责                                                              | 当前实现形态       |
-| ---------- | ----------------------------------------------------------------- | ------------------ |
-| `env`      | 只读环境状态：`isMacOS`、`prefersReducedMotion`、视口信号         | store 已接管       |
-| `library`  | 专辑列表 / 详情加载、库内搜索、切换竞态控制、封面预加载、舞台联动 | controller 为主    |
-| `player`   | 当前歌曲、播放队列、歌词加载与高亮、上一首/下一首/乱序/循环       | controller 为主    |
-| `download` | 任务列表与操作、下载设置与偏好、单曲/整专/多选入口、历史筛选      | controller 为主    |
-| `home`     | 首页数据获取与缓存：最新专辑、系列分组、收听历史、状态仪表盘      | controller + store |
-| `shell`    | 设置面板与下载面板开关、视图切换、toast 宿主、全局页面级交互协调  | store + controller |
+| 域           | 职责                                                              | 当前实现形态       |
+| ------------ | ----------------------------------------------------------------- | ------------------ |
+| `env`        | 只读环境状态：`isMacOS`、`prefersReducedMotion`、视口信号         | store 已接管       |
+| `library`    | 专辑列表 / 详情加载、库内搜索、切换竞态控制、封面预加载、舞台联动 | controller 为主    |
+| `player`     | 当前歌曲、播放队列、歌词加载与高亮、上一首/下一首/乱序/循环       | controller 为主    |
+| `download`   | 任务列表与操作、下载设置与偏好、单曲/整专/多选入口、历史筛选      | controller 为主    |
+| `home`       | 首页数据获取与缓存：最新专辑、系列分组、收听历史、状态仪表盘      | controller + store |
+| `shell`      | 设置面板与下载面板开关、视图切换、toast 宿主、全局页面级交互协调  | store + controller |
+| `collection` | 合集列表与详情、歌曲管理、导入导出                                | controller         |
+| `tagEditor`  | Tag 双层编辑、三路合并与冲突解决                                  | controller + store |
 
 ### 依赖方向
 
 推荐保持单向读依赖：
 
 ```text
-env → library → player → download → home → shell
+env → library → player → download → home → collection → tagEditor → shell
 ```
 
 - `env` 是只读环境域，可被其他域读取
 - `library` 提供内容上下文
 - `player` 可依赖当前专辑上下文构建播放队列
 - `download` 可依赖专辑/当前曲目上下文创建任务
+- `collection` 依赖 library 提供的专辑/歌曲上下文
+- `tagEditor` 依赖 library 提供的实体上下文
 - `shell` 只读取其他域的聚合结果，不反向写入业务状态
 
 ## 3. UI 系统约束

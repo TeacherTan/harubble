@@ -39,7 +39,7 @@ cargo doc -p harubble --bin harubble --no-deps --document-private-items
 - `src/lib/api.ts`：主 Tauri command bridge
 - `src/lib/settingsApi.ts`：设置面板专用 IPC bridge
 - `src/lib/types.ts`：前后端共享数据结构
-- `src/lib/features/`：按 `env / library / player / download / shell` 划分的领域目录
+- `src/lib/features/`：按 `env / library / player / download / home / shell / collection / tagEditor` 划分的领域目录
 - `src/lib/components/app/`：前端壳层组件目录
 
 ## 真相来源
@@ -52,7 +52,7 @@ cargo doc -p harubble --bin harubble --no-deps --document-private-items
 
 ## 当前实现状态
 
-- **已稳定**：Phase 1–10、下载历史增强、日志 viewer、偏好系统、本地库存标记链路、Phase 12A 库内搜索 MVP
+- **已稳定**：Phase 1–10、下载历史增强、日志 viewer、偏好系统、本地库存标记链路、Phase 12A 库内搜索 MVP、合集系统（官方 + 用户 CRUD + 导入导出）、Tag Editor（双层编辑 + 三路合并 + 冲突解决）
 - **已部分落地**：Phase 12B 的 `intro / belong` 命中表达、拼音召回与搜索排序增强
 - **仍在演进**：Phase 11 的条件触发型后端增强、Phase 12B 剩余搜索增强、Phase 12C 歌词检索，以及前端 controller / 文档收敛
 

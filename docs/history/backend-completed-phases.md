@@ -15,6 +15,8 @@
 - **Phase 12B 已落地首批搜索增强能力**
 - **首页模块已完成（后端数据层 + 前端视图）**
 - **Tag Registry 自定义元数据系统已完成（后端 + 前端）**
+- **Tag Editor 双层编辑与三路合并已完成（后端 + 前端）**
+- **合集系统已完成（官方合集 + 用户合集 CRUD + 导入导出）**
 - Phase 8 当前已包含：结构化本地证据、`verified` / `mismatch` / `partial` / `unverifiable` 的实际产出、下载链路 provenance 记录、下载后自动重扫、`inventoryVersion` 驱动的前端缓存失效与状态展示
 - Phase 12 当前已包含：`search_library` command、基于本地 snapshot + Tantivy 的索引、`all / albums / songs` scope、`notReady / building / stale / ready` 生命周期、`intro` / `belong` 命中表达、标题 / 艺术家 /归属字段的拼音召回，以及稳定排序与 last-ready 回退
 - 当前待办已切换为 **Phase 11（条件触发）** 与 **Phase 12B / 12C 的剩余增强**
