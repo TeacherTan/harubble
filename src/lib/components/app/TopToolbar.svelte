@@ -271,16 +271,19 @@
     font-size: 0.75rem;
     font-weight: 500;
     opacity: 0;
-    transition: opacity 0.15s ease 0.1s;
+    width: 0;
+    overflow: hidden;
+    transition:
+      opacity 0.15s ease 0.1s,
+      width 0.2s ease;
   }
 
   .search-trigger:hover:not(.expanded) .search-capsule-text {
     opacity: 1;
+    width: auto;
   }
 
   .search-trigger:hover:not(.expanded) .search-circle {
-    justify-content: flex-start;
-    padding: 0 12px;
     color: rgba(15, 23, 42, 0.85);
   }
 
