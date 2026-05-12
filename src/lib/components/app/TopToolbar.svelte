@@ -156,12 +156,12 @@
         aria-label={labels.searchPlaceholder}
         onclick={handleTriggerClick}
       >
-        <Search size={14} aria-hidden="true" />
-        <span class="search-capsule-text">搜索</span>
+        <Search size={16} aria-hidden="true" />
         {#if hasActiveSearch}
           <span class="search-indicator" aria-hidden="true"></span>
         {/if}
       </button>
+      <span class="search-capsule-text">搜索</span>
     {/if}
   </div>
 
@@ -211,14 +211,15 @@
 
 <style>
   .search-trigger {
-    width: 32px;
-    height: 32px;
-    border-radius: 16px;
+    height: 36px;
+    border-radius: 999px;
     background: rgba(255, 255, 255, 0.62);
     border: 1px solid rgba(255, 255, 255, 0.5);
     backdrop-filter: blur(18px) saturate(1.25);
     -webkit-backdrop-filter: blur(18px) saturate(1.25);
-    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+    box-shadow:
+      0 16px 36px rgba(15, 23, 42, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.94);
     transition:
       width 0.2s ease,
       border-radius 0.2s ease;
@@ -226,56 +227,55 @@
     overflow: hidden;
     display: flex;
     align-items: center;
-    justify-content: center;
+    padding: 0 8px;
+    gap: 8px;
   }
 
   .search-trigger:hover:not(.expanded) {
-    width: 90px;
+    width: auto;
   }
 
   .search-trigger.expanded {
     flex: 1;
-    height: 36px;
-    border-radius: 18px;
     transition-duration: 0.3s;
     border-color: rgba(var(--accent-rgb), 0.36);
     box-shadow:
       0 16px 36px rgba(15, 23, 42, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.94),
       0 0 0 3px rgba(var(--accent-rgb), 0.1);
   }
 
   .search-circle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    width: 100%;
-    height: 100%;
-    padding: 0;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
     border: none;
     background: none;
-    color: rgba(15, 23, 42, 0.6);
+    color: rgba(15, 23, 42, 0.55);
     cursor: pointer;
-    white-space: nowrap;
     position: relative;
+    padding: 0;
   }
 
   .search-circle :global(svg) {
-    flex-shrink: 0;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
 
   .search-capsule-text {
     font-family: var(--font-body);
     font-size: 0.75rem;
     font-weight: 500;
+    color: rgba(15, 23, 42, 0.55);
     opacity: 0;
     width: 0;
     overflow: hidden;
     transition:
       opacity 0.15s ease 0.1s,
       width 0.2s ease;
+    pointer-events: none;
   }
 
   .search-trigger:hover:not(.expanded) .search-capsule-text {
@@ -284,7 +284,7 @@
   }
 
   .search-trigger:hover:not(.expanded) .search-circle {
-    color: rgba(15, 23, 42, 0.85);
+    color: rgba(15, 23, 42, 0.8);
   }
 
   .search-indicator {
