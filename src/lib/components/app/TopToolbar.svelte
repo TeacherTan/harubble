@@ -252,7 +252,7 @@
     padding: 0 9px;
     border: none;
     background: none;
-    color: var(--text-secondary, #64748b);
+    color: rgba(15, 23, 42, 0.6);
     cursor: pointer;
     white-space: nowrap;
     position: relative;
@@ -268,6 +268,10 @@
 
   .search-trigger:hover:not(.expanded) .search-capsule-text {
     opacity: 1;
+  }
+
+  .search-trigger:hover:not(.expanded) .search-circle {
+    color: rgba(15, 23, 42, 0.85);
   }
 
   .search-indicator {
