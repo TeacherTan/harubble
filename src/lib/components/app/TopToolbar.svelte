@@ -211,6 +211,7 @@
 
 <style>
   .search-trigger {
+    width: 36px;
     height: 36px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.62);
@@ -220,19 +221,20 @@
     box-shadow:
       0 16px 36px rgba(15, 23, 42, 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.94);
-    transition:
-      width 0.2s ease,
-      border-radius 0.2s ease;
+    transition: width 0.2s ease;
     will-change: width;
     overflow: hidden;
     display: flex;
     align-items: center;
-    padding: 0 8px;
+    justify-content: center;
+    padding: 0;
     gap: 8px;
   }
 
   .search-trigger:hover:not(.expanded) {
     width: auto;
+    padding: 0 12px;
+    justify-content: flex-start;
   }
 
   .search-trigger.expanded {
