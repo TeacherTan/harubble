@@ -9,12 +9,12 @@
 
 ### 当前问题
 
-| 问题 | 位置 | 说明 |
-|------|------|------|
-| 专辑列表与导航耦合 | `AlbumSidebarSection` | 专辑列表挤占 sidebar 可用空间，与搜索栏、合集区域争夺纵向高度，随专辑数量增长体验劣化 |
-| 首页信息密度低 | `HomeView` | 当前首页以横向滚动条（`HomeLatestAlbums`）+ 多个分组区块组成，没有一个"全量总览"入口 |
-| 搜索结果停留在 sidebar | `AlbumSidebarSection` | 搜索命中后结果挤压在 240px 宽的 sidebar 列中，阅读性差，无法展示封面图 |
-| Collections 语义模糊 | `CollectionSidebarSection` | 合集与专辑列表并列，不像其他音乐软件（Spotify / Apple Music）那样具有独立的"播放列表"语义 |
+| 问题                   | 位置                       | 说明                                                                                      |
+| ---------------------- | -------------------------- | ----------------------------------------------------------------------------------------- |
+| 专辑列表与导航耦合     | `AlbumSidebarSection`      | 专辑列表挤占 sidebar 可用空间，与搜索栏、合集区域争夺纵向高度，随专辑数量增长体验劣化     |
+| 首页信息密度低         | `HomeView`                 | 当前首页以横向滚动条（`HomeLatestAlbums`）+ 多个分组区块组成，没有一个"全量总览"入口      |
+| 搜索结果停留在 sidebar | `AlbumSidebarSection`      | 搜索命中后结果挤压在 240px 宽的 sidebar 列中，阅读性差，无法展示封面图                    |
+| Collections 语义模糊   | `CollectionSidebarSection` | 合集与专辑列表并列，不像其他音乐软件（Spotify / Apple Music）那样具有独立的"播放列表"语义 |
 
 ### 目标
 
@@ -109,7 +109,12 @@ aside.sidebar
 
 ```typescript
 // src/lib/features/shell/store.svelte.ts
-export type AppView = 'home' | 'overview' | 'library' | 'tagEditor' | 'collection';
+export type AppView =
+  | 'home'
+  | 'overview'
+  | 'library'
+  | 'tagEditor'
+  | 'collection';
 //                            ^^^^^^^^^^^ 新增
 ```
 
@@ -119,13 +124,13 @@ export type AppView = 'home' | 'overview' | 'library' | 'tagEditor' | 'collectio
 
 ### 4.2 导航触发条件
 
-| 用户操作 | 路由目标 | 说明 |
-|---------|---------|------|
-| 点击 Sidebar「Library」| `overview` | Library 导航项绑定 AlbumOverview，作为专辑库主内容区入口 |
-| 点击 Sidebar「Home」| `home` | Home 导航项保持原 HomeView，视图保留不变 |
-| 搜索栏聚焦 / 输入 | `overview` | 聚焦后直接切换到 overview 页内展示搜索结果 |
-| 点击专辑卡片 | `library`（专辑详情） | 与现有 `handleSelectAlbum` 行为一致 |
-| 点击 Sidebar Collections 条目 | `collection` | 与现有合集详情行为一致 |
+| 用户操作                      | 路由目标              | 说明                                                     |
+| ----------------------------- | --------------------- | -------------------------------------------------------- |
+| 点击 Sidebar「Library」       | `overview`            | Library 导航项绑定 AlbumOverview，作为专辑库主内容区入口 |
+| 点击 Sidebar「Home」          | `home`                | Home 导航项保持原 HomeView，视图保留不变                 |
+| 搜索栏聚焦 / 输入             | `overview`            | 聚焦后直接切换到 overview 页内展示搜索结果               |
+| 点击专辑卡片                  | `library`（专辑详情） | 与现有 `handleSelectAlbum` 行为一致                      |
+| 点击 Sidebar Collections 条目 | `collection`          | 与现有合集详情行为一致                                   |
 
 ### 4.3 AlbumOverview 组件设计
 
@@ -173,11 +178,11 @@ AlbumOverview
 
 ### 5.1 语义定位
 
-| 对比 | Spotify | Apple Music | Harubble（改版后）|
-|------|---------|-------------|-----------------|
-| 左侧固定列 | Your Library（歌单列表）| Library（分类浏览）| Collections（合集列表）|
-| 点击条目 | 打开歌单详情 | 打开专辑/歌单 | 打开合集详情 |
-| 支持操作 | 新建、排序、搜索 | 添加到库 | 新建、导入（现有）|
+| 对比       | Spotify                  | Apple Music         | Harubble（改版后）      |
+| ---------- | ------------------------ | ------------------- | ----------------------- |
+| 左侧固定列 | Your Library（歌单列表） | Library（分类浏览） | Collections（合集列表） |
+| 点击条目   | 打开歌单详情             | 打开专辑/歌单       | 打开合集详情            |
+| 支持操作   | 新建、排序、搜索         | 添加到库            | 新建、导入（现有）      |
 
 ### 5.2 Sidebar Collections 区域布局
 
@@ -209,11 +214,11 @@ AlbumOverview
 
 导航项顺序调整为 **Library → Home → Tags**（Library 上移至首位），各项路由目标如下：
 
-| 导航项 | 当前目标 | 改版后目标 |
-|--------|---------|-----------|
-| Library | `library` | `overview`（绑定 AlbumOverview 专辑库总览）|
-| Home   | `home`  | `home`（保持不变，HomeView 保留）|
-| Tags   | `tagEditor` | `tagEditor`（不变）|
+| 导航项  | 当前目标    | 改版后目标                                  |
+| ------- | ----------- | ------------------------------------------- |
+| Library | `library`   | `overview`（绑定 AlbumOverview 专辑库总览） |
+| Home    | `home`      | `home`（保持不变，HomeView 保留）           |
+| Tags    | `tagEditor` | `tagEditor`（不变）                         |
 
 ### 6.2 Search Bar 聚焦行为
 
@@ -233,16 +238,16 @@ onfocus={() => {
 
 ## 七、受影响的文件清单
 
-| 文件 | 变更类型 | 说明 |
-|------|---------|------|
-| `src/lib/features/shell/store.svelte.ts` | **修改** | `AppView` 增加 `'overview'`，增加 `navigateToOverview()` |
-| `src/lib/components/app/AppSidebar.svelte` | **修改** | 移除 `AlbumSidebarSection` 及相关 Props |
-| `src/lib/components/app/SidebarNav.svelte` | **修改** | Library 与 Home 导航项位置互换；Library 目标改为 `overview`；搜索聚焦目标改为 `overview` |
-| `src/lib/components/app/CollectionSidebarSection.svelte` | **修改** | 移除 `max-height` 限制，增加曲目数角标，增加 hover 播放按钮 |
-| `src/lib/components/app/AlbumOverview.svelte` | **新增** | 全量专辑卡片网格 + 搜索结果展示 |
-| `src/lib/components/AlbumCard.svelte` | **修改** | 增加 `layout?: 'list' | 'grid'` prop，grid 模式下封面居上、文字居下 |
-| `src/App.svelte` | **修改** | 增加 `overview` 视图的路由渲染；移除向 `AppSidebar` 传递的专辑列表 props |
-| `src/lib/types.ts` | 可能 **修改** | 如 `AlbumOverview` 需要新的数据结构 |
+| 文件                                                     | 变更类型      | 说明                                                                                     |
+| -------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `src/lib/features/shell/store.svelte.ts`                 | **修改**      | `AppView` 增加 `'overview'`，增加 `navigateToOverview()`                                 |
+| `src/lib/components/app/AppSidebar.svelte`               | **修改**      | 移除 `AlbumSidebarSection` 及相关 Props                                                  |
+| `src/lib/components/app/SidebarNav.svelte`               | **修改**      | Library 与 Home 导航项位置互换；Library 目标改为 `overview`；搜索聚焦目标改为 `overview` |
+| `src/lib/components/app/CollectionSidebarSection.svelte` | **修改**      | 移除 `max-height` 限制，增加曲目数角标，增加 hover 播放按钮                              |
+| `src/lib/components/app/AlbumOverview.svelte`            | **新增**      | 全量专辑卡片网格 + 搜索结果展示                                                          |
+| `src/lib/components/AlbumCard.svelte`                    | **修改**      | 增加 `layout?: 'list'                                                                    | 'grid'` prop，grid 模式下封面居上、文字居下 |
+| `src/App.svelte`                                         | **修改**      | 增加 `overview` 视图的路由渲染；移除向 `AppSidebar` 传递的专辑列表 props                 |
+| `src/lib/types.ts`                                       | 可能 **修改** | 如 `AlbumOverview` 需要新的数据结构                                                      |
 
 **不在本次范围内（保持不变）**
 
@@ -271,12 +276,12 @@ onfocus={() => {
 
 以下 Token 已在现有 `app.css` 定义，`AlbumOverview` 直接引用即可：
 
-| 用途 | Token |
-|------|-------|
-| 网格背景 | `--surface-workspace` |
-| 卡片悬停 | `--hover-bg-elevated` |
-| 选中态底色 | `--surface-state`（`rgba(accent-rgb, 0.08)`）|
+| 用途         | Token                                                   |
+| ------------ | ------------------------------------------------------- |
+| 网格背景     | `--surface-workspace`                                   |
+| 卡片悬停     | `--hover-bg-elevated`                                   |
+| 选中态底色   | `--surface-state`（`rgba(accent-rgb, 0.08)`）           |
 | 区块标题字体 | `--font-display`，`font-size: 1rem`，`font-weight: 600` |
-| 专辑名字体 | `14px / 500`，`var(--text-primary)` |
-| 艺人字体 | `12px / 400`，`var(--text-secondary)` |
-| 卡片圆角 | `12px`（与现有 `AlbumCard` 一致）|
+| 专辑名字体   | `14px / 500`，`var(--text-primary)`                     |
+| 艺人字体     | `12px / 400`，`var(--text-secondary)`                   |
+| 卡片圆角     | `12px`（与现有 `AlbumCard` 一致）                       |
