@@ -226,6 +226,7 @@
     overflow: hidden;
     display: flex;
     align-items: center;
+    justify-content: center;
   }
 
   .search-trigger:hover:not(.expanded) {
@@ -250,7 +251,7 @@
     gap: 6px;
     width: 100%;
     height: 100%;
-    padding: 0 9px;
+    padding: 0;
     border: none;
     background: none;
     color: rgba(15, 23, 42, 0.6);
@@ -278,6 +279,8 @@
   }
 
   .search-trigger:hover:not(.expanded) .search-circle {
+    justify-content: flex-start;
+    padding: 0 12px;
     color: rgba(15, 23, 42, 0.85);
   }
 
