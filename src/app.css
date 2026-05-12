@@ -846,8 +846,17 @@ img[data-image-state='error'] {
 .top-actions {
   position: fixed;
   top: 16px;
+  left: 16px;
   right: 16px;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.top-actions > * {
+  pointer-events: auto;
 }
 
 .macos-window-drag-region {
@@ -1016,6 +1025,7 @@ img[data-image-state='error'] {
 @media (max-width: 900px) {
   .top-actions {
     top: 12px;
+    left: 12px;
     right: 12px;
   }
 
@@ -2239,8 +2249,17 @@ img[data-image-state='error'] {
 .top-actions {
   position: absolute;
   top: 18px;
+  left: 18px;
   right: 18px;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.top-actions > * {
+  pointer-events: auto;
 }
 
 .top-toolbar {
@@ -2533,6 +2552,7 @@ img[data-image-state='error'] {
 @media (max-width: 900px) {
   .top-actions {
     top: 12px;
+    left: 12px;
     right: 12px;
   }
 
