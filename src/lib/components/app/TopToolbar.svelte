@@ -249,7 +249,7 @@
     background: none;
     color: rgba(15, 23, 42, 0.55);
     cursor: pointer;
-    padding: 0 0 0 10px;
+    padding: 0 0 0 9px;
     margin: 0;
     gap: 6px;
   }
