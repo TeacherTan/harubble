@@ -70,11 +70,26 @@ jobs:
             printf 'v%d.%d.0\n' "$major" "$((minor + 1))"
           }
 
-          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" -H "Accept: application/vnd.github+json")"
-          pr="$(jq -c 'map(select(.merged_at != null and .base.ref == "main"))[0] // empty' <<< "$pr_json")"
+          # GitHub 的 commits/{sha}/pulls API 具有最终一致性：push 事件触发 workflow
+          # 后，merge commit 与 PR 的关联可能还未建立。使用退避重试等待收敛。
+          pr=""
+          max_attempts=5
+          for attempt in $(seq 1 "$max_attempts"); do
+            pr_json="$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" -H "Accept: application/vnd.github+json")"
+            pr="$(jq -c 'map(select(.merged_at != null and .base.ref == "main"))[0] // empty' <<< "$pr_json")"
+            if [ -n "$pr" ]; then
+              echo "Found associated PR on attempt $attempt."
+              break
+            fi
+            if [ "$attempt" -lt "$max_attempts" ]; then
+              delay=$((attempt * 5))
+              echo "Attempt $attempt/$max_attempts: no merged PR found yet, retrying in ${delay}s..."
+              sleep "$delay"
+            fi
+          done
 
           if [ -z "$pr" ]; then
-            echo "No merged pull request is associated with $GITHUB_SHA; skipping release."
+            echo "No merged pull request is associated with $GITHUB_SHA after $max_attempts attempts; skipping release."
             echo "should_release=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
