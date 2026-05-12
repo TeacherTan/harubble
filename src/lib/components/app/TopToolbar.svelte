@@ -246,6 +246,7 @@
   .search-circle {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     width: 100%;
     height: 100%;
@@ -256,6 +257,12 @@
     cursor: pointer;
     white-space: nowrap;
     position: relative;
+  }
+
+  .search-circle :global(svg) {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
   }
 
   .search-capsule-text {
