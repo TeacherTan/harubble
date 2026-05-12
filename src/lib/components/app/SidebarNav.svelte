@@ -26,8 +26,8 @@
     icon: typeof Home;
     labelKey: 'home' | 'library' | 'tags' | 'collections';
   }[] = [
-    { view: 'overview', icon: Library, labelKey: 'library' },
     { view: 'home', icon: Home, labelKey: 'home' },
+    { view: 'overview', icon: Library, labelKey: 'library' },
     { view: 'tagEditor', icon: Tag, labelKey: 'tags' },
     { view: 'collection', icon: ListMusic, labelKey: 'collections' },
   ];
