@@ -3,6 +3,7 @@
   import { localeState } from '$lib/i18n';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import ImportIcon from '@lucide/svelte/icons/download';
+  import PlayIcon from '@lucide/svelte/icons/play';
   import type { CollectionSummary } from '$lib/types';
 
   interface Props {
@@ -12,6 +13,7 @@
     onSelect: (id: string) => void;
     onCreate: () => void;
     onImport: () => void;
+    onPlay?: (id: string) => void;
   }
 
   let {
@@ -21,6 +23,7 @@
     onSelect,
     onCreate,
     onImport,
+    onPlay,
   }: Props = $props();
 
   const officialCollections = $derived.by(() =>
@@ -72,32 +75,78 @@
   {:else if collections.length === 0}
     <div class="collection-empty">{labels.empty}</div>
   {:else}
-    <div class="collection-list">
+    <div class="collection-list" role="listbox" aria-label={labels.title}>
       {#each officialCollections as collection (collection.id)}
-        <button
-          type="button"
+        <div
           class="collection-item"
           class:is-selected={selectedCollectionId === collection.id}
           class:is-official={true}
+          role="option"
+          tabindex="0"
+          aria-selected={selectedCollectionId === collection.id}
           onclick={() => onSelect(collection.id)}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onSelect(collection.id);
+            }
+          }}
         >
           <span class="collection-name">
             <span class="official-badge">★</span>
             {collection.name}
           </span>
-          <span class="collection-count">{collection.songCount}</span>
-        </button>
+          <span class="collection-item-trailing">
+            <span class="collection-count">{collection.songCount}</span>
+            {#if onPlay}
+              <button
+                type="button"
+                class="collection-play-btn"
+                aria-label={`播放 ${collection.name}`}
+                onclick={(e) => {
+                  e.stopPropagation();
+                  onPlay(collection.id);
+                }}
+              >
+                <PlayIcon size={12} />
+              </button>
+            {/if}
+          </span>
+        </div>
       {/each}
       {#each userCollections as collection (collection.id)}
-        <button
-          type="button"
+        <div
           class="collection-item"
           class:is-selected={selectedCollectionId === collection.id}
+          role="option"
+          tabindex="0"
+          aria-selected={selectedCollectionId === collection.id}
           onclick={() => onSelect(collection.id)}
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onSelect(collection.id);
+            }
+          }}
         >
           <span class="collection-name">{collection.name}</span>
-          <span class="collection-count">{collection.songCount}</span>
-        </button>
+          <span class="collection-item-trailing">
+            <span class="collection-count">{collection.songCount}</span>
+            {#if onPlay}
+              <button
+                type="button"
+                class="collection-play-btn"
+                aria-label={`播放 ${collection.name}`}
+                onclick={(e) => {
+                  e.stopPropagation();
+                  onPlay(collection.id);
+                }}
+              >
+                <PlayIcon size={12} />
+              </button>
+            {/if}
+          </span>
+        </div>
       {/each}
     </div>
   {/if}
@@ -209,6 +258,40 @@
     font-size: 11px;
     color: var(--text-tertiary);
     flex-shrink: 0;
+  }
+
+  .collection-item-trailing {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .collection-play-btn {
+    appearance: none;
+    border: none;
+    background: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition:
+      opacity 0.15s ease,
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .collection-item:hover .collection-play-btn {
+    opacity: 1;
+  }
+
+  .collection-play-btn:hover {
+    background: rgba(var(--accent-rgb), 0.15);
+    color: var(--accent);
   }
 
   .collection-loading,
