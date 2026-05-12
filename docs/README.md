@@ -80,6 +80,10 @@ CI/CD 流程、发布触发条件、版本号策略与产物构建。
 
 代码格式化与 hooks 配置。使用 pre-commit 框架统一管理提交前格式化，对所有开发者和 AI Agent 生效。开发者可以直接将此文档提供给 Agent，由 Agent 自行完成安装。
 
+#### [windows-build-constraint.md](./process/windows-build-constraint.md)
+
+Windows 构建约束：禁止 release 构建弹出黑色终端窗口。包含根因分析、修复方式、Agent 约束规则与验证方法。任何涉及二进制入口点或构建配置的修改都应参考本文档。
+
 ### history/ — 历史记录
 
 #### [decisions.md](./history/decisions.md)

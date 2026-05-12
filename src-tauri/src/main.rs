@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 //! Harubble Tauri 桌面后端。
 //!
 //! 这个二进制 crate 通过 Tauri 命令和播放器事件向前端暴露后端能力。
