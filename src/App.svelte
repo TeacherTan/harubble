@@ -30,13 +30,9 @@
   <AppSidebar
     isMacOS={runtime.isMacOS}
     currentView={runtime.currentView}
-    searchQuery={runtime.librarySearchQuery}
-    searchScope={runtime.librarySearchScope}
     onNavigate={(view) => {
       runtime.shellStore.currentView = view;
     }}
-    onSearchQueryChange={runtime.libraryController.setSearchQuery}
-    onSearchScopeChange={runtime.libraryController.setSearchScope}
   />
 
   <section class="main-region">
@@ -53,9 +49,17 @@
       isRefreshing={runtime.isRefreshing}
       settingsOpen={runtime.settingsOpen}
       downloadPanelOpen={runtime.downloadPanelOpen}
+      searchQuery={runtime.librarySearchQuery}
+      searchScope={runtime.librarySearchScope}
+      currentView={runtime.currentView}
       onRefresh={runtime.handleRefresh}
       onOpenDownloads={runtime.handleToggleDownloads}
       onOpenSettings={runtime.handleToggleSettings}
+      onSearchQueryChange={runtime.libraryController.setSearchQuery}
+      onSearchScopeChange={runtime.libraryController.setSearchScope}
+      onNavigate={(view) => {
+        runtime.shellStore.currentView = view;
+      }}
     />
 
     {#if runtime.currentView === 'home'}
