@@ -3,7 +3,7 @@
   import { localeState } from '$lib/i18n';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
-  import { Home, Library, Tag, Search } from '@lucide/svelte';
+  import { Home, Library, Tag, Search, ListMusic } from '@lucide/svelte';
   import type { AppView } from '$lib/features/shell/store.svelte';
   import type { LibrarySearchScope } from '$lib/types';
 
@@ -31,6 +31,7 @@
       home: m.shell_nav_home(),
       library: m.shell_nav_library(),
       tags: m.shell_nav_tags(),
+      collections: m.shell_nav_collections(),
       searchPlaceholder: m.sidebar_search_placeholder(),
     };
   });
@@ -38,11 +39,12 @@
   const navItems: {
     view: AppView;
     icon: typeof Home;
-    labelKey: 'home' | 'library' | 'tags';
+    labelKey: 'home' | 'library' | 'tags' | 'collections';
   }[] = [
     { view: 'overview', icon: Library, labelKey: 'library' },
     { view: 'home', icon: Home, labelKey: 'home' },
     { view: 'tagEditor', icon: Tag, labelKey: 'tags' },
+    { view: 'collection', icon: ListMusic, labelKey: 'collections' },
   ];
 
   const scopeOptions = $derived.by(() => {

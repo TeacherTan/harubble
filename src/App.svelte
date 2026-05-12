@@ -37,12 +37,6 @@
     }}
     onSearchQueryChange={runtime.libraryController.setSearchQuery}
     onSearchScopeChange={runtime.libraryController.setSearchScope}
-    collections={runtime.collectionController.collections}
-    selectedCollectionId={runtime.collectionController.selectedCollectionId}
-    collectionsLoading={runtime.collectionController.isLoading}
-    onCollectionSelect={runtime.collectionController.selectCollection}
-    onCollectionCreate={runtime.collectionController.openCreateDialog}
-    onCollectionImport={runtime.collectionController.handleImport}
   />
 
   <section class="main-region">

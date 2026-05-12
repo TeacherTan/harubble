@@ -304,6 +304,7 @@
   "shell_nav_home": "Home",
   "shell_nav_library": "Library",
   "shell_nav_tags": "Tags",
+  "shell_nav_collections": "Collections",
   "sidebar_search_placeholder": "Search...",
   "sidebar_collections_title": "Collections",
   "sidebar_collections_import": "Import collection",
