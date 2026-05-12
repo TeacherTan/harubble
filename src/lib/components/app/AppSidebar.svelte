@@ -1,29 +1,16 @@
 <script lang="ts">
   import BrandLogo from '$lib/components/app/BrandLogo.svelte';
   import SidebarNav from '$lib/components/app/SidebarNav.svelte';
-  import type { LibrarySearchScope } from '$lib/types';
 
   import type { AppView } from '$lib/features/shell/store.svelte';
 
   interface Props {
     isMacOS: boolean;
     currentView: AppView;
-    searchQuery: string;
-    searchScope: LibrarySearchScope;
     onNavigate: (view: AppView) => void;
-    onSearchQueryChange: (query: string) => void;
-    onSearchScopeChange: (scope: LibrarySearchScope) => void;
   }
 
-  let {
-    isMacOS,
-    currentView,
-    searchQuery,
-    searchScope,
-    onNavigate,
-    onSearchQueryChange,
-    onSearchScopeChange,
-  }: Props = $props();
+  let { isMacOS, currentView, onNavigate }: Props = $props();
 </script>
 
 <aside class="sidebar">
@@ -38,14 +25,7 @@
   <BrandLogo {isMacOS} />
 
   <div class="sidebar-nav-region">
-    <SidebarNav
-      {currentView}
-      {searchQuery}
-      {searchScope}
-      {onNavigate}
-      {onSearchQueryChange}
-      {onSearchScopeChange}
-    />
+    <SidebarNav {currentView} {onNavigate} />
   </div>
 </aside>
 
