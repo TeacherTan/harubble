@@ -264,31 +264,29 @@ impl Read for GrowingFileReader {
             return Ok(0);
         }
 
-        loop {
-            let (lock, condvar) = &*self.state;
-            let mut state = lock.lock().unwrap();
+        let (lock, condvar) = &*self.state;
+        let mut state = lock.lock().unwrap();
 
-            while self.position >= state.available_len && !state.complete && state.error.is_none() {
-                state = condvar.wait(state).unwrap();
-            }
-
-            if let Some(error) = &state.error {
-                return Err(io::Error::new(io::ErrorKind::Other, error.clone()));
-            }
-
-            if self.position >= state.available_len {
-                return Ok(0);
-            }
-
-            let available = (state.available_len - self.position) as usize;
-            drop(state);
-
-            let read_len = available.min(buf.len());
-            self.file.seek(SeekFrom::Start(self.position))?;
-            let written = self.file.read(&mut buf[..read_len])?;
-            self.position += written as u64;
-            return Ok(written);
+        while self.position >= state.available_len && !state.complete && state.error.is_none() {
+            state = condvar.wait(state).unwrap();
         }
+
+        if let Some(error) = &state.error {
+            return Err(io::Error::new(io::ErrorKind::Other, error.clone()));
+        }
+
+        if self.position >= state.available_len {
+            return Ok(0);
+        }
+
+        let available = (state.available_len - self.position) as usize;
+        drop(state);
+
+        let read_len = available.min(buf.len());
+        self.file.seek(SeekFrom::Start(self.position))?;
+        let written = self.file.read(&mut buf[..read_len])?;
+        self.position += written as u64;
+        Ok(written)
     }
 }
 
