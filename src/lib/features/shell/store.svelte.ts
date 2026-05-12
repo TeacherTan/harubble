@@ -10,7 +10,12 @@ interface OpenSideSheetOptions {
 type SettingsSheetComponent = typeof SettingsSheet;
 type DownloadTasksSheetComponent = typeof DownloadTasksSheet;
 
-export type AppView = 'home' | 'library' | 'tagEditor' | 'collection';
+export type AppView =
+  | 'home'
+  | 'overview'
+  | 'library'
+  | 'tagEditor'
+  | 'collection';
 
 let settingsOpen = $state(false);
 let downloadPanelOpen = $state(false);
@@ -176,6 +181,9 @@ export const shellStore = {
   },
   navigateToHome() {
     currentView = 'home';
+  },
+  navigateToOverview() {
+    currentView = 'overview';
   },
   navigateToLibrary() {
     currentView = 'library';

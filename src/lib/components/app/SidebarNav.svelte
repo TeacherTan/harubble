@@ -40,8 +40,8 @@
     icon: typeof Home;
     labelKey: 'home' | 'library' | 'tags';
   }[] = [
+    { view: 'overview', icon: Library, labelKey: 'library' },
     { view: 'home', icon: Home, labelKey: 'home' },
-    { view: 'library', icon: Library, labelKey: 'library' },
     { view: 'tagEditor', icon: Tag, labelKey: 'tags' },
   ];
 
@@ -106,7 +106,7 @@
           onSearchQueryChange(target.value);
         }}
         onfocus={() => {
-          if (currentView !== 'library') onNavigate('library');
+          if (currentView !== 'overview') onNavigate('overview');
         }}
       />
       <Button

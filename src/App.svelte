@@ -11,6 +11,7 @@
   import TagEditorView from '$lib/components/app/TagEditorView.svelte';
   import CollectionDetailPanel from '$lib/components/app/CollectionDetailPanel.svelte';
   import CollectionFormDialog from '$lib/components/app/CollectionFormDialog.svelte';
+  import AlbumOverview from '$lib/components/app/AlbumOverview.svelte';
 
   const runtime = createAppRuntime();
 </script>
@@ -30,21 +31,12 @@
     isMacOS={runtime.isMacOS}
     currentView={runtime.currentView}
     searchQuery={runtime.librarySearchQuery}
+    searchScope={runtime.librarySearchScope}
     onNavigate={(view) => {
       runtime.shellStore.currentView = view;
     }}
     onSearchQueryChange={runtime.libraryController.setSearchQuery}
-    albums={runtime.albums}
-    selectedAlbumCid={runtime.selectedAlbumCid}
-    reducedMotion={runtime.prefersReducedMotion}
-    loadingAlbums={runtime.loadingAlbums}
-    errorMsg={runtime.errorMsg}
-    searchScope={runtime.librarySearchScope}
-    searchLoading={runtime.librarySearchLoading}
-    searchResponse={runtime.librarySearchResponse}
     onSearchScopeChange={runtime.libraryController.setSearchScope}
-    onSelectAlbum={runtime.handleSelectAlbum}
-    onSelectSearchResult={runtime.handleSelectSearchResult}
     collections={runtime.collectionController.collections}
     selectedCollectionId={runtime.collectionController.selectedCollectionId}
     collectionsLoading={runtime.collectionController.isLoading}
@@ -100,6 +92,17 @@
         collections={runtime.collectionController.collections}
         onAddToCollection={(colId, songCid) =>
           runtime.collectionController.handleAddSongs(colId, [songCid])}
+      />
+    {:else if runtime.currentView === 'overview'}
+      <AlbumOverview
+        albums={runtime.albums}
+        selectedAlbumCid={runtime.selectedAlbumCid}
+        reducedMotion={runtime.prefersReducedMotion}
+        searchQuery={runtime.librarySearchQuery}
+        searchLoading={runtime.librarySearchLoading}
+        searchResponse={runtime.librarySearchResponse}
+        onSelectAlbum={runtime.handleSelectAlbum}
+        onSelectSearchResult={runtime.handleSelectSearchResult}
       />
     {:else}
       <LibraryView {runtime} />
