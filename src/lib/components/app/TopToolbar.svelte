@@ -243,15 +243,20 @@
   .search-circle {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 36px;
+    width: 100%;
     height: 100%;
     border: none;
     background: none;
     color: rgba(15, 23, 42, 0.55);
     cursor: pointer;
-    padding: 0;
+    padding: 0 0 0 10px;
     margin: 0;
+    gap: 6px;
+  }
+
+  .search-circle :global(svg) {
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
   }
 
@@ -260,7 +265,7 @@
     font-family: var(--font-body);
     font-size: 0.75rem;
     font-weight: 500;
-    margin-left: 2px;
+    white-space: nowrap;
     opacity: 0;
     transition: opacity 0.15s ease 0.1s;
   }
@@ -271,12 +276,6 @@
 
   .search-trigger:hover:not(.expanded) .search-circle::after {
     opacity: 1;
-  }
-
-  .search-circle :global(svg) {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
   }
 
   .search-indicator {
