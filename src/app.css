@@ -216,6 +216,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+img[data-image-state='empty'],
+img[data-image-state='loading'],
+img[data-image-state='error'] {
+  color: transparent;
+  background:
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), transparent),
+    var(--bg-tertiary);
+}
+
 .app-side-sheet[data-side='right'] {
   --app-side-sheet-max-width: 36rem;
   --sheet-border: color-mix(in srgb, var(--border) 78%, white 22%);

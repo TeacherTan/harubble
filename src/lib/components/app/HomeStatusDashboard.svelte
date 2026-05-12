@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
+  import { imageDataSrc } from '$lib/imageDataSrc';
   import type { HomepageStatus } from '$lib/types';
 
   interface Props {
@@ -84,7 +85,7 @@
     <div class="now-playing" aria-label={labels.nowPlayingAria}>
       {#if currentSong.coverUrl}
         <img
-          src={currentSong.coverUrl}
+          use:imageDataSrc={currentSong.coverUrl}
           alt=""
           class="np-cover"
           class:playing={isPlaying}

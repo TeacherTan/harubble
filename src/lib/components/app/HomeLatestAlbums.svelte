@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
+  import { imageDataSrc } from '$lib/imageDataSrc';
   import type { Album } from '$lib/types';
 
   interface Props {
@@ -40,7 +41,7 @@
           type="button"
         >
           <img
-            src={album.coverUrl}
+            use:imageDataSrc={album.coverUrl}
             alt={album.name}
             class="album-cover"
             loading="lazy"

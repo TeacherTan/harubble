@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
+  import { imageDataSrc } from '$lib/imageDataSrc';
   import type { SeriesGroup } from '$lib/types';
 
   interface Props {
@@ -51,7 +52,7 @@
             {#each group.albums.slice(0, 8) as album (album.cid)}
               <div class="mini-cover-wrapper" title={album.name}>
                 <img
-                  src={album.coverUrl}
+                  use:imageDataSrc={album.coverUrl}
                   alt={album.name}
                   class="mini-cover"
                   loading="lazy"
