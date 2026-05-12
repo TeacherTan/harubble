@@ -227,7 +227,7 @@
   }
 
   .search-trigger:hover:not(.expanded) {
-    width: auto;
+    width: 88px;
   }
 
   .search-trigger.expanded {
@@ -241,9 +241,10 @@
   }
 
   .search-circle {
-    display: grid;
-    place-items: center;
-    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
     height: 100%;
     border: none;
     background: none;
@@ -251,15 +252,31 @@
     cursor: pointer;
     padding: 0;
     margin: 0;
+    flex-shrink: 0;
+  }
+
+  .search-circle::after {
+    content: '搜索';
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-left: 2px;
+    opacity: 0;
+    transition: opacity 0.15s ease 0.1s;
   }
 
   .search-trigger:hover:not(.expanded) .search-circle {
     color: rgba(15, 23, 42, 0.8);
   }
 
+  .search-trigger:hover:not(.expanded) .search-circle::after {
+    opacity: 1;
+  }
+
   .search-circle :global(svg) {
     width: 16px;
     height: 16px;
+    flex-shrink: 0;
   }
 
   .search-indicator {
