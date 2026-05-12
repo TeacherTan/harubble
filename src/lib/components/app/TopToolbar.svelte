@@ -157,11 +157,11 @@
         onclick={handleTriggerClick}
       >
         <Search size={16} aria-hidden="true" />
+        <span class="search-capsule-text">搜索</span>
         {#if hasActiveSearch}
           <span class="search-indicator" aria-hidden="true"></span>
         {/if}
       </button>
-      <span class="search-capsule-text">搜索</span>
     {/if}
   </div>
 
@@ -224,17 +224,10 @@
     transition: width 0.2s ease;
     will-change: width;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    gap: 8px;
   }
 
   .search-trigger:hover:not(.expanded) {
     width: auto;
-    padding: 0 12px;
-    justify-content: flex-start;
   }
 
   .search-trigger.expanded {
@@ -248,20 +241,29 @@
   }
 
   .search-circle {
-    display: grid;
-    place-items: center;
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
     border: none;
     background: none;
     color: rgba(15, 23, 42, 0.55);
     cursor: pointer;
     position: relative;
     padding: 0;
+    white-space: nowrap;
+  }
+
+  .search-trigger:hover:not(.expanded) .search-circle {
+    padding: 0 12px;
+    justify-content: flex-start;
+    color: rgba(15, 23, 42, 0.8);
   }
 
   .search-circle :global(svg) {
+    flex-shrink: 0;
     width: 16px;
     height: 16px;
   }
@@ -270,23 +272,17 @@
     font-family: var(--font-body);
     font-size: 0.75rem;
     font-weight: 500;
-    color: rgba(15, 23, 42, 0.55);
     opacity: 0;
     width: 0;
     overflow: hidden;
     transition:
       opacity 0.15s ease 0.1s,
       width 0.2s ease;
-    pointer-events: none;
   }
 
   .search-trigger:hover:not(.expanded) .search-capsule-text {
     opacity: 1;
     width: auto;
-  }
-
-  .search-trigger:hover:not(.expanded) .search-circle {
-    color: rgba(15, 23, 42, 0.8);
   }
 
   .search-indicator {
