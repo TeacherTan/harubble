@@ -1239,6 +1239,12 @@ export function createAppRuntime() {
         ? downloadController.isSongDownloadInteractionBlocked(currentSong.cid)
         : false;
     },
+    get sidebarCollapsed() {
+      return shellStore.sidebarCollapsed;
+    },
+    toggleSidebar() {
+      shellStore.toggleSidebar();
+    },
     settingsState,
     shellStore,
     libraryController,
