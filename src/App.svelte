@@ -26,10 +26,16 @@
 
 <StatusToastHost />
 
-<div class="app-shell" class:macos-overlay={runtime.isMacOS}>
+<div
+  class="app-shell"
+  class:macos-overlay={runtime.isMacOS}
+  style:--sidebar-width={runtime.sidebarCollapsed ? '56px' : '248px'}
+>
   <AppSidebar
     isMacOS={runtime.isMacOS}
     currentView={runtime.currentView}
+    collapsed={runtime.sidebarCollapsed}
+    onToggle={runtime.toggleSidebar}
     onNavigate={(view) => {
       runtime.shellStore.currentView = view;
     }}
