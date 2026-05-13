@@ -7,9 +7,10 @@
   interface Props {
     currentView: AppView;
     onNavigate: (view: AppView) => void;
+    collapsed?: boolean;
   }
 
-  let { currentView, onNavigate }: Props = $props();
+  let { currentView, onNavigate, collapsed = false }: Props = $props();
 
   const labels = $derived.by(() => {
     void localeState.current;
@@ -29,7 +30,7 @@
   ];
 </script>
 
-<nav class="sidebar-nav" aria-label="Main navigation">
+<nav class="sidebar-nav" class:collapsed aria-label="Main navigation">
   {#each navItems as item (item.view)}
     <button
       type="button"
@@ -37,9 +38,10 @@
       class:active={currentView === item.view}
       onclick={() => onNavigate(item.view)}
       aria-current={currentView === item.view ? 'page' : undefined}
+      title={collapsed ? labels[item.labelKey] : undefined}
     >
       <item.icon size={16} aria-hidden="true" />
-      <span>{labels[item.labelKey]}</span>
+      <span class="nav-label">{labels[item.labelKey]}</span>
     </button>
   {/each}
 </nav>
@@ -50,6 +52,11 @@
     flex-direction: column;
     gap: 2px;
     padding: 0 8px;
+  }
+
+  .sidebar-nav.collapsed {
+    padding: 0 4px;
+    align-items: center;
   }
 
   .nav-item {
@@ -72,6 +79,27 @@
       color var(--motion-fast) ease;
   }
 
+  .collapsed .nav-item {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .nav-label {
+    overflow: hidden;
+    white-space: nowrap;
+    transition:
+      opacity 200ms ease,
+      width 200ms ease;
+  }
+
+  .collapsed .nav-label {
+    opacity: 0;
+    width: 0;
+    pointer-events: none;
+  }
+
   .nav-item:hover {
     background: var(--hover-bg-elevated);
     color: var(--text-primary);
@@ -81,5 +109,11 @@
     background: var(--surface-state);
     color: var(--text-primary);
     font-weight: 600;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-label {
+      transition: none;
+    }
   }
 </style>
