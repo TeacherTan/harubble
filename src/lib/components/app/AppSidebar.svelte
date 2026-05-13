@@ -5,7 +5,7 @@
   import SidebarNav from '$lib/components/app/SidebarNav.svelte';
   import { CollapsibleGroup } from '$lib/components/ui/collapsible-group';
   import PlusIcon from '@lucide/svelte/icons/plus';
-  import PlayIcon from '@lucide/svelte/icons/play';
+  import ListMusicIcon from '@lucide/svelte/icons/list-music';
 
   import type { AppView } from '$lib/features/shell/store.svelte';
   import type { CollectionSummary } from '$lib/types';
@@ -31,7 +31,7 @@
     isCollectionsLoading,
     onSelectCollection,
     onCreateCollection,
-    onPlayCollection,
+    onPlayCollection: _onPlayCollection,
   }: Props = $props();
 
   const officialCollections = $derived.by(() =>
@@ -82,41 +82,17 @@
             aria-label={labels.official}
           >
             {#each officialCollections as collection (collection.id)}
-              <div
+              <button
+                type="button"
                 class="collection-item"
-                class:is-selected={selectedCollectionId === collection.id}
+                class:active={selectedCollectionId === collection.id}
                 role="option"
-                tabindex="0"
                 aria-selected={selectedCollectionId === collection.id}
                 onclick={() => onSelectCollection(collection.id)}
-                onkeydown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onSelectCollection(collection.id);
-                  }
-                }}
               >
-                <span class="collection-name">
-                  <span class="official-badge">★</span>
-                  {collection.name}
-                </span>
-                <span class="collection-item-trailing">
-                  <span class="collection-count">{collection.songCount}</span>
-                  {#if onPlayCollection}
-                    <button
-                      type="button"
-                      class="collection-play-btn"
-                      aria-label={`播放 ${collection.name}`}
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        onPlayCollection(collection.id);
-                      }}
-                    >
-                      <PlayIcon size={12} />
-                    </button>
-                  {/if}
-                </span>
-              </div>
+                <ListMusicIcon size={16} aria-hidden="true" />
+                <span>{collection.name}</span>
+              </button>
             {/each}
           </div>
         </CollapsibleGroup>
@@ -136,38 +112,17 @@
         {/snippet}
         <div class="collection-list" role="listbox" aria-label={labels.custom}>
           {#each userCollections as collection (collection.id)}
-            <div
+            <button
+              type="button"
               class="collection-item"
-              class:is-selected={selectedCollectionId === collection.id}
+              class:active={selectedCollectionId === collection.id}
               role="option"
-              tabindex="0"
               aria-selected={selectedCollectionId === collection.id}
               onclick={() => onSelectCollection(collection.id)}
-              onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onSelectCollection(collection.id);
-                }
-              }}
             >
-              <span class="collection-name">{collection.name}</span>
-              <span class="collection-item-trailing">
-                <span class="collection-count">{collection.songCount}</span>
-                {#if onPlayCollection}
-                  <button
-                    type="button"
-                    class="collection-play-btn"
-                    aria-label={`播放 ${collection.name}`}
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      onPlayCollection(collection.id);
-                    }}
-                  >
-                    <PlayIcon size={12} />
-                  </button>
-                {/if}
-              </span>
-            </div>
+              <ListMusicIcon size={16} aria-hidden="true" />
+              <span>{collection.name}</span>
+            </button>
           {/each}
         </div>
       </CollapsibleGroup>
@@ -187,100 +142,52 @@
     padding: 12px 8px 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
   }
 
   .collection-list {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    padding: 0 8px;
   }
 
   .collection-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    gap: 0.5rem;
     width: 100%;
-    padding: 6px 10px;
+    height: 36px;
+    padding: 0 0.75rem;
     border: none;
     border-radius: 8px;
     background: none;
-    color: var(--text-secondary);
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
     font-family: var(--font-body);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 500;
     cursor: pointer;
     text-align: left;
     transition:
-      background-color 0.15s ease,
-      color 0.15s ease;
+      background var(--motion-fast) ease,
+      color var(--motion-fast) ease;
   }
 
   .collection-item:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--hover-bg-elevated);
     color: var(--text-primary);
   }
 
-  .collection-item.is-selected {
-    background: rgba(var(--accent-rgb), 0.12);
+  .collection-item.active {
+    background: var(--surface-state);
     color: var(--text-primary);
+    font-weight: 600;
   }
 
-  .collection-name {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
+  .collection-item span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .official-badge {
-    color: var(--accent);
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-
-  .collection-count {
-    font-size: 11px;
-    color: var(--text-tertiary);
-    flex-shrink: 0;
-  }
-
-  .collection-item-trailing {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-
-  .collection-play-btn {
-    appearance: none;
-    border: none;
-    background: none;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition:
-      opacity 0.15s ease,
-      background-color 0.15s ease,
-      color 0.15s ease;
-  }
-
-  .collection-item:hover .collection-play-btn {
-    opacity: 1;
-  }
-
-  .collection-play-btn:hover {
-    background: rgba(var(--accent-rgb), 0.15);
-    color: var(--accent);
   }
 
   .section-action-btn {
