@@ -25,6 +25,14 @@ let settingsSheetLoader = $state<Promise<SettingsSheetComponent> | null>(null);
 let downloadTasksSheetLoader =
   $state<Promise<DownloadTasksSheetComponent> | null>(null);
 let currentView = $state<AppView>('home');
+
+const SIDEBAR_COLLAPSED_KEY = 'harubble:sidebar-collapsed';
+
+let sidebarCollapsed = $state(
+  typeof window !== 'undefined' &&
+    localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true'
+);
+
 let sideSheetRequestSeq = 0;
 let initialized = false;
 
@@ -37,6 +45,7 @@ function dispose() {
   settingsOpen = false;
   downloadPanelOpen = false;
   currentView = 'home';
+  sidebarCollapsed = false;
   sideSheetRequestSeq = 0;
   initialized = false;
 }
@@ -178,6 +187,21 @@ export const shellStore = {
   },
   set currentView(value: AppView) {
     currentView = value;
+  },
+  get sidebarCollapsed() {
+    return sidebarCollapsed;
+  },
+  set sidebarCollapsed(value: boolean) {
+    sidebarCollapsed = value;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(value));
+    }
+  },
+  toggleSidebar() {
+    sidebarCollapsed = !sidebarCollapsed;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(sidebarCollapsed));
+    }
   },
   navigateToHome() {
     currentView = 'home';
