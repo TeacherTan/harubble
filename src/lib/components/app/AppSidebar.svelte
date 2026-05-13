@@ -7,6 +7,7 @@
   import PlusIcon from '@lucide/svelte/icons/plus';
   import ListMusicIcon from '@lucide/svelte/icons/list-music';
   import StarIcon from '@lucide/svelte/icons/star';
+  import TagIcon from '@lucide/svelte/icons/tag';
 
   import type { AppView } from '$lib/features/shell/store.svelte';
   import type { CollectionSummary } from '$lib/types';
@@ -48,6 +49,7 @@
       official: m.sidebar_collections_official(),
       custom: m.sidebar_collections_custom(),
       create: m.sidebar_collections_create(),
+      tags: m.shell_nav_tags(),
     };
   });
 </script>
@@ -122,6 +124,19 @@
         {/each}
       </div>
     </CollapsibleGroup>
+  </div>
+
+  <div class="sidebar-bottom">
+    <button
+      type="button"
+      class="bottom-nav-item"
+      class:active={currentView === 'tagEditor'}
+      onclick={() => onNavigate('tagEditor')}
+      aria-current={currentView === 'tagEditor' ? 'page' : undefined}
+    >
+      <TagIcon size={16} aria-hidden="true" />
+      <span>{labels.tags}</span>
+    </button>
   </div>
 </aside>
 
@@ -203,5 +218,42 @@
   .section-action-btn:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--text-primary);
+  }
+
+  .sidebar-bottom {
+    flex-shrink: 0;
+    padding: 8px 16px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    height: 36px;
+    padding: 0 0.75rem;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background var(--motion-fast) ease,
+      color var(--motion-fast) ease;
+  }
+
+  .bottom-nav-item:hover {
+    background: var(--hover-bg-elevated);
+    color: var(--text-primary);
+  }
+
+  .bottom-nav-item.active {
+    background: var(--surface-state);
+    color: var(--text-primary);
+    font-weight: 600;
   }
 </style>
