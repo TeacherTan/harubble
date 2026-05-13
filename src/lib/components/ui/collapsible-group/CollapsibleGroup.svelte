@@ -7,6 +7,7 @@
     title: string;
     icon?: Component<{ size?: number }>;
     defaultExpanded?: boolean;
+    empty?: boolean;
     children: Snippet;
     actions?: Snippet;
   }
@@ -15,6 +16,7 @@
     title,
     icon,
     defaultExpanded = false,
+    empty = false,
     children,
     actions,
   }: Props = $props();
@@ -22,6 +24,7 @@
   let expanded = $state(defaultExpanded);
 
   function toggle() {
+    if (empty) return;
     expanded = !expanded;
   }
 
@@ -34,6 +37,7 @@
   <button
     type="button"
     class="collapsible-group-header"
+    class:is-empty={empty}
     aria-expanded={expanded}
     onclick={toggle}
   >
@@ -49,12 +53,16 @@
         {@render actions()}
       </span>
     {/if}
-    <span class="collapsible-group-chevron" class:is-expanded={expanded}>
+    <span
+      class="collapsible-group-chevron"
+      class:is-expanded={expanded}
+      class:is-disabled={empty}
+    >
       <ChevronRightIcon size={12} />
     </span>
   </button>
 
-  {#if expanded}
+  {#if expanded && !empty}
     <div class="collapsible-group-content" transition:slide={{ duration: 200 }}>
       {@render children()}
     </div>
@@ -90,6 +98,10 @@
 
   .collapsible-group-header:hover {
     background: var(--hover-bg-elevated, rgba(255, 255, 255, 0.06));
+  }
+
+  .collapsible-group-header.is-empty {
+    cursor: default;
   }
 
   .collapsible-group-icon {
@@ -132,6 +144,10 @@
     color: var(--text-tertiary);
     flex-shrink: 0;
     transition: transform 0.2s ease;
+  }
+
+  .collapsible-group-chevron.is-disabled {
+    opacity: 0.3;
   }
 
   .collapsible-group-actions + .collapsible-group-chevron {

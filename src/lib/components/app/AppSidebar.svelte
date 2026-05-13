@@ -29,7 +29,7 @@
     onNavigate,
     collections,
     selectedCollectionId,
-    isCollectionsLoading,
+    isCollectionsLoading: _isCollectionsLoading,
     onSelectCollection,
     onCreateCollection,
     onPlayCollection: _onPlayCollection,
@@ -48,8 +48,6 @@
       official: m.sidebar_collections_official(),
       custom: m.sidebar_collections_custom(),
       create: m.sidebar_collections_create(),
-      loading: m.sidebar_collections_loading(),
-      empty: m.sidebar_collections_empty(),
     };
   });
 </script>
@@ -70,64 +68,60 @@
   </div>
 
   <div class="sidebar-collections-region">
-    {#if isCollectionsLoading}
-      <div class="collection-loading">{labels.loading}</div>
-    {:else if collections.length === 0}
-      <div class="collection-empty">{labels.empty}</div>
-    {:else}
-      {#if officialCollections.length > 0}
-        <CollapsibleGroup title={labels.official} icon={StarIcon}>
-          <div
-            class="collection-list"
-            role="listbox"
-            aria-label={labels.official}
-          >
-            {#each officialCollections as collection (collection.id)}
-              <button
-                type="button"
-                class="collection-item"
-                class:active={selectedCollectionId === collection.id}
-                role="option"
-                aria-selected={selectedCollectionId === collection.id}
-                onclick={() => onSelectCollection(collection.id)}
-              >
-                <ListMusicIcon size={16} aria-hidden="true" />
-                <span>{collection.name}</span>
-              </button>
-            {/each}
-          </div>
-        </CollapsibleGroup>
-      {/if}
-
-      <CollapsibleGroup title={labels.custom} icon={ListMusicIcon}>
-        {#snippet actions()}
+    <CollapsibleGroup
+      title={labels.official}
+      icon={StarIcon}
+      empty={officialCollections.length === 0}
+    >
+      <div class="collection-list" role="listbox" aria-label={labels.official}>
+        {#each officialCollections as collection (collection.id)}
           <button
             type="button"
-            class="section-action-btn"
-            title={labels.create}
-            aria-label={labels.create}
-            onclick={onCreateCollection}
+            class="collection-item"
+            class:active={selectedCollectionId === collection.id}
+            role="option"
+            aria-selected={selectedCollectionId === collection.id}
+            onclick={() => onSelectCollection(collection.id)}
           >
-            <PlusIcon size={14} />
+            <ListMusicIcon size={16} aria-hidden="true" />
+            <span>{collection.name}</span>
           </button>
-        {/snippet}
-        <div class="collection-list" role="listbox" aria-label={labels.custom}>
-          {#each userCollections as collection (collection.id)}
-            <button
-              type="button"
-              class="collection-item"
-              class:active={selectedCollectionId === collection.id}
-              role="option"
-              aria-selected={selectedCollectionId === collection.id}
-              onclick={() => onSelectCollection(collection.id)}
-            >
-              <ListMusicIcon size={16} aria-hidden="true" />
-              <span>{collection.name}</span>
-            </button>
-          {/each}
-        </div>
-      </CollapsibleGroup>
-    {/if}
+        {/each}
+      </div>
+    </CollapsibleGroup>
+
+    <CollapsibleGroup
+      title={labels.custom}
+      icon={ListMusicIcon}
+      empty={userCollections.length === 0}
+    >
+      {#snippet actions()}
+        <button
+          type="button"
+          class="section-action-btn"
+          title={labels.create}
+          aria-label={labels.create}
+          onclick={onCreateCollection}
+        >
+          <PlusIcon size={14} />
+        </button>
+      {/snippet}
+      <div class="collection-list" role="listbox" aria-label={labels.custom}>
+        {#each userCollections as collection (collection.id)}
+          <button
+            type="button"
+            class="collection-item"
+            class:active={selectedCollectionId === collection.id}
+            role="option"
+            aria-selected={selectedCollectionId === collection.id}
+            onclick={() => onSelectCollection(collection.id)}
+          >
+            <ListMusicIcon size={16} aria-hidden="true" />
+            <span>{collection.name}</span>
+          </button>
+        {/each}
+      </div>
+    </CollapsibleGroup>
   </div>
 </aside>
 
@@ -209,12 +203,5 @@
   .section-action-btn:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--text-primary);
-  }
-
-  .collection-loading,
-  .collection-empty {
-    padding: 12px 10px;
-    font-size: 12px;
-    color: var(--text-tertiary);
   }
 </style>
