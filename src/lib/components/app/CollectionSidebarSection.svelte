@@ -2,8 +2,8 @@
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
   import PlusIcon from '@lucide/svelte/icons/plus';
-  import ImportIcon from '@lucide/svelte/icons/download';
   import PlayIcon from '@lucide/svelte/icons/play';
+  import { CollapsibleGroup } from '$lib/components/ui/collapsible-group';
   import type { CollectionSummary } from '$lib/types';
 
   interface Props {
@@ -22,7 +22,7 @@
     isLoading,
     onSelect,
     onCreate,
-    onImport,
+    onImport: _onImport,
     onPlay,
   }: Props = $props();
 
@@ -37,7 +37,8 @@
     void localeState.current;
     return {
       title: m.sidebar_collections_title(),
-      import: m.sidebar_collections_import(),
+      official: m.sidebar_collections_official(),
+      custom: m.sidebar_collections_custom(),
       create: m.sidebar_collections_create(),
       loading: m.sidebar_collections_loading(),
       empty: m.sidebar_collections_empty(),
@@ -46,109 +47,109 @@
 </script>
 
 <div class="collection-sidebar-section">
-  <div class="section-header">
-    <span class="section-title">{labels.title}</span>
-    <div class="section-actions">
-      <button
-        type="button"
-        class="section-action-btn"
-        title={labels.import}
-        aria-label={labels.import}
-        onclick={onImport}
-      >
-        <ImportIcon size={14} />
-      </button>
-      <button
-        type="button"
-        class="section-action-btn"
-        title={labels.create}
-        aria-label={labels.create}
-        onclick={onCreate}
-      >
-        <PlusIcon size={14} />
-      </button>
-    </div>
-  </div>
-
   {#if isLoading}
     <div class="collection-loading">{labels.loading}</div>
   {:else if collections.length === 0}
     <div class="collection-empty">{labels.empty}</div>
   {:else}
-    <div class="collection-list" role="listbox" aria-label={labels.title}>
-      {#each officialCollections as collection (collection.id)}
+    {#if officialCollections.length > 0}
+      <CollapsibleGroup title={labels.official}>
         <div
-          class="collection-item"
-          class:is-selected={selectedCollectionId === collection.id}
-          class:is-official={true}
-          role="option"
-          tabindex="0"
-          aria-selected={selectedCollectionId === collection.id}
-          onclick={() => onSelect(collection.id)}
-          onkeydown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onSelect(collection.id);
-            }
-          }}
+          class="collection-list"
+          role="listbox"
+          aria-label={labels.official}
         >
-          <span class="collection-name">
-            <span class="official-badge">★</span>
-            {collection.name}
-          </span>
-          <span class="collection-item-trailing">
-            <span class="collection-count">{collection.songCount}</span>
-            {#if onPlay}
-              <button
-                type="button"
-                class="collection-play-btn"
-                aria-label={`播放 ${collection.name}`}
-                onclick={(e) => {
-                  e.stopPropagation();
-                  onPlay(collection.id);
-                }}
-              >
-                <PlayIcon size={12} />
-              </button>
-            {/if}
-          </span>
+          {#each officialCollections as collection (collection.id)}
+            <div
+              class="collection-item"
+              class:is-selected={selectedCollectionId === collection.id}
+              class:is-official={true}
+              role="option"
+              tabindex="0"
+              aria-selected={selectedCollectionId === collection.id}
+              onclick={() => onSelect(collection.id)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelect(collection.id);
+                }
+              }}
+            >
+              <span class="collection-name">
+                <span class="official-badge">★</span>
+                {collection.name}
+              </span>
+              <span class="collection-item-trailing">
+                <span class="collection-count">{collection.songCount}</span>
+                {#if onPlay}
+                  <button
+                    type="button"
+                    class="collection-play-btn"
+                    aria-label={`播放 ${collection.name}`}
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      onPlay(collection.id);
+                    }}
+                  >
+                    <PlayIcon size={12} />
+                  </button>
+                {/if}
+              </span>
+            </div>
+          {/each}
         </div>
-      {/each}
-      {#each userCollections as collection (collection.id)}
-        <div
-          class="collection-item"
-          class:is-selected={selectedCollectionId === collection.id}
-          role="option"
-          tabindex="0"
-          aria-selected={selectedCollectionId === collection.id}
-          onclick={() => onSelect(collection.id)}
-          onkeydown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onSelect(collection.id);
-            }
-          }}
+      </CollapsibleGroup>
+    {/if}
+
+    <CollapsibleGroup title={labels.custom}>
+      {#snippet actions()}
+        <button
+          type="button"
+          class="section-action-btn"
+          title={labels.create}
+          aria-label={labels.create}
+          onclick={onCreate}
         >
-          <span class="collection-name">{collection.name}</span>
-          <span class="collection-item-trailing">
-            <span class="collection-count">{collection.songCount}</span>
-            {#if onPlay}
-              <button
-                type="button"
-                class="collection-play-btn"
-                aria-label={`播放 ${collection.name}`}
-                onclick={(e) => {
-                  e.stopPropagation();
-                  onPlay(collection.id);
-                }}
-              >
-                <PlayIcon size={12} />
-              </button>
-            {/if}
-          </span>
-        </div>
-      {/each}
-    </div>
+          <PlusIcon size={14} />
+        </button>
+      {/snippet}
+      <div class="collection-list" role="listbox" aria-label={labels.custom}>
+        {#each userCollections as collection (collection.id)}
+          <div
+            class="collection-item"
+            class:is-selected={selectedCollectionId === collection.id}
+            role="option"
+            tabindex="0"
+            aria-selected={selectedCollectionId === collection.id}
+            onclick={() => onSelect(collection.id)}
+            onkeydown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(collection.id);
+              }
+            }}
+          >
+            <span class="collection-name">{collection.name}</span>
+            <span class="collection-item-trailing">
+              <span class="collection-count">{collection.songCount}</span>
+              {#if onPlay}
+                <button
+                  type="button"
+                  class="collection-play-btn"
+                  aria-label={`播放 ${collection.name}`}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    onPlay(collection.id);
+                  }}
+                >
+                  <PlayIcon size={12} />
+                </button>
+              {/if}
+            </span>
+          </div>
+        {/each}
+      </div>
+    </CollapsibleGroup>
   {/if}
 </div>
 
@@ -156,49 +157,8 @@
   .collection-sidebar-section {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     padding: 0 0 12px;
-  }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 4px 4px;
-  }
-
-  .section-title {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-tertiary);
-  }
-
-  .section-actions {
-    display: flex;
-    gap: 2px;
-  }
-
-  .section-action-btn {
-    appearance: none;
-    border: none;
-    background: none;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease;
-  }
-
-  .section-action-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-primary);
   }
 
   .collection-list {
@@ -292,6 +252,27 @@
   .collection-play-btn:hover {
     background: rgba(var(--accent-rgb), 0.15);
     color: var(--accent);
+  }
+
+  .section-action-btn {
+    appearance: none;
+    border: none;
+    background: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .section-action-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
   }
 
   .collection-loading,
