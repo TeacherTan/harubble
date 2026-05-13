@@ -44,6 +44,23 @@
     logoExpandReady,
   }: Props = $props();
 
+  // contentCollapsed 延迟跟随 collapsed，由动画回调驱动
+  let contentCollapsed = $state(collapsed);
+
+  function handleLogoRotateEnd() {
+    if (!collapsed) {
+      contentCollapsed = false;
+    }
+    onLogoRotateEnd?.();
+  }
+
+  function handleLogoMoveEnd() {
+    if (collapsed) {
+      contentCollapsed = true;
+    }
+    onLogoMoveEnd?.();
+  }
+
   const officialCollections = $derived.by(() =>
     collections.filter((c) => c.isOfficial)
   );
@@ -62,7 +79,7 @@
   });
 </script>
 
-<aside class="sidebar" class:collapsed>
+<aside class="sidebar" class:collapsed={contentCollapsed}>
   {#if isMacOS}
     <div
       class="sidebar-drag-region"
@@ -74,16 +91,16 @@
   <BrandLogo
     {isMacOS}
     {collapsed}
-    onRotateEnd={onLogoRotateEnd}
-    onMoveEnd={onLogoMoveEnd}
+    onRotateEnd={handleLogoRotateEnd}
+    onMoveEnd={handleLogoMoveEnd}
     expandReady={logoExpandReady}
   />
 
   <div class="sidebar-nav-region">
-    <SidebarNav {currentView} {onNavigate} {collapsed} />
+    <SidebarNav {currentView} {onNavigate} collapsed={contentCollapsed} />
   </div>
 
-  <div class="sidebar-collections-collapsed" class:hidden={!collapsed}>
+  <div class="sidebar-collections-collapsed" class:hidden={!contentCollapsed}>
     <button
       type="button"
       class="collapsed-collection-btn"
@@ -103,7 +120,7 @@
     </button>
   </div>
 
-  <div class="sidebar-collections-region" class:hidden={collapsed}>
+  <div class="sidebar-collections-region" class:hidden={contentCollapsed}>
     <CollapsibleGroup
       title={labels.official}
       icon={StarIcon}
@@ -160,14 +177,14 @@
     </CollapsibleGroup>
   </div>
 
-  <div class="sidebar-bottom" class:collapsed>
+  <div class="sidebar-bottom" class:collapsed={contentCollapsed}>
     <button
       type="button"
       class="bottom-nav-item"
       class:active={currentView === 'tagEditor'}
       onclick={() => onNavigate('tagEditor')}
       aria-current={currentView === 'tagEditor' ? 'page' : undefined}
-      title={collapsed ? labels.tags : undefined}
+      title={contentCollapsed ? labels.tags : undefined}
     >
       <TagIcon size={16} aria-hidden="true" />
       <span class="bottom-nav-label">{labels.tags}</span>
