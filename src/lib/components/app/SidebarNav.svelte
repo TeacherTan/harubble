@@ -55,7 +55,7 @@
   }
 
   .sidebar-nav.collapsed {
-    padding: 0 4px;
+    padding: 0;
     align-items: center;
   }
 
@@ -89,15 +89,19 @@
   .nav-label {
     overflow: hidden;
     white-space: nowrap;
+    opacity: 1;
     transition:
-      opacity 200ms ease,
-      width 200ms ease;
+      opacity 200ms ease 300ms,
+      width 200ms ease 300ms;
   }
 
   .collapsed .nav-label {
     opacity: 0;
     width: 0;
     pointer-events: none;
+    transition:
+      opacity 150ms ease,
+      width 150ms ease;
   }
 
   .nav-item:hover {

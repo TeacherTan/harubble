@@ -21,6 +21,7 @@
     actions,
   }: Props = $props();
 
+  // svelte-ignore state_referenced_locally
   let expanded = $state(defaultExpanded);
 
   function toggle() {
@@ -28,7 +29,7 @@
     expanded = !expanded;
   }
 
-  function handleActionsClick(e: MouseEvent) {
+  function handleActionsClick(e: MouseEvent | KeyboardEvent) {
     e.stopPropagation();
   }
 </script>
@@ -49,7 +50,11 @@
     <span class="collapsible-group-title">{title}</span>
     {#if actions}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span class="collapsible-group-actions" onclick={handleActionsClick}>
+      <span
+        class="collapsible-group-actions"
+        onclick={handleActionsClick}
+        onkeydown={handleActionsClick}
+      >
         {@render actions()}
       </span>
     {/if}
@@ -71,7 +76,8 @@
 
 {#snippet iconRenderer()}
   {#if icon}
-    <svelte:component this={icon} size={16} />
+    {@const Icon = icon}
+    <Icon size={16} />
   {/if}
 {/snippet}
 

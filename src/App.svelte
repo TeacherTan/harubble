@@ -12,8 +12,39 @@
   import CollectionDetailPanel from '$lib/components/app/CollectionDetailPanel.svelte';
   import CollectionFormDialog from '$lib/components/app/CollectionFormDialog.svelte';
   import AlbumOverview from '$lib/components/app/AlbumOverview.svelte';
+  import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
+  import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
   const runtime = createAppRuntime();
+
+  /**
+   * 侧边栏宽度由 BrandLogo 动画回调驱动：
+   * - 收起：旋转 → 移动 → onMoveEnd → 收起宽度
+   * - 展开：旋转 → onRotateEnd → 展开宽度 → 宽度过渡完 → expandReady 通知移动
+   */
+  const SIDEBAR_TRANSITION_DUR = 300;
+
+  let sidebarWidth = $state(runtime.sidebarCollapsed ? '56px' : '248px');
+  let logoExpandReady = $state(false);
+
+  function handleRotateEnd() {
+    if (!runtime.sidebarCollapsed) {
+      // 展开方向：旋转完毕后立即展开宽度
+      sidebarWidth = '248px';
+      // 等宽度过渡完成后通知 BrandLogo 开始移动
+      setTimeout(() => {
+        logoExpandReady = true;
+      }, SIDEBAR_TRANSITION_DUR + 50);
+    }
+  }
+
+  function handleMoveEnd() {
+    if (runtime.sidebarCollapsed) {
+      // 收起方向：移动完毕后收起宽度
+      sidebarWidth = '56px';
+    }
+    logoExpandReady = false;
+  }
 </script>
 
 {#if runtime.isMacOS}
@@ -29,13 +60,12 @@
 <div
   class="app-shell"
   class:macos-overlay={runtime.isMacOS}
-  style:--sidebar-width={runtime.sidebarCollapsed ? '56px' : '248px'}
+  style:--sidebar-width={sidebarWidth}
 >
   <AppSidebar
     isMacOS={runtime.isMacOS}
     currentView={runtime.currentView}
     collapsed={runtime.sidebarCollapsed}
-    onToggle={runtime.toggleSidebar}
     onNavigate={(view) => {
       runtime.shellStore.currentView = view;
     }}
@@ -44,7 +74,25 @@
     isCollectionsLoading={runtime.collectionController.isLoading}
     onSelectCollection={runtime.collectionController.selectCollection}
     onCreateCollection={runtime.collectionController.openCreateDialog}
+    onLogoRotateEnd={handleRotateEnd}
+    onLogoMoveEnd={handleMoveEnd}
+    {logoExpandReady}
   />
+
+  <button
+    type="button"
+    class="sidebar-toggle-btn"
+    onclick={runtime.toggleSidebar}
+    aria-label={runtime.sidebarCollapsed
+      ? 'Expand sidebar'
+      : 'Collapse sidebar'}
+  >
+    {#if runtime.sidebarCollapsed}
+      <ChevronRightIcon size={14} />
+    {:else}
+      <ChevronLeftIcon size={14} />
+    {/if}
+  </button>
 
   <section class="main-region">
     {#if runtime.isMacOS}

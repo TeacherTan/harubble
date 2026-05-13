@@ -419,9 +419,38 @@ img[data-image-state='error'] {
   flex-direction: column;
 }
 
+.sidebar-toggle-btn {
+  position: absolute;
+  left: var(--sidebar-width, 248px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition:
+    left 300ms ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--hover-bg-elevated);
+  color: var(--text-primary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app-shell,
-  .sidebar {
+  .sidebar,
+  .sidebar-toggle-btn,
+  .macos-window-drag-region {
     transition: none;
   }
 }
@@ -872,11 +901,12 @@ img[data-image-state='error'] {
 .macos-window-drag-region {
   position: fixed;
   top: 0;
-  left: 0;
+  left: var(--sidebar-width, 248px);
   right: 0;
   height: 56px;
   z-index: 90;
   user-select: none;
+  transition: left 300ms ease;
 }
 
 .sidebar-drag-region,
