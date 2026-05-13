@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte';
+  import { gsap, Flip, getMotionDuration, killTweens } from '$lib/design/gsap';
 
   interface Props {
     isMacOS?: boolean;
@@ -35,35 +36,24 @@
   const ROW1 = BRAND_LETTERS.slice(0, 6);
   const ROW2 = BRAND_LETTERS.slice(6);
 
-  const charEls: (HTMLSpanElement | null)[] = $state(Array(12).fill(null));
-
-  const STAGGER = 30;
+  const STAGGER = 0.03;
   const ROTATE_DUR = 280;
   const MOVE_DUR = 320;
-  const TOTAL_ROTATE = 11 * STAGGER + ROTATE_DUR;
-  const TOTAL_MOVE = 11 * STAGGER + MOVE_DUR;
 
+  const charEls: (HTMLSpanElement | null)[] = $state(Array(12).fill(null));
   let layoutCollapsed = $state(collapsed);
-  let charTransforms: string[] = $state(Array(12).fill(''));
   let animating = $state(false);
   let prevCollapsed: boolean | null = $state(null);
 
-  /** 展开时：等侧边栏宽度展开后再开始移动阶段 */
+  let currentTimeline: gsap.core.Timeline | null = null;
   let expandResolve: (() => void) | null = null;
 
-  // 当 expandReady 变为 true 时，解除等待
   $effect(() => {
     if (expandReady && expandResolve) {
       expandResolve();
       expandResolve = null;
     }
   });
-
-  function getRect(el: HTMLSpanElement | null) {
-    if (!el) return { x: 0, y: 0 };
-    const r = el.getBoundingClientRect();
-    return { x: r.left, y: r.top };
-  }
 
   $effect(() => {
     const curr = collapsed;
@@ -80,61 +70,71 @@
     void runAnimation(curr);
   });
 
+  $effect(() => {
+    return () => {
+      currentTimeline?.kill();
+      killTweens(charEls.filter(Boolean));
+    };
+  });
+
   async function runAnimation(toCollapsed: boolean) {
+    if (currentTimeline) {
+      currentTimeline.kill();
+      currentTimeline = null;
+    }
+    if (expandResolve) {
+      expandResolve();
+      expandResolve = null;
+    }
+
+    const validEls = charEls.filter((el): el is HTMLSpanElement => el !== null);
+    if (validEls.length === 0) return;
+
     animating = true;
+    const rotateDur = getMotionDuration(ROTATE_DUR);
+    const moveDur = getMotionDuration(MOVE_DUR);
     const targetAngle = toCollapsed ? -90 : 0;
 
-    // ── 阶段1: 原地旋转 ──
-    charTransforms = charEls.map((_, i) => {
-      const d = i * STAGGER;
-      return `transform: rotate(${targetAngle}deg); transition: transform ${ROTATE_DUR}ms cubic-bezier(0.2, 0, 0, 1) ${d}ms;`;
+    // ── Phase 1: Stagger Rotate ──
+    const tl = gsap.timeline();
+    currentTimeline = tl;
+
+    await new Promise<void>((resolve) => {
+      tl.to(validEls, {
+        rotation: targetAngle,
+        duration: rotateDur,
+        stagger: STAGGER,
+        ease: 'power3.out',
+        onComplete: resolve,
+      });
     });
 
-    await sleep(TOTAL_ROTATE + 50);
     onRotateEnd?.();
 
     if (!toCollapsed) {
-      // 展开：旋转完毕后等父组件展开宽度
       await new Promise<void>((resolve) => {
         expandResolve = resolve;
       });
     }
 
-    // ── 阶段2: FLIP 移动 ──
-    const currentRects = charEls.map(getRect);
+    // ── Phase 2: FLIP Move ──
+    const state = Flip.getState(validEls);
 
-    // 瞬间切换布局以测量目标位置
     layoutCollapsed = toCollapsed;
-    charTransforms = charEls.map(() => `transform: rotate(${targetAngle}deg);`);
     await tick();
-    await new Promise((r) => requestAnimationFrame(r));
 
-    const targetRects = charEls.map(getRect);
-
-    // INVERT
-    charTransforms = charEls.map((_, i) => {
-      const dx = currentRects[i].x - targetRects[i].x;
-      const dy = currentRects[i].y - targetRects[i].y;
-      return `transform: rotate(${targetAngle}deg) translate(${dx}px, ${dy}px); transition: none;`;
+    const flipTl = Flip.from(state, {
+      duration: moveDur,
+      stagger: STAGGER,
+      ease: 'power2.out',
+      absolute: true,
+      onComplete: () => {
+        onMoveEnd?.();
+        animating = false;
+        currentTimeline = null;
+      },
     });
-    await tick();
-    await new Promise((r) => requestAnimationFrame(r));
-
-    // PLAY
-    charTransforms = charEls.map((_, i) => {
-      const d = i * STAGGER;
-      return `transform: rotate(${targetAngle}deg) translate(0, 0); transition: transform ${MOVE_DUR}ms cubic-bezier(0.16, 1, 0.3, 1) ${d}ms;`;
-    });
-
-    await sleep(TOTAL_MOVE + 50);
-    onMoveEnd?.();
-
-    charTransforms = Array(12).fill('');
-    animating = false;
-  }
-
-  function sleep(ms: number): Promise<void> {
-    return new Promise((r) => setTimeout(r, ms));
+    currentTimeline = flipTl;
   }
 </script>
 
@@ -150,7 +150,6 @@
         class="brand-char"
         class:outline={letter.outline}
         class:rotated={layoutCollapsed && !animating}
-        style={charTransforms[i] || null}
         bind:this={charEls[i]}>{letter.char}</span
       >
     {/each}
@@ -161,7 +160,6 @@
         class="brand-char"
         class:outline={letter.outline}
         class:rotated={layoutCollapsed && !animating}
-        style={charTransforms[i + 6] || null}
         bind:this={charEls[i + 6]}>{letter.char}</span
       >
     {/each}
