@@ -8,6 +8,7 @@
   import ListMusicIcon from '@lucide/svelte/icons/list-music';
   import StarIcon from '@lucide/svelte/icons/star';
   import TagIcon from '@lucide/svelte/icons/tag';
+  import PanelLeftIcon from '@lucide/svelte/icons/panel-left';
 
   import type { AppView } from '$lib/features/shell/store.svelte';
   import type { CollectionSummary } from '$lib/types';
@@ -22,6 +23,8 @@
     onSelectCollection: (id: string) => void;
     onCreateCollection: () => void;
     onPlayCollection?: (id: string) => void;
+    collapsed: boolean;
+    onToggle: () => void;
   }
 
   let {
@@ -34,6 +37,8 @@
     onSelectCollection,
     onCreateCollection,
     onPlayCollection: _onPlayCollection,
+    collapsed,
+    onToggle,
   }: Props = $props();
 
   const officialCollections = $derived.by(() =>
@@ -54,7 +59,7 @@
   });
 </script>
 
-<aside class="sidebar">
+<aside class="sidebar" class:collapsed>
   {#if isMacOS}
     <div
       class="sidebar-drag-region"
@@ -63,79 +68,97 @@
     ></div>
   {/if}
 
-  <BrandLogo {isMacOS} />
+  <div class="sidebar-header" class:macos={isMacOS}>
+    <button
+      type="button"
+      class="collapse-toggle"
+      onclick={onToggle}
+      aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+    >
+      <PanelLeftIcon size={16} />
+    </button>
+  </div>
+
+  <BrandLogo {isMacOS} {collapsed} />
 
   <div class="sidebar-nav-region">
-    <SidebarNav {currentView} {onNavigate} />
+    <SidebarNav {currentView} {onNavigate} {collapsed} />
   </div>
 
-  <div class="sidebar-collections-region">
-    <CollapsibleGroup
-      title={labels.official}
-      icon={StarIcon}
-      empty={officialCollections.length === 0}
-    >
-      <div class="collection-list" role="listbox" aria-label={labels.official}>
-        {#each officialCollections as collection (collection.id)}
-          <button
-            type="button"
-            class="collection-item"
-            class:active={selectedCollectionId === collection.id}
-            role="option"
-            aria-selected={selectedCollectionId === collection.id}
-            onclick={() => onSelectCollection(collection.id)}
-          >
-            <ListMusicIcon size={16} aria-hidden="true" />
-            <span>{collection.name}</span>
-          </button>
-        {/each}
-      </div>
-    </CollapsibleGroup>
-
-    <CollapsibleGroup
-      title={labels.custom}
-      icon={ListMusicIcon}
-      empty={userCollections.length === 0}
-    >
-      {#snippet actions()}
-        <button
-          type="button"
-          class="section-action-btn"
-          title={labels.create}
-          aria-label={labels.create}
-          onclick={onCreateCollection}
+  {#if !collapsed}
+    <div class="sidebar-collections-region">
+      <CollapsibleGroup
+        title={labels.official}
+        icon={StarIcon}
+        empty={officialCollections.length === 0}
+      >
+        <div
+          class="collection-list"
+          role="listbox"
+          aria-label={labels.official}
         >
-          <PlusIcon size={14} />
-        </button>
-      {/snippet}
-      <div class="collection-list" role="listbox" aria-label={labels.custom}>
-        {#each userCollections as collection (collection.id)}
+          {#each officialCollections as collection (collection.id)}
+            <button
+              type="button"
+              class="collection-item"
+              class:active={selectedCollectionId === collection.id}
+              role="option"
+              aria-selected={selectedCollectionId === collection.id}
+              onclick={() => onSelectCollection(collection.id)}
+            >
+              <ListMusicIcon size={16} aria-hidden="true" />
+              <span>{collection.name}</span>
+            </button>
+          {/each}
+        </div>
+      </CollapsibleGroup>
+
+      <CollapsibleGroup
+        title={labels.custom}
+        icon={ListMusicIcon}
+        empty={userCollections.length === 0}
+      >
+        {#snippet actions()}
           <button
             type="button"
-            class="collection-item"
-            class:active={selectedCollectionId === collection.id}
-            role="option"
-            aria-selected={selectedCollectionId === collection.id}
-            onclick={() => onSelectCollection(collection.id)}
+            class="section-action-btn"
+            title={labels.create}
+            aria-label={labels.create}
+            onclick={onCreateCollection}
           >
-            <ListMusicIcon size={16} aria-hidden="true" />
-            <span>{collection.name}</span>
+            <PlusIcon size={14} />
           </button>
-        {/each}
-      </div>
-    </CollapsibleGroup>
-  </div>
+        {/snippet}
+        <div class="collection-list" role="listbox" aria-label={labels.custom}>
+          {#each userCollections as collection (collection.id)}
+            <button
+              type="button"
+              class="collection-item"
+              class:active={selectedCollectionId === collection.id}
+              role="option"
+              aria-selected={selectedCollectionId === collection.id}
+              onclick={() => onSelectCollection(collection.id)}
+            >
+              <ListMusicIcon size={16} aria-hidden="true" />
+              <span>{collection.name}</span>
+            </button>
+          {/each}
+        </div>
+      </CollapsibleGroup>
+    </div>
+  {/if}
 
-  <div class="sidebar-bottom">
+  <div class="sidebar-bottom" class:collapsed>
     <button
       type="button"
       class="bottom-nav-item"
       class:active={currentView === 'tagEditor'}
       onclick={() => onNavigate('tagEditor')}
       aria-current={currentView === 'tagEditor' ? 'page' : undefined}
+      title={collapsed ? labels.tags : undefined}
     >
       <TagIcon size={16} aria-hidden="true" />
-      <span>{labels.tags}</span>
+      <span class="bottom-nav-label">{labels.tags}</span>
     </button>
   </div>
 </aside>
@@ -255,5 +278,73 @@
     background: var(--surface-state);
     color: var(--text-primary);
     font-weight: 600;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 12px 12px 0;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header.macos {
+    padding-top: 40px;
+  }
+
+  .collapsed .sidebar-header {
+    justify-content: center;
+    padding: 12px 0 0;
+  }
+
+  .collapsed .sidebar-header.macos {
+    padding-top: 40px;
+  }
+
+  .collapse-toggle {
+    appearance: none;
+    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .collapse-toggle:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+  }
+
+  .sidebar-bottom.collapsed .bottom-nav-item {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .bottom-nav-label {
+    overflow: hidden;
+    white-space: nowrap;
+    transition:
+      opacity 200ms ease,
+      width 200ms ease;
+  }
+
+  .collapsed .bottom-nav-label {
+    opacity: 0;
+    width: 0;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bottom-nav-label {
+      transition: none;
+    }
   }
 </style>
