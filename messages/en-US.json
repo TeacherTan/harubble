@@ -311,6 +311,8 @@
   "sidebar_collections_create": "New collection",
   "sidebar_collections_loading": "Loading…",
   "sidebar_collections_empty": "No collections",
+  "sidebar_collections_official": "Official",
+  "sidebar_collections_custom": "My Collections",
   "tag_editor_loading": "Loading...",
   "tag_editor_select_album_hint": "Select an album from the sidebar to edit tags",
   "tag_editor_back_to_album": "Back to album",
