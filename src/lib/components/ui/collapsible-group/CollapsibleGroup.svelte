@@ -1,16 +1,23 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
   import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-  import type { Snippet } from 'svelte';
+  import type { Snippet, Component } from 'svelte';
 
   interface Props {
     title: string;
+    icon?: Component<{ size?: number }>;
     defaultExpanded?: boolean;
     children: Snippet;
     actions?: Snippet;
   }
 
-  let { title, defaultExpanded = false, children, actions }: Props = $props();
+  let {
+    title,
+    icon,
+    defaultExpanded = false,
+    children,
+    actions,
+  }: Props = $props();
 
   let expanded = $state(defaultExpanded);
 
@@ -30,9 +37,11 @@
     aria-expanded={expanded}
     onclick={toggle}
   >
-    <span class="collapsible-group-chevron" class:is-expanded={expanded}>
-      <ChevronRightIcon size={12} />
-    </span>
+    {#if icon}
+      <span class="collapsible-group-icon">
+        {@render iconRenderer()}
+      </span>
+    {/if}
     <span class="collapsible-group-title">{title}</span>
     {#if actions}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -40,6 +49,9 @@
         {@render actions()}
       </span>
     {/if}
+    <span class="collapsible-group-chevron" class:is-expanded={expanded}>
+      <ChevronRightIcon size={12} />
+    </span>
   </button>
 
   {#if expanded}
@@ -48,6 +60,12 @@
     </div>
   {/if}
 </div>
+
+{#snippet iconRenderer()}
+  {#if icon}
+    <svelte:component this={icon} size={16} />
+  {/if}
+{/snippet}
 
 <style>
   .collapsible-group {
@@ -61,37 +79,32 @@
     background: none;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.5rem;
     width: 100%;
-    padding: 6px 8px;
-    border-radius: 6px;
+    height: 36px;
+    padding: 0 0.75rem;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: background var(--motion-fast, 0.15s) ease;
   }
 
   .collapsible-group-header:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--hover-bg-elevated, rgba(255, 255, 255, 0.06));
   }
 
-  .collapsible-group-chevron {
+  .collapsible-group-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-tertiary);
-    transition: transform 0.2s ease;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
     flex-shrink: 0;
   }
 
-  .collapsible-group-chevron.is-expanded {
-    transform: rotate(90deg);
-  }
-
   .collapsible-group-title {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-tertiary);
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
   }
 
   .collapsible-group-actions {
@@ -105,6 +118,28 @@
 
   .collapsible-group-header:hover .collapsible-group-actions {
     opacity: 1;
+  }
+
+  .collapsible-group-chevron {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--surface-state, rgba(255, 255, 255, 0.06));
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  .collapsible-group-actions + .collapsible-group-chevron {
+    margin-left: 4px;
+  }
+
+  .collapsible-group-chevron.is-expanded {
+    transform: rotate(90deg);
   }
 
   .collapsible-group-content {

@@ -6,6 +6,7 @@
   import { CollapsibleGroup } from '$lib/components/ui/collapsible-group';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import ListMusicIcon from '@lucide/svelte/icons/list-music';
+  import StarIcon from '@lucide/svelte/icons/star';
 
   import type { AppView } from '$lib/features/shell/store.svelte';
   import type { CollectionSummary } from '$lib/types';
@@ -75,7 +76,7 @@
       <div class="collection-empty">{labels.empty}</div>
     {:else}
       {#if officialCollections.length > 0}
-        <CollapsibleGroup title={labels.official}>
+        <CollapsibleGroup title={labels.official} icon={StarIcon}>
           <div
             class="collection-list"
             role="listbox"
@@ -98,7 +99,7 @@
         </CollapsibleGroup>
       {/if}
 
-      <CollapsibleGroup title={labels.custom}>
+      <CollapsibleGroup title={labels.custom} icon={ListMusicIcon}>
         {#snippet actions()}
           <button
             type="button"
