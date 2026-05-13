@@ -140,10 +140,10 @@
   .sidebar-collections-region {
     flex: 1;
     overflow-y: auto;
-    padding: 12px 16px 0;
+    padding: 0 16px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
   }
 
   .collection-list {
