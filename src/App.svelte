@@ -38,7 +38,6 @@
     isCollectionsLoading={runtime.collectionController.isLoading}
     onSelectCollection={runtime.collectionController.selectCollection}
     onCreateCollection={runtime.collectionController.openCreateDialog}
-    onImportCollection={runtime.collectionController.handleImport}
   />
 
   <section class="main-region">

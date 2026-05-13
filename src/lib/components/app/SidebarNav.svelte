@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
-  import { Home, Library, Tag, ListMusic } from '@lucide/svelte';
+  import { Home, Library, Tag } from '@lucide/svelte';
   import type { AppView } from '$lib/features/shell/store.svelte';
 
   interface Props {
@@ -17,19 +17,17 @@
       home: m.shell_nav_home(),
       library: m.shell_nav_library(),
       tags: m.shell_nav_tags(),
-      collections: m.shell_nav_collections(),
     };
   });
 
   const navItems: {
     view: AppView;
     icon: typeof Home;
-    labelKey: 'home' | 'library' | 'tags' | 'collections';
+    labelKey: 'home' | 'library' | 'tags';
   }[] = [
     { view: 'home', icon: Home, labelKey: 'home' },
     { view: 'overview', icon: Library, labelKey: 'library' },
     { view: 'tagEditor', icon: Tag, labelKey: 'tags' },
-    { view: 'collection', icon: ListMusic, labelKey: 'collections' },
   ];
 </script>
 
