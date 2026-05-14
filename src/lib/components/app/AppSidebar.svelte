@@ -1,8 +1,6 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
-  import { untrack } from 'svelte';
-  import { gsap, getMotionDuration, killTweens } from '$lib/design/gsap';
   import BrandLogo from '$lib/components/app/BrandLogo.svelte';
   import SidebarNav from '$lib/components/app/SidebarNav.svelte';
   import { CollapsibleGroup } from '$lib/components/ui/collapsible-group';
@@ -25,8 +23,16 @@
     onCreateCollection: () => void;
     onPlayCollection?: (id: string) => void;
     collapsed: boolean;
-    onLogoMoveEnd?: () => void;
-    logoExpandReady?: boolean;
+    contentCollapsed: boolean;
+    contentInteractive: boolean;
+    layoutCollapsed: boolean;
+    sidebarEl?: HTMLElement | null;
+    navRegionEl?: HTMLElement | null;
+    collectionsRegionEl?: HTMLElement | null;
+    collectionsCollapsedEl?: HTMLElement | null;
+    bottomLabelEl?: HTMLSpanElement | null;
+    logoContainerEl?: HTMLDivElement | null;
+    onCharsReady?: (els: HTMLSpanElement[]) => void;
   }
 
   let {
@@ -39,69 +45,18 @@
     onSelectCollection,
     onCreateCollection,
     onPlayCollection: _onPlayCollection,
-    collapsed,
-    onLogoMoveEnd,
-    logoExpandReady,
+    collapsed: _collapsed,
+    contentCollapsed,
+    contentInteractive,
+    layoutCollapsed,
+    sidebarEl = $bindable(null),
+    navRegionEl = $bindable(null),
+    collectionsRegionEl = $bindable(null),
+    collectionsCollapsedEl = $bindable(null),
+    bottomLabelEl = $bindable(null),
+    logoContainerEl = $bindable(null),
+    onCharsReady,
   }: Props = $props();
-
-  // contentCollapsed 延迟跟随 collapsed，由动画回调驱动：
-  // 展开方向等 logoExpandReady 触发后再切换（与字母旋转同步），收起方向等 LOGO 动画结束后再切换
-  let contentCollapsed = $state(true);
-  let bottomLabelEl = $state<HTMLSpanElement | null>(null);
-  let prevCollapsedProp: boolean | null = $state(null);
-
-  $effect(() => {
-    const curr = collapsed;
-    const prev = untrack(() => prevCollapsedProp);
-    if (prev === null) {
-      contentCollapsed = curr;
-      prevCollapsedProp = curr;
-      return;
-    }
-    if (prev === curr) return;
-    prevCollapsedProp = curr;
-
-    if (!curr) {
-      contentCollapsed = false;
-      // 展开：GSAP 动画底部标签
-      const el = bottomLabelEl;
-      if (el) {
-        killTweens([el]);
-        const dur = getMotionDuration(220);
-        gsap.fromTo(
-          el,
-          { maxWidth: 0, opacity: 0 },
-          { maxWidth: 120, opacity: 1, duration: dur, ease: 'ios-out' }
-        );
-      }
-    }
-  });
-
-  $effect(() => {
-    return () => {
-      const el = bottomLabelEl;
-      if (el) killTweens([el]);
-    };
-  });
-
-  function handleLogoMoveEnd() {
-    if (collapsed) {
-      contentCollapsed = true;
-      // 收起：GSAP 动画底部标签
-      const el = bottomLabelEl;
-      if (el) {
-        killTweens([el]);
-        const dur = getMotionDuration(220);
-        gsap.to(el, {
-          maxWidth: 0,
-          opacity: 0,
-          duration: dur,
-          ease: 'ios-in',
-        });
-      }
-    }
-    onLogoMoveEnd?.();
-  }
 
   const officialCollections = $derived.by(() =>
     collections.filter((c) => c.isOfficial)
@@ -121,7 +76,7 @@
   });
 </script>
 
-<aside class="sidebar" class:collapsed={contentCollapsed}>
+<aside class="sidebar" class:collapsed={contentCollapsed} bind:this={sidebarEl}>
   {#if isMacOS}
     <div
       class="sidebar-drag-region"
@@ -132,16 +87,20 @@
 
   <BrandLogo
     {isMacOS}
-    {collapsed}
-    onMoveEnd={handleLogoMoveEnd}
-    expandReady={logoExpandReady}
+    {layoutCollapsed}
+    bind:containerEl={logoContainerEl}
+    {onCharsReady}
   />
 
-  <div class="sidebar-nav-region">
+  <div class="sidebar-nav-region" bind:this={navRegionEl}>
     <SidebarNav {currentView} {onNavigate} collapsed={contentCollapsed} />
   </div>
 
-  <div class="sidebar-collections-collapsed" class:hidden={!contentCollapsed}>
+  <div
+    class="sidebar-collections-collapsed"
+    class:hidden={!contentCollapsed}
+    bind:this={collectionsCollapsedEl}
+  >
     <button
       type="button"
       class="collapsed-collection-btn"
@@ -161,7 +120,12 @@
     </button>
   </div>
 
-  <div class="sidebar-collections-region" class:hidden={contentCollapsed}>
+  <div
+    class="sidebar-collections-region"
+    class:hidden={contentCollapsed}
+    style:pointer-events={contentInteractive ? undefined : 'none'}
+    bind:this={collectionsRegionEl}
+  >
     <CollapsibleGroup
       title={labels.official}
       icon={StarIcon}
@@ -254,18 +218,14 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    opacity: 1;
-    transition: opacity 200ms ease 300ms;
   }
 
   .sidebar-collections-region.hidden {
-    opacity: 0;
     pointer-events: none;
     overflow: hidden;
     flex: 0;
     height: 0;
     padding: 0;
-    transition: opacity 150ms ease;
   }
 
   .sidebar-collections-collapsed {
@@ -274,17 +234,13 @@
     align-items: center;
     gap: 2px;
     padding: 8px 4px;
-    opacity: 1;
-    transition: opacity 200ms ease 300ms;
   }
 
   .sidebar-collections-collapsed.hidden {
-    opacity: 0;
     pointer-events: none;
     overflow: hidden;
     height: 0;
     padding: 0;
-    transition: opacity 150ms ease;
   }
 
   .collapsed-collection-btn {
@@ -424,13 +380,5 @@
   .bottom-nav-label.hidden {
     max-width: 0;
     opacity: 0;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .bottom-nav-label,
-    .sidebar-collections-region,
-    .sidebar-collections-collapsed {
-      transition: none;
-    }
   }
 </style>
