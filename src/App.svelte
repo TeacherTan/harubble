@@ -20,27 +20,29 @@
   /**
    * 侧边栏宽度由 BrandLogo 动画回调驱动：
    * - 收起：旋转 → 移动 → onMoveEnd → 收起宽度
-   * - 展开：旋转 → onRotateEnd → 展开宽度 → 宽度过渡完 → expandReady 通知移动
+   * - 展开：宽度先展开 → 过渡完 → expandReady 通知字母动画 → 字母完 → 侧栏项上移
    */
   const SIDEBAR_TRANSITION_DUR = 300;
 
   let sidebarWidth = $state(runtime.sidebarCollapsed ? '56px' : '248px');
   let logoExpandReady = $state(false);
+  let prevSidebarCollapsed = $state(runtime.sidebarCollapsed);
 
-  function handleRotateEnd() {
-    if (!runtime.sidebarCollapsed) {
-      // 展开方向：旋转完毕后立即展开宽度
+  $effect(() => {
+    const curr = runtime.sidebarCollapsed;
+    if (curr === prevSidebarCollapsed) return;
+    prevSidebarCollapsed = curr;
+
+    if (!curr) {
       sidebarWidth = '248px';
-      // 等宽度过渡完成后通知 BrandLogo 开始移动
       setTimeout(() => {
         logoExpandReady = true;
       }, SIDEBAR_TRANSITION_DUR + 50);
     }
-  }
+  });
 
   function handleMoveEnd() {
     if (runtime.sidebarCollapsed) {
-      // 收起方向：移动完毕后收起宽度
       sidebarWidth = '56px';
     }
     logoExpandReady = false;
@@ -74,7 +76,6 @@
     isCollectionsLoading={runtime.collectionController.isLoading}
     onSelectCollection={runtime.collectionController.selectCollection}
     onCreateCollection={runtime.collectionController.openCreateDialog}
-    onLogoRotateEnd={handleRotateEnd}
     onLogoMoveEnd={handleMoveEnd}
     {logoExpandReady}
   />

@@ -2,6 +2,8 @@
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
   import { Home, Library } from '@lucide/svelte';
+  import { untrack } from 'svelte';
+  import { gsap, getMotionDuration, killTweens } from '$lib/design/gsap';
   import type { AppView } from '$lib/features/shell/store.svelte';
 
   interface Props {
@@ -28,10 +30,63 @@
     { view: 'home', icon: Home, labelKey: 'home' },
     { view: 'overview', icon: Library, labelKey: 'library' },
   ];
+
+  const labelEls: (HTMLSpanElement | null)[] = $state(
+    Array(navItems.length).fill(null)
+  );
+  let prevCollapsed: boolean | null = $state(null);
+
+  $effect(() => {
+    const curr = collapsed;
+    const prev = untrack(() => prevCollapsed);
+
+    if (prev === null) {
+      prevCollapsed = curr;
+      return;
+    }
+    if (prev === curr) return;
+    prevCollapsed = curr;
+
+    const validEls = labelEls.filter(
+      (el): el is HTMLSpanElement => el !== null
+    );
+    if (validEls.length === 0) return;
+
+    killTweens(validEls);
+    const dur = getMotionDuration(220);
+
+    if (curr) {
+      gsap.to(validEls, {
+        maxWidth: 0,
+        opacity: 0,
+        duration: dur,
+        stagger: 0.02,
+        ease: 'ios-in',
+      });
+    } else {
+      gsap.fromTo(
+        validEls,
+        { maxWidth: 0, opacity: 0 },
+        {
+          maxWidth: 120,
+          opacity: 1,
+          duration: dur,
+          stagger: 0.02,
+          ease: 'ios-out',
+        }
+      );
+    }
+  });
+
+  $effect(() => {
+    return () => {
+      killTweens(labelEls.filter(Boolean));
+    };
+  });
 </script>
 
 <nav class="sidebar-nav" class:collapsed aria-label="Main navigation">
-  {#each navItems as item (item.view)}
+  {#each navItems as item, i (item.view)}
     <button
       type="button"
       class="nav-item"
@@ -41,7 +96,11 @@
       title={collapsed ? labels[item.labelKey] : undefined}
     >
       <item.icon size={16} aria-hidden="true" />
-      <span class="nav-label">{labels[item.labelKey]}</span>
+      <span
+        class="nav-label"
+        class:hidden={collapsed && prevCollapsed !== null}
+        bind:this={labelEls[i]}>{labels[item.labelKey]}</span
+      >
     </button>
   {/each}
 </nav>
@@ -89,19 +148,11 @@
   .nav-label {
     overflow: hidden;
     white-space: nowrap;
-    opacity: 1;
-    transition:
-      opacity 200ms ease 300ms,
-      width 200ms ease 300ms;
   }
 
-  .collapsed .nav-label {
+  .nav-label.hidden {
+    max-width: 0;
     opacity: 0;
-    width: 0;
-    pointer-events: none;
-    transition:
-      opacity 150ms ease,
-      width 150ms ease;
   }
 
   .nav-item:hover {

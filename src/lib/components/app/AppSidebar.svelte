@@ -1,6 +1,8 @@
 <script lang="ts">
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
+  import { untrack } from 'svelte';
+  import { gsap, getMotionDuration, killTweens } from '$lib/design/gsap';
   import BrandLogo from '$lib/components/app/BrandLogo.svelte';
   import SidebarNav from '$lib/components/app/SidebarNav.svelte';
   import { CollapsibleGroup } from '$lib/components/ui/collapsible-group';
@@ -23,7 +25,6 @@
     onCreateCollection: () => void;
     onPlayCollection?: (id: string) => void;
     collapsed: boolean;
-    onLogoRotateEnd?: () => void;
     onLogoMoveEnd?: () => void;
     logoExpandReady?: boolean;
   }
@@ -39,24 +40,65 @@
     onCreateCollection,
     onPlayCollection: _onPlayCollection,
     collapsed,
-    onLogoRotateEnd,
     onLogoMoveEnd,
     logoExpandReady,
   }: Props = $props();
 
-  // contentCollapsed 延迟跟随 collapsed，由动画回调驱动
-  let contentCollapsed = $state(collapsed);
+  // contentCollapsed 延迟跟随 collapsed，由动画回调驱动：
+  // 展开方向等 logoExpandReady 触发后再切换（与字母旋转同步），收起方向等 LOGO 动画结束后再切换
+  let contentCollapsed = $state(true);
+  let bottomLabelEl = $state<HTMLSpanElement | null>(null);
+  let prevCollapsedProp: boolean | null = $state(null);
 
-  function handleLogoRotateEnd() {
-    if (!collapsed) {
-      contentCollapsed = false;
+  $effect(() => {
+    const curr = collapsed;
+    const prev = untrack(() => prevCollapsedProp);
+    if (prev === null) {
+      contentCollapsed = curr;
+      prevCollapsedProp = curr;
+      return;
     }
-    onLogoRotateEnd?.();
-  }
+    if (prev === curr) return;
+    prevCollapsedProp = curr;
+
+    if (!curr) {
+      contentCollapsed = false;
+      // 展开：GSAP 动画底部标签
+      const el = bottomLabelEl;
+      if (el) {
+        killTweens([el]);
+        const dur = getMotionDuration(220);
+        gsap.fromTo(
+          el,
+          { maxWidth: 0, opacity: 0 },
+          { maxWidth: 120, opacity: 1, duration: dur, ease: 'ios-out' }
+        );
+      }
+    }
+  });
+
+  $effect(() => {
+    return () => {
+      const el = bottomLabelEl;
+      if (el) killTweens([el]);
+    };
+  });
 
   function handleLogoMoveEnd() {
     if (collapsed) {
       contentCollapsed = true;
+      // 收起：GSAP 动画底部标签
+      const el = bottomLabelEl;
+      if (el) {
+        killTweens([el]);
+        const dur = getMotionDuration(220);
+        gsap.to(el, {
+          maxWidth: 0,
+          opacity: 0,
+          duration: dur,
+          ease: 'ios-in',
+        });
+      }
     }
     onLogoMoveEnd?.();
   }
@@ -91,7 +133,6 @@
   <BrandLogo
     {isMacOS}
     {collapsed}
-    onRotateEnd={handleLogoRotateEnd}
     onMoveEnd={handleLogoMoveEnd}
     expandReady={logoExpandReady}
   />
@@ -187,7 +228,11 @@
       title={contentCollapsed ? labels.tags : undefined}
     >
       <TagIcon size={16} aria-hidden="true" />
-      <span class="bottom-nav-label">{labels.tags}</span>
+      <span
+        class="bottom-nav-label"
+        class:hidden={contentCollapsed}
+        bind:this={bottomLabelEl}>{labels.tags}</span
+      >
     </button>
   </div>
 </aside>
@@ -374,19 +419,11 @@
   .bottom-nav-label {
     overflow: hidden;
     white-space: nowrap;
-    opacity: 1;
-    transition:
-      opacity 200ms ease 300ms,
-      width 200ms ease 300ms;
   }
 
-  .collapsed .bottom-nav-label {
+  .bottom-nav-label.hidden {
+    max-width: 0;
     opacity: 0;
-    width: 0;
-    pointer-events: none;
-    transition:
-      opacity 150ms ease,
-      width 150ms ease;
   }
 
   @media (prefers-reduced-motion: reduce) {

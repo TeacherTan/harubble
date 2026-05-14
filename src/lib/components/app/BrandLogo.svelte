@@ -5,7 +5,6 @@
   interface Props {
     isMacOS?: boolean;
     collapsed?: boolean;
-    onRotateEnd?: () => void;
     onMoveEnd?: () => void;
     expandReady?: boolean;
   }
@@ -13,7 +12,6 @@
   let {
     isMacOS = false,
     collapsed = false,
-    onRotateEnd,
     onMoveEnd,
     expandReady = false,
   }: Props = $props();
@@ -36,11 +34,12 @@
   const ROW1 = BRAND_LETTERS.slice(0, 6);
   const ROW2 = BRAND_LETTERS.slice(6);
 
-  const STAGGER = 0.03;
-  const ROTATE_DUR = 280;
-  const MOVE_DUR = 320;
+  const STAGGER = 0.02;
+  const ROTATE_DUR = 200;
+  const MOVE_DUR = 240;
 
   const charEls: (HTMLSpanElement | null)[] = $state(Array(12).fill(null));
+  let containerEl: HTMLDivElement | null = $state(null);
   let layoutCollapsed = $state(collapsed);
   let animating = $state(false);
   let prevCollapsed: boolean | null = $state(null);
@@ -95,40 +94,106 @@
     const moveDur = getMotionDuration(MOVE_DUR);
     const targetAngle = toCollapsed ? -90 : 0;
 
-    // ── Phase 1: Stagger Rotate ──
-    const tl = gsap.timeline();
-    currentTimeline = tl;
-
-    await new Promise<void>((resolve) => {
-      tl.to(validEls, {
-        rotation: targetAngle,
-        duration: rotateDur,
-        stagger: STAGGER,
-        ease: 'power3.out',
-        onComplete: resolve,
-      });
-    });
-
-    onRotateEnd?.();
-
+    // 展开方向：字母立即原地旋转，同时锁住容器尺寸防止侧栏展开导致字母位移
     if (!toCollapsed) {
-      await new Promise<void>((resolve) => {
+      if (containerEl) {
+        containerEl.style.height = `${containerEl.offsetHeight}px`;
+        containerEl.style.width = `${containerEl.offsetWidth}px`;
+        containerEl.style.overflow = 'hidden';
+      }
+
+      // ── Phase 1: Stagger Rotate（与侧栏宽度展开同步） ──
+      const tl = gsap.timeline();
+      currentTimeline = tl;
+
+      const rotatePromise = new Promise<void>((resolve) => {
+        tl.to(validEls, {
+          rotation: targetAngle,
+          duration: rotateDur,
+          stagger: STAGGER,
+          ease: 'ios-spring',
+          onComplete: resolve,
+        });
+      });
+
+      // 等侧栏宽度展开完毕 + 旋转完毕，两者都完成后再进入 FLIP
+      const expandPromise = new Promise<void>((resolve) => {
         expandResolve = resolve;
+      });
+      await Promise.all([rotatePromise, expandPromise]);
+    } else {
+      // ── 收起方向：正常旋转 ──
+      const tl = gsap.timeline();
+      currentTimeline = tl;
+
+      await new Promise<void>((resolve) => {
+        tl.to(validEls, {
+          rotation: targetAngle,
+          duration: rotateDur,
+          stagger: STAGGER,
+          ease: 'ios-spring',
+          onComplete: resolve,
+        });
       });
     }
 
     // ── Phase 2: FLIP Move ──
+    // 在释放宽度前捕获字母位置，防止容器变宽后 align-items:center 导致跳变
     const state = Flip.getState(validEls);
+
+    if (containerEl && toCollapsed) {
+      containerEl.style.height = `${containerEl.offsetHeight}px`;
+    }
+
+    // 释放宽度锁定（展开方向，侧栏已展开完毕）
+    if (containerEl && !toCollapsed) {
+      containerEl.style.width = '';
+    }
+
+    // 切换布局前隐藏字母，防止布局切换到 FLIP 接管之间的一帧闪烁
+    validEls.forEach((el) => (el.style.visibility = 'hidden'));
 
     layoutCollapsed = toCollapsed;
     await tick();
 
+    // FLIP 接管后立即恢复可见
+    validEls.forEach((el) => (el.style.visibility = ''));
+
+    if (containerEl && !toCollapsed) {
+      // 展开方向：用克隆节点测量目标高度（FLIP absolute 会影响实际容器内容高度）
+      const clone = containerEl.cloneNode(true) as HTMLDivElement;
+      clone.style.position = 'absolute';
+      clone.style.visibility = 'hidden';
+      clone.style.height = 'auto';
+      clone.style.width = '';
+      clone.style.overflow = '';
+      clone.style.pointerEvents = 'none';
+      containerEl.parentElement!.appendChild(clone);
+      const naturalHeight = clone.offsetHeight;
+      clone.remove();
+
+      gsap.to(containerEl, {
+        height: naturalHeight,
+        duration: moveDur,
+        delay: 0.25,
+        ease: 'ios-spring',
+        onComplete: () => {
+          containerEl!.style.height = '';
+          containerEl!.style.overflow = '';
+        },
+      });
+    }
+
     const flipTl = Flip.from(state, {
       duration: moveDur,
       stagger: STAGGER,
-      ease: 'power2.out',
+      ease: 'ios-spring',
       absolute: true,
       onComplete: () => {
+        if (containerEl) {
+          containerEl.style.height = '';
+          containerEl.style.overflow = '';
+        }
         onMoveEnd?.();
         animating = false;
         currentTimeline = null;
@@ -143,6 +208,7 @@
   class:macos={isMacOS}
   class:collapsed={layoutCollapsed}
   aria-hidden="true"
+  bind:this={containerEl}
 >
   <span class="brand-row">
     {#each ROW1 as letter, i (i)}
@@ -204,6 +270,7 @@
   .collapsed .brand-row {
     flex-direction: column-reverse;
     align-items: center;
+    line-height: 0.88;
   }
 
   .brand-char {
