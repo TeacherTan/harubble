@@ -15,38 +15,95 @@
   import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
   import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
+  import {
+    createSidebarAnimator,
+    type SidebarAnimator,
+  } from '$lib/design/sidebar-animator';
+
   const runtime = createAppRuntime();
 
-  /**
-   * 侧边栏宽度由 BrandLogo 动画回调驱动：
-   * - 收起：旋转 → 移动 → onMoveEnd → 收起宽度
-   * - 展开：宽度先展开 → 过渡完 → expandReady 通知字母动画 → 字母完 → 侧栏项上移
-   */
-  const SIDEBAR_TRANSITION_DUR = 300;
+  let animator: SidebarAnimator | null = null;
+  let logoCharEls: HTMLSpanElement[] = [];
+  let shellEl: HTMLElement | null = $state(null);
+  let sidebarEl: HTMLElement | null = $state(null);
+  let navRegionEl: HTMLElement | null = $state(null);
+  let collectionsRegionEl: HTMLElement | null = $state(null);
+  let collectionsCollapsedEl: HTMLElement | null = $state(null);
+  let bottomLabelEl: HTMLSpanElement | null = $state(null);
+  let logoContainerEl: HTMLDivElement | null = $state(null);
 
-  let sidebarWidth = $state(runtime.sidebarCollapsed ? '56px' : '248px');
-  let logoExpandReady = $state(false);
-  let prevSidebarCollapsed = $state(runtime.sidebarCollapsed);
+  let contentCollapsed = $state(runtime.sidebarCollapsed);
+  let contentInteractive = $state(!runtime.sidebarCollapsed);
+  let layoutCollapsed = $state(runtime.sidebarCollapsed);
 
+  function handleCharsReady(els: HTMLSpanElement[]) {
+    logoCharEls = els;
+  }
+
+  function onContentInteractive(interactive: boolean) {
+    contentInteractive = interactive;
+  }
+  function onContentSwitch(collapsed: boolean) {
+    contentCollapsed = collapsed;
+  }
+  function onLayoutSwitch(collapsed: boolean) {
+    layoutCollapsed = collapsed;
+  }
+
+  /* eslint-disable @typescript-eslint/no-unnecessary-condition -- $state(null) refs are populated by bind:this at runtime */
+  $effect(() => {
+    if (
+      shellEl &&
+      sidebarEl &&
+      logoContainerEl &&
+      bottomLabelEl &&
+      navRegionEl &&
+      collectionsRegionEl &&
+      collectionsCollapsedEl &&
+      logoCharEls.length === 12
+    ) {
+      if (animator) return;
+      animator = createSidebarAnimator({
+        shellEl,
+        sidebarEl,
+        logoCharEls,
+        logoContainerEl,
+        navRegionEl,
+        collectionsRegionEl,
+        collectionsCollapsedEl,
+        bottomLabelEl,
+        initialCollapsed: runtime.sidebarCollapsed,
+        onContentInteractive,
+        onContentSwitch,
+        onLayoutSwitch,
+      });
+    }
+  });
+  /* eslint-enable @typescript-eslint/no-unnecessary-condition */
+
+  let prevCollapsed: boolean | null = null;
   $effect(() => {
     const curr = runtime.sidebarCollapsed;
-    if (curr === prevSidebarCollapsed) return;
-    prevSidebarCollapsed = curr;
-
-    if (!curr) {
-      sidebarWidth = '248px';
-      setTimeout(() => {
-        logoExpandReady = true;
-      }, SIDEBAR_TRANSITION_DUR + 50);
+    if (!animator) return;
+    if (prevCollapsed === null) {
+      prevCollapsed = curr;
+      return;
+    }
+    if (curr === prevCollapsed) return;
+    prevCollapsed = curr;
+    if (curr) {
+      animator.collapse();
+    } else {
+      animator.expand();
     }
   });
 
-  function handleMoveEnd() {
-    if (runtime.sidebarCollapsed) {
-      sidebarWidth = '56px';
-    }
-    logoExpandReady = false;
-  }
+  $effect(() => {
+    return () => {
+      animator?.dispose();
+      animator = null;
+    };
+  });
 </script>
 
 {#if runtime.isMacOS}
@@ -62,12 +119,15 @@
 <div
   class="app-shell"
   class:macos-overlay={runtime.isMacOS}
-  style:--sidebar-width={sidebarWidth}
+  bind:this={shellEl}
 >
   <AppSidebar
     isMacOS={runtime.isMacOS}
     currentView={runtime.currentView}
     collapsed={runtime.sidebarCollapsed}
+    {contentCollapsed}
+    {contentInteractive}
+    {layoutCollapsed}
     onNavigate={(view) => {
       runtime.shellStore.currentView = view;
     }}
@@ -76,8 +136,13 @@
     isCollectionsLoading={runtime.collectionController.isLoading}
     onSelectCollection={runtime.collectionController.selectCollection}
     onCreateCollection={runtime.collectionController.openCreateDialog}
-    onLogoMoveEnd={handleMoveEnd}
-    {logoExpandReady}
+    bind:sidebarEl
+    bind:navRegionEl
+    bind:collectionsRegionEl
+    bind:collectionsCollapsedEl
+    bind:bottomLabelEl
+    bind:logoContainerEl
+    onCharsReady={handleCharsReady}
   />
 
   <button

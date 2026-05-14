@@ -33,7 +33,7 @@
   const ROW1 = BRAND_LETTERS.slice(0, 6);
   const ROW2 = BRAND_LETTERS.slice(6);
 
-  const charEls: HTMLSpanElement[] = Array(12).fill(null);
+  const charEls: (HTMLSpanElement | null)[] = Array(12).fill(null);
 
   onMount(() => {
     const ready = charEls.filter((el): el is HTMLSpanElement => el !== null);
