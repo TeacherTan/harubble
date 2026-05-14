@@ -396,7 +396,6 @@ img[data-image-state='error'] {
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width, 248px) 1fr;
-  transition: grid-template-columns 300ms ease;
   width: 100vw;
   height: 100vh;
   gap: 0;
@@ -408,7 +407,6 @@ img[data-image-state='error'] {
   position: relative;
   width: var(--sidebar-width, 248px);
   min-width: 0;
-  transition: width 300ms ease;
   background:
     linear-gradient(180deg, var(--surface-tint-strong) 0%, transparent 40%),
     var(--bg-secondary);
@@ -436,7 +434,6 @@ img[data-image-state='error'] {
   justify-content: center;
   z-index: 100;
   transition:
-    left 300ms ease,
     color 0.15s ease,
     background 0.15s ease;
 }
@@ -447,10 +444,7 @@ img[data-image-state='error'] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell,
-  .sidebar,
-  .sidebar-toggle-btn,
-  .macos-window-drag-region {
+  .sidebar-toggle-btn {
     transition: none;
   }
 }
@@ -906,7 +900,6 @@ img[data-image-state='error'] {
   height: 56px;
   z-index: 90;
   user-select: none;
-  transition: left 300ms ease;
 }
 
 .sidebar-drag-region,
