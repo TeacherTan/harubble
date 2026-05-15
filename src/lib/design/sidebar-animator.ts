@@ -93,6 +93,7 @@ const TIMING = {
   ROTATE_DUR: 200,
   MOVE_DUR: 240,
   STAGGER: 0.05,
+  FLIP_STAGGER: 0.025,
   CONTENT_FADE: 200,
   LABEL_DUR: 150,
   PHASE_GAP: 50,
@@ -237,6 +238,7 @@ function getAnimationParams() {
     rotateDur: reduced ? 0 : TIMING.ROTATE_DUR / 1000,
     moveDur: reduced ? 0 : TIMING.MOVE_DUR / 1000,
     stagger: reduced ? 0 : TIMING.STAGGER,
+    flipStagger: reduced ? 0 : TIMING.FLIP_STAGGER,
     contentFade: reduced ? 0 : TIMING.CONTENT_FADE / 1000,
     labelDur: reduced ? 0 : TIMING.LABEL_DUR / 1000,
     phaseGap: reduced ? 0 : TIMING.PHASE_GAP / 1000,
@@ -262,7 +264,7 @@ function syncToState(config: SidebarAnimatorConfig, collapsed: boolean) {
 
   config.onLayoutSwitch(collapsed);
   config.onContentSwitch(collapsed);
-  config.onContentInteractive(!collapsed);
+  config.onContentInteractive(true);
 }
 
 function cleanupTransientStyles(
@@ -409,7 +411,7 @@ export function createSidebarAnimator(
     const targetHeight = clone.offsetHeight;
     clone.remove();
 
-    const totalStagger = params.stagger * (els.length - 1);
+    const totalStagger = params.flipStagger * (els.length - 1);
 
     heightTween = gsap.to(config.logoContainerEl, {
       height: targetHeight,
@@ -436,7 +438,7 @@ export function createSidebarAnimator(
       gsap.to(el, {
         opacity: 0.6,
         duration: params.moveDur,
-        delay: params.stagger * i,
+        delay: params.flipStagger * i,
         ease: 'ios-out',
         onComplete: () => {
           gsap.to(el, { opacity: 1, duration: 0.1, ease: 'ios-out' });
@@ -447,7 +449,7 @@ export function createSidebarAnimator(
     const flipTl = Flip.from(state, {
       targets: sortedEls,
       duration: params.moveDur,
-      stagger: params.stagger,
+      stagger: params.flipStagger,
       ease: 'ios-spring',
       absolute: true,
     });
