@@ -23,7 +23,7 @@
   const runtime = createAppRuntime();
 
   let animator: SidebarAnimator | null = null;
-  let logoCharEls: HTMLSpanElement[] = [];
+  let logoCharEls: HTMLSpanElement[] = $state([]);
   let shellEl: HTMLElement | null = $state(null);
   let sidebarEl: HTMLElement | null = $state(null);
   let navRegionEl: HTMLElement | null = $state(null);
@@ -124,7 +124,6 @@
   <AppSidebar
     isMacOS={runtime.isMacOS}
     currentView={runtime.currentView}
-    collapsed={runtime.sidebarCollapsed}
     {contentCollapsed}
     {contentInteractive}
     {layoutCollapsed}
@@ -136,6 +135,7 @@
     isCollectionsLoading={runtime.collectionController.isLoading}
     onSelectCollection={runtime.collectionController.selectCollection}
     onCreateCollection={runtime.collectionController.openCreateDialog}
+    onRequestExpand={runtime.toggleSidebar}
     bind:sidebarEl
     bind:navRegionEl
     bind:collectionsRegionEl

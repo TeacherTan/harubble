@@ -2,6 +2,7 @@
   import * as m from '$lib/paraglide/messages.js';
   import { localeState } from '$lib/i18n';
   import BrandLogo from '$lib/components/app/BrandLogo.svelte';
+  import SidebarItemButton from '$lib/components/app/SidebarItemButton.svelte';
   import SidebarNav from '$lib/components/app/SidebarNav.svelte';
   import { CollapsibleGroup } from '$lib/components/ui/collapsible-group';
   import PlusIcon from '@lucide/svelte/icons/plus';
@@ -22,7 +23,7 @@
     onSelectCollection: (id: string) => void;
     onCreateCollection: () => void;
     onPlayCollection?: (id: string) => void;
-    collapsed: boolean;
+    onRequestExpand?: () => void;
     contentCollapsed: boolean;
     contentInteractive: boolean;
     layoutCollapsed: boolean;
@@ -45,7 +46,7 @@
     onSelectCollection,
     onCreateCollection,
     onPlayCollection: _onPlayCollection,
-    collapsed: _collapsed,
+    onRequestExpand,
     contentCollapsed,
     contentInteractive,
     layoutCollapsed,
@@ -93,7 +94,12 @@
   />
 
   <div class="sidebar-nav-region" bind:this={navRegionEl}>
-    <SidebarNav {currentView} {onNavigate} collapsed={contentCollapsed} />
+    <SidebarNav
+      {currentView}
+      {onNavigate}
+      collapsed={contentCollapsed}
+      {onRequestExpand}
+    />
   </div>
 
   <div
@@ -101,23 +107,21 @@
     class:hidden={!contentCollapsed}
     bind:this={collectionsCollapsedEl}
   >
-    <button
-      type="button"
-      class="collapsed-collection-btn"
-      title={labels.official}
-      aria-label={labels.official}
-    >
-      <StarIcon size={16} aria-hidden="true" />
-    </button>
-    <button
-      type="button"
-      class="collapsed-collection-btn"
-      title={labels.custom}
-      aria-label={labels.custom}
+    <SidebarItemButton
+      label={labels.official}
+      icon={StarIcon}
+      collapsed={true}
+      expandOnCollapsedClick
+      {onRequestExpand}
+    />
+    <SidebarItemButton
+      label={labels.custom}
+      icon={ListMusicIcon}
+      collapsed={true}
+      expandOnCollapsedClick
+      {onRequestExpand}
       onclick={onCreateCollection}
-    >
-      <ListMusicIcon size={16} aria-hidden="true" />
-    </button>
+    />
   </div>
 
   <div
@@ -133,17 +137,15 @@
     >
       <div class="collection-list" role="listbox" aria-label={labels.official}>
         {#each officialCollections as collection (collection.id)}
-          <button
-            type="button"
-            class="collection-item"
-            class:active={selectedCollectionId === collection.id}
+          <SidebarItemButton
+            label={collection.name}
+            icon={ListMusicIcon}
+            collapsed={false}
+            active={selectedCollectionId === collection.id}
             role="option"
-            aria-selected={selectedCollectionId === collection.id}
+            ariaSelected={selectedCollectionId === collection.id}
             onclick={() => onSelectCollection(collection.id)}
-          >
-            <ListMusicIcon size={16} aria-hidden="true" />
-            <span>{collection.name}</span>
-          </button>
+          />
         {/each}
       </div>
     </CollapsibleGroup>
@@ -166,38 +168,33 @@
       {/snippet}
       <div class="collection-list" role="listbox" aria-label={labels.custom}>
         {#each userCollections as collection (collection.id)}
-          <button
-            type="button"
-            class="collection-item"
-            class:active={selectedCollectionId === collection.id}
+          <SidebarItemButton
+            label={collection.name}
+            icon={ListMusicIcon}
+            collapsed={false}
+            active={selectedCollectionId === collection.id}
             role="option"
-            aria-selected={selectedCollectionId === collection.id}
+            ariaSelected={selectedCollectionId === collection.id}
             onclick={() => onSelectCollection(collection.id)}
-          >
-            <ListMusicIcon size={16} aria-hidden="true" />
-            <span>{collection.name}</span>
-          </button>
+          />
         {/each}
       </div>
     </CollapsibleGroup>
   </div>
 
   <div class="sidebar-bottom" class:collapsed={contentCollapsed}>
-    <button
-      type="button"
-      class="bottom-nav-item"
-      class:active={currentView === 'tagEditor'}
+    <SidebarItemButton
+      label={labels.tags}
+      icon={TagIcon}
+      collapsed={contentCollapsed}
+      active={currentView === 'tagEditor'}
+      hiddenLabel={contentCollapsed}
+      ariaCurrent={currentView === 'tagEditor' ? 'page' : undefined}
+      expandOnCollapsedClick={false}
+      {onRequestExpand}
       onclick={() => onNavigate('tagEditor')}
-      aria-current={currentView === 'tagEditor' ? 'page' : undefined}
-      title={contentCollapsed ? labels.tags : undefined}
-    >
-      <TagIcon size={16} aria-hidden="true" />
-      <span
-        class="bottom-nav-label"
-        class:hidden={contentCollapsed}
-        bind:this={bottomLabelEl}>{labels.tags}</span
-      >
-    </button>
+      bind:labelEl={bottomLabelEl}
+    />
   </div>
 </aside>
 
@@ -213,8 +210,9 @@
 
   .sidebar-collections-region {
     flex: 1;
+    overflow-x: hidden;
     overflow-y: auto;
-    padding: 0 16px;
+    padding: 0 8px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -231,9 +229,9 @@
   .sidebar-collections-collapsed {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 2px;
-    padding: 8px 4px;
+    padding: 0 0 8px 10px;
   }
 
   .sidebar-collections-collapsed.hidden {
@@ -243,69 +241,10 @@
     padding: 0;
   }
 
-  .collapsed-collection-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border: none;
-    border-radius: 8px;
-    background: none;
-    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
-    cursor: pointer;
-    transition:
-      background var(--motion-fast) ease,
-      color var(--motion-fast) ease;
-  }
-
-  .collapsed-collection-btn:hover {
-    background: var(--hover-bg-elevated);
-    color: var(--text-primary);
-  }
-
   .collection-list {
     display: flex;
     flex-direction: column;
     gap: 2px;
-  }
-
-  .collection-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    height: 36px;
-    padding: 0 0.75rem;
-    border: none;
-    border-radius: 8px;
-    background: none;
-    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
-    font-family: var(--font-body);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    cursor: pointer;
-    text-align: left;
-    transition:
-      background var(--motion-fast) ease,
-      color var(--motion-fast) ease;
-  }
-
-  .collection-item:hover {
-    background: var(--hover-bg-elevated);
-    color: var(--text-primary);
-  }
-
-  .collection-item.active {
-    background: var(--surface-state);
-    color: var(--text-primary);
-    font-weight: 600;
-  }
-
-  .collection-item span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .section-action-btn {
@@ -332,53 +271,12 @@
   .sidebar-bottom {
     flex-shrink: 0;
     margin-top: auto;
-    padding: 8px 16px 12px;
+    padding: 8px 8px 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  .bottom-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    height: 36px;
-    padding: 0 0.75rem;
-    border: none;
-    border-radius: 8px;
-    background: none;
-    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
-    font-family: var(--font-body);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition:
-      background var(--motion-fast) ease,
-      color var(--motion-fast) ease;
-  }
-
-  .bottom-nav-item:hover {
-    background: var(--hover-bg-elevated);
-    color: var(--text-primary);
-  }
-
-  .bottom-nav-item.active {
-    background: var(--surface-state);
-    color: var(--text-primary);
-    font-weight: 600;
-  }
-
-  .sidebar-bottom.collapsed .bottom-nav-item {
-    justify-content: center;
-    padding: 0;
-  }
-
-  .bottom-nav-label {
-    overflow: hidden;
-    white-space: nowrap;
-  }
-
-  .bottom-nav-label.hidden {
-    max-width: 0;
-    opacity: 0;
+  .sidebar-bottom.collapsed {
+    padding-right: 10px;
+    padding-left: 10px;
   }
 </style>

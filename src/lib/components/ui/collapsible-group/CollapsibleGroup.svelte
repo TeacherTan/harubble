@@ -1,11 +1,13 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
+  import SidebarItemButton from '$lib/components/app/SidebarItemButton.svelte';
   import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+  import type { LucideProps } from '@lucide/svelte';
   import type { Snippet, Component } from 'svelte';
 
   interface Props {
     title: string;
-    icon?: Component<{ size?: number }>;
+    icon?: Component<LucideProps>;
     defaultExpanded?: boolean;
     empty?: boolean;
     children: Snippet;
@@ -29,43 +31,55 @@
     expanded = !expanded;
   }
 
-  function handleActionsClick(e: MouseEvent | KeyboardEvent) {
+  function handleActionsClick(e: MouseEvent) {
+    e.stopPropagation();
+  }
+
+  function handleActionsKeydown(e: KeyboardEvent) {
     e.stopPropagation();
   }
 </script>
 
 <div class="collapsible-group">
-  <button
-    type="button"
-    class="collapsible-group-header"
-    class:is-empty={empty}
-    aria-expanded={expanded}
-    onclick={toggle}
-  >
-    {#if icon}
-      <span class="collapsible-group-icon">
-        {@render iconRenderer()}
-      </span>
-    {/if}
-    <span class="collapsible-group-title">{title}</span>
-    {#if actions}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span
-        class="collapsible-group-actions"
-        onclick={handleActionsClick}
-        onkeydown={handleActionsClick}
-      >
-        {@render actions()}
-      </span>
-    {/if}
-    <span
-      class="collapsible-group-chevron"
-      class:is-expanded={expanded}
-      class:is-disabled={empty}
+  {#if icon}
+    <SidebarItemButton
+      element={actions ? 'div' : 'button'}
+      label={title}
+      {icon}
+      collapsed={false}
+      disabled={empty}
+      ariaExpanded={expanded}
+      onclick={toggle}
     >
-      <ChevronRightIcon size={12} />
-    </span>
-  </button>
+      {#if actions}
+        <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+        <span
+          class="collapsible-group-actions"
+          onclick={handleActionsClick}
+          onkeydown={handleActionsKeydown}
+        >
+          {@render actions()}
+        </span>
+      {/if}
+      <span
+        class="collapsible-group-chevron"
+        class:is-expanded={expanded}
+        class:is-disabled={empty}
+      >
+        <ChevronRightIcon size={12} />
+      </span>
+    </SidebarItemButton>
+  {:else}
+    <button
+      type="button"
+      class="collapsible-group-fallback-header"
+      class:is-empty={empty}
+      aria-expanded={expanded}
+      onclick={toggle}
+    >
+      <span class="collapsible-group-title">{title}</span>
+    </button>
+  {/if}
 
   {#if expanded && !empty}
     <div class="collapsible-group-content" transition:slide={{ duration: 200 }}>
@@ -74,20 +88,13 @@
   {/if}
 </div>
 
-{#snippet iconRenderer()}
-  {#if icon}
-    {@const Icon = icon}
-    <Icon size={16} />
-  {/if}
-{/snippet}
-
 <style>
   .collapsible-group {
     display: flex;
     flex-direction: column;
   }
 
-  .collapsible-group-header {
+  .collapsible-group-fallback-header {
     appearance: none;
     border: none;
     background: none;
@@ -102,20 +109,12 @@
     transition: background var(--motion-fast, 0.15s) ease;
   }
 
-  .collapsible-group-header:hover {
+  .collapsible-group-fallback-header:hover {
     background: var(--hover-bg-elevated, rgba(255, 255, 255, 0.06));
   }
 
-  .collapsible-group-header.is-empty {
+  .collapsible-group-fallback-header.is-empty {
     cursor: default;
-  }
-
-  .collapsible-group-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
-    flex-shrink: 0;
   }
 
   .collapsible-group-title {
@@ -134,7 +133,7 @@
     transition: opacity 0.15s ease;
   }
 
-  .collapsible-group-header:hover .collapsible-group-actions {
+  :global(.sidebar-item-button:hover) .collapsible-group-actions {
     opacity: 1;
   }
 

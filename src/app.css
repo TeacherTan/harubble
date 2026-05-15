@@ -399,6 +399,7 @@ img[data-image-state='error'] {
   width: 100vw;
   height: 100vh;
   gap: 0;
+  overflow: hidden;
   background: var(--bg-primary);
 }
 

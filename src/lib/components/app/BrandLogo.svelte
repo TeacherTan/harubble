@@ -33,7 +33,7 @@
   const ROW1 = BRAND_LETTERS.slice(0, 6);
   const ROW2 = BRAND_LETTERS.slice(6);
 
-  const charEls: (HTMLSpanElement | null)[] = Array(12).fill(null);
+  const charEls: (HTMLSpanElement | null)[] = $state(Array(12).fill(null));
 
   onMount(() => {
     const ready = charEls.filter((el): el is HTMLSpanElement => el !== null);
@@ -55,7 +55,7 @@
       <span
         class="brand-char"
         class:outline={letter.outline}
-        bind:this={charEls[i]}>{letter.char}</span
+        bind:this={charEls[i]}><span data-logo-glyph>{letter.char}</span></span
       >
     {/each}
   </span>
@@ -64,7 +64,8 @@
       <span
         class="brand-char"
         class:outline={letter.outline}
-        bind:this={charEls[i + 6]}>{letter.char}</span
+        bind:this={charEls[i + 6]}
+        ><span data-logo-glyph>{letter.char}</span></span
       >
     {/each}
   </span>
@@ -100,6 +101,7 @@
     font-family: var(--font-wide);
     font-size: 22px;
     font-weight: 700;
+    line-height: 0.88;
     letter-spacing: 0.04em;
     color: var(--accent);
     white-space: nowrap;
@@ -108,10 +110,13 @@
   .collapsed .brand-row {
     flex-direction: column-reverse;
     align-items: center;
-    line-height: 0.88;
   }
 
   .brand-char {
+    display: inline-block;
+  }
+
+  .brand-char [data-logo-glyph] {
     display: inline-block;
   }
 

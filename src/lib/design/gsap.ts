@@ -11,7 +11,7 @@ CustomEase.create('ios-spring', '0.22, 0.61, 0.36, 1');
 
 export { gsap, Flip };
 
-const reducedMotionQuery =
+export const reducedMotionQuery =
   typeof window !== 'undefined'
     ? window.matchMedia('(prefers-reduced-motion: reduce)')
     : null;
