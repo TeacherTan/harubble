@@ -1,5 +1,44 @@
+/**
+ * 侧栏动画编排器
+ *
+ * 负责侧栏展开/折叠的全流程命令式动画编排，基于 GSAP + Flip 插件实现。
+ * 动画期间整个侧栏屏蔽 hover 与点击交互，直到所有阶段完成后恢复。
+ *
+ * ## 动画设计
+ *
+ * - Logo 字符旋转：折叠态字符逆时针旋转 -90°，展开态恢复 0°，带 stagger 依次触发
+ * - Logo FLIP 布局切换：字符从竖向堆栈飞向横向双行（或反向），按堆栈底部优先顺序依次飞出
+ * - 透明度叙事：旋转阶段字符渐变为半透明（0.35），飞行中恢复至 0.6，到位后 100ms 内实体化至 1
+ * - 文字标签跟随：展开时标签不等侧栏完全展开，当可用空间达到标签宽度 50% 时即开始同速展开
+ * - 侧栏宽度：展开 300ms / 折叠 200ms，使用 ios-spring 缓动
+ * - 所有缓动曲线统一使用 iOS 风格 CustomEase（ios / ios-in / ios-out / ios-spring）
+ *
+ * ## 展开动画时间线
+ *
+ *  Phase 1 — 宽度展开 + 旋转 + 变淡（并行，300ms）
+ *  ┌─────────────────────────────────────────────────────────────┐
+ *  │ [0ms ─────────────────────────────────── 300ms]             │
+ *  │  ├─ 侧栏宽度 56px → 248px (ios-spring)                     │
+ *  │  ├─ 字符旋转 -90° → 0° (ios-spring, stagger 50ms)          │
+ *  │  ├─ 字符透明度 1 → 0.35 (ios-in)                           │
+ *  │  └─ 文字标签：可用空间 ≥ 标签宽度×50% 时开始同速展开        │
+ *  └─────────────────────────────────────────────────────────────┘
+ *
+ *  Phase 2 — FLIP 堆栈弹出（240ms/字符，stagger 50ms，底部优先）
+ *  ┌─────────────────────────────────────────────────────────────┐
+ *  │ 字符按折叠态 Y 坐标从底到顶排序，依次飞向展开态目标位置      │
+ *  │  ├─ 每个字符飞行 240ms (ios-spring)                         │
+ *  │  ├─ 飞行中透明度 0.35 → 0.6 (ios-out)                      │
+ *  │  ├─ 到位后 100ms 内 0.6 → 1 (ios-out)                      │
+ *  │  └─ 容器高度同步过渡至目标高度 (240ms + totalStagger)        │
+ *  └─────────────────────────────────────────────────────────────┘
+ *
+ *  完成 → 恢复交互、清理瞬态样式
+ */
 import { tick } from 'svelte';
 import { gsap, Flip, reducedMotionQuery } from '$lib/design/gsap';
+import { runExpand } from './sidebar-animator-expand';
+import { runCollapse } from './sidebar-animator-collapse';
 
 export interface SidebarAnimatorConfig {
   shellEl: HTMLElement;
@@ -24,13 +63,38 @@ export interface SidebarAnimator {
   dispose(): void;
 }
 
+export type AnimationParams = ReturnType<typeof getAnimationParams>;
+
+export interface AnimatorContext {
+  config: SidebarAnimatorConfig;
+  logoGlyphEls: HTMLElement[];
+  params: AnimationParams;
+  constants: {
+    COLLAPSED_WIDTH: string;
+    EXPANDED_WIDTH: string;
+    COLLAPSED_WIDTH_VALUE: number;
+    EXPANDED_WIDTH_VALUE: number;
+  };
+  isStale: (id: number) => boolean;
+  setTimeline: (tl: gsap.core.Timeline | null) => void;
+  applyExpandedWidthFrame: (
+    measuredLogoWidth: number,
+    currentWidth: number
+  ) => void;
+  flipPhase: (
+    id: number,
+    toCollapsed: boolean
+  ) => Promise<gsap.core.Timeline | null>;
+  commitState: (collapsed: boolean) => void;
+}
+
 const TIMING = {
   WIDTH_DUR: 300,
   ROTATE_DUR: 200,
   MOVE_DUR: 240,
-  STAGGER: 0.02,
+  STAGGER: 0.05,
   CONTENT_FADE: 200,
-  LABEL_DUR: 300,
+  LABEL_DUR: 150,
   PHASE_GAP: 50,
   FLIP_DELAY: 0,
 } as const;
@@ -345,16 +409,43 @@ export function createSidebarAnimator(
     const targetHeight = clone.offsetHeight;
     clone.remove();
 
+    const totalStagger = params.stagger * (els.length - 1);
+
     heightTween = gsap.to(config.logoContainerEl, {
       height: targetHeight,
-      duration: params.moveDur,
+      duration: params.moveDur + totalStagger,
       ease: 'ios-spring',
       onComplete: () => {
         heightTween = null;
       },
     });
 
+    const sortedEls = [...els].sort((a, b) => {
+      const rectA = state.elementStates.find(
+        (s: { element: Element }) => s.element === a
+      )!;
+      const rectB = state.elementStates.find(
+        (s: { element: Element }) => s.element === b
+      )!;
+      const yA = rectA.bounds.top;
+      const yB = rectB.bounds.top;
+      return yB - yA;
+    });
+
+    sortedEls.forEach((el, i) => {
+      gsap.to(el, {
+        opacity: 0.6,
+        duration: params.moveDur,
+        delay: params.stagger * i,
+        ease: 'ios-out',
+        onComplete: () => {
+          gsap.to(el, { opacity: 1, duration: 0.1, ease: 'ios-out' });
+        },
+      });
+    });
+
     const flipTl = Flip.from(state, {
+      targets: sortedEls,
       duration: params.moveDur,
       stagger: params.stagger,
       ease: 'ios-spring',
@@ -365,181 +456,39 @@ export function createSidebarAnimator(
     return flipTl as gsap.core.Timeline;
   }
 
-  async function runCollapse(id: number) {
+  function buildContext(): AnimatorContext {
     const params = getAnimationParams();
-    const labelEls = collectSidebarAnimatorLabelEls(config);
-
-    config.onContentInteractive(false);
-
-    const phase1 = gsap.timeline();
-    currentTimeline = phase1;
-
-    // collapse 宽度收缩与字母旋转同步，故共用 rotateDur 而非 widthDur
-    phase1.to(
-      config.shellEl,
-      {
-        '--sidebar-width': COLLAPSED_WIDTH,
-        duration: params.rotateDur,
-        ease: 'ios-spring',
-      },
-      0
-    );
-
-    phase1.to(
+    return {
+      config,
       logoGlyphEls,
-      {
-        rotation: -90,
-        duration: params.rotateDur,
-        stagger: params.stagger,
-        ease: 'ios-spring',
+      params,
+      constants: {
+        COLLAPSED_WIDTH,
+        EXPANDED_WIDTH,
+        COLLAPSED_WIDTH_VALUE,
+        EXPANDED_WIDTH_VALUE,
       },
-      0
-    );
-
-    phase1.to(
-      [config.collectionsRegionEl, config.navRegionEl],
-      {
-        opacity: 0,
-        duration: params.rotateDur,
-        ease: 'ios-in',
+      isStale,
+      setTimeline: (tl) => {
+        currentTimeline = tl;
       },
-      0
-    );
-
-    phase1.to(
-      labelEls,
-      {
-        maxWidth: 0,
-        opacity: 0,
-        duration: params.rotateDur,
-        ease: 'ios-in',
+      applyExpandedWidthFrame: (measuredLogoWidth, currentWidth) => {
+        applyExpandedWidthFrame(currentWidth, measuredLogoWidth);
       },
-      0
-    );
-
-    await chainTimelineComplete(phase1);
-    if (isStale(id)) return;
-
-    const flipResult = await flipPhase(id, true, params);
-    if (!flipResult || isStale(id)) return;
-
-    await chainTimelineComplete(flipResult);
-    if (isStale(id)) return;
-
-    lastCommittedCollapsed = true;
-    config.onContentSwitch(true);
-    cleanupTransientStyles(config, 'collapsed');
-    config.onComplete?.(true);
-    currentTimeline = null;
-  }
-
-  async function runExpand(id: number) {
-    const params = getAnimationParams();
-    const collapsedLogoWidth =
-      config.logoContainerEl.getBoundingClientRect().width ||
-      COLLAPSED_WIDTH_VALUE;
-
-    applyExpandedWidthFrame(COLLAPSED_WIDTH_VALUE, collapsedLogoWidth);
-    gsap.set(config.logoContainerEl, { overflow: 'hidden' });
-
-    config.onContentSwitch(false);
-    await tick();
-    if (isStale(id)) return;
-
-    gsap.set(config.collectionsRegionEl, { clearProps: 'opacity' });
-    gsap.set(config.navRegionEl, { clearProps: 'opacity' });
-    const labelEls = collectSidebarAnimatorLabelEls(config);
-    gsap.set(labelEls, { maxWidth: 0, opacity: 0 });
-
-    const measuredLabelWidths = labelEls.map((el) => el.scrollWidth);
-
-    const lockedGlyphRects = logoGlyphEls.map((el) =>
-      el.getBoundingClientRect()
-    );
-    const lockLogoGlyphCenters = () => {
-      logoGlyphEls.forEach((glyphEl, index) => {
-        const currentTransform = {
-          x: Number(gsap.getProperty(glyphEl, 'x')) || 0,
-          y: Number(gsap.getProperty(glyphEl, 'y')) || 0,
-        };
-        const nextTransform = getCenterLockTransform(
-          lockedGlyphRects[index],
-          glyphEl.getBoundingClientRect(),
-          currentTransform
-        );
-        gsap.set(glyphEl, nextTransform);
-      });
+      flipPhase: (id, toCollapsed) => flipPhase(id, toCollapsed, params),
+      commitState: (collapsed) => {
+        lastCommittedCollapsed = collapsed;
+        cleanupTransientStyles(config, collapsed ? 'collapsed' : 'expanded');
+        config.onComplete?.(collapsed);
+        currentTimeline = null;
+      },
     };
-
-    const widthFrame = { width: COLLAPSED_WIDTH_VALUE };
-    const phase1 = gsap.timeline();
-    currentTimeline = phase1;
-
-    phase1.to(
-      widthFrame,
-      {
-        width: EXPANDED_WIDTH_VALUE,
-        duration: params.widthDur,
-        ease: 'ios-spring',
-        onUpdate: () => {
-          applyExpandedWidthFrame(widthFrame.width, collapsedLogoWidth);
-          lockLogoGlyphCenters();
-        },
-        onComplete: () => {
-          applyExpandedWidthFrame(EXPANDED_WIDTH_VALUE, collapsedLogoWidth);
-        },
-      },
-      0
-    );
-
-    phase1.to(
-      logoGlyphEls,
-      {
-        rotation: 0,
-        duration: params.widthDur,
-        stagger: params.stagger,
-        ease: 'ios-spring',
-        onUpdate: lockLogoGlyphCenters,
-      },
-      0
-    );
-
-    await chainTimelineComplete(phase1);
-    if (isStale(id)) return;
-
-    applyExpandedWidthFrame(EXPANDED_WIDTH_VALUE, collapsedLogoWidth);
-
-    const labelTl = gsap.timeline();
-    currentTimeline = labelTl;
-
-    labelTl.to(labelEls, {
-      maxWidth: (index) => measuredLabelWidths[index] || 120,
-      opacity: 1,
-      duration: params.labelDur,
-      ease: 'ios-out',
-    });
-
-    await chainTimelineComplete(labelTl);
-    if (isStale(id)) return;
-
-    const flipResult = await flipPhase(id, false, params);
-    if (!flipResult || isStale(id)) return;
-
-    await chainTimelineComplete(flipResult);
-    if (isStale(id)) return;
-
-    config.onContentInteractive(true);
-
-    lastCommittedCollapsed = false;
-    cleanupTransientStyles(config, 'expanded');
-    config.onComplete?.(false);
-    currentTimeline = null;
   }
 
   function collapse() {
     const id = startNewAnimation();
     if (lastCommittedCollapsed) return;
-    runCollapse(id).catch(() => {
+    runCollapse(id, buildContext()).catch(() => {
       if (!isStale(id)) {
         lastCommittedCollapsed = true;
         syncToState(config, true);
@@ -551,7 +500,7 @@ export function createSidebarAnimator(
   function expand() {
     const id = startNewAnimation();
     if (!lastCommittedCollapsed) return;
-    runExpand(id).catch(() => {
+    runExpand(id, buildContext()).catch(() => {
       if (!isStale(id)) {
         lastCommittedCollapsed = false;
         syncToState(config, false);

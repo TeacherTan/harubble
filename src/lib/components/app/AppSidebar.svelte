@@ -77,7 +77,12 @@
   });
 </script>
 
-<aside class="sidebar" class:collapsed={contentCollapsed} bind:this={sidebarEl}>
+<aside
+  class="sidebar"
+  class:collapsed={contentCollapsed}
+  style:pointer-events={contentInteractive ? undefined : 'none'}
+  bind:this={sidebarEl}
+>
   {#if isMacOS}
     <div
       class="sidebar-drag-region"
@@ -139,7 +144,6 @@
         {#each officialCollections as collection (collection.id)}
           <SidebarItemButton
             label={collection.name}
-            icon={ListMusicIcon}
             collapsed={false}
             active={selectedCollectionId === collection.id}
             role="option"
@@ -170,7 +174,6 @@
         {#each userCollections as collection (collection.id)}
           <SidebarItemButton
             label={collection.name}
-            icon={ListMusicIcon}
             collapsed={false}
             active={selectedCollectionId === collection.id}
             role="option"

@@ -6,7 +6,7 @@
   interface Props {
     element?: 'button' | 'div';
     label: string;
-    icon: Component<LucideProps>;
+    icon?: Component<LucideProps>;
     collapsed: boolean;
     active?: boolean;
     hiddenLabel?: boolean;
@@ -88,9 +88,11 @@
   onclick={handleClick}
   onkeydown={handleKeydown}
 >
-  <span class="sidebar-item-icon">
-    <Icon size={16} aria-hidden={true} />
-  </span>
+  {#if Icon}
+    <span class="sidebar-item-icon">
+      <Icon size={16} aria-hidden={true} />
+    </span>
+  {/if}
   <span
     class="sidebar-item-label"
     class:hidden={hiddenLabel}
